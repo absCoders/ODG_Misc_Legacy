@@ -97,7 +97,7 @@ Public Class ServiceEngine
             End If
         End With
 
-        System.Threading.Thread.Sleep(3000)
+        importer = New OrdersImport.SalesOrderImporter
     End Sub
 
     Private Delegate Sub DataReceivedDelegate( _

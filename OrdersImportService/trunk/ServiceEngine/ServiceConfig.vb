@@ -7,13 +7,13 @@ Public Class ServiceConfig
     ' 2) ConfigFileName in ServiceStartup.vb
     ' 3) ServiceName, DisplayName and Description in ServiceInstallation.vb
 
-    Private Const DefaultTNS = "ODG"
+    Private Const DefaultTNS = "TST"
     Private _TNS As String = DefaultTNS
 
-    Private Const DefaultUID = "ODG"
+    Private Const DefaultUID = "TST"
     Private _UID As String = DefaultUID
 
-    Private Const DefaultPWD = "ODG"
+    Private Const DefaultPWD = "TST"
     Private _PWD As String = DefaultPWD
 
     Private Const DefaultFileFolder = "C:\ABS\ORDERIMP\"
