@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wsdl:definitions xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd" xmlns:wsa="http://schemas.xmlsoap.org/ws/2004/08/addressing" xmlns:wsap="http://schemas.xmlsoap.org/ws/2004/08/addressing/policy" xmlns:wsp="http://schemas.xmlsoap.org/ws/2004/09/policy" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msc="http://schemas.microsoft.com/ws/2005/12/wsdl/contract" xmlns:tns="http://tempuri.org/" xmlns:wsaw="http://www.w3.org/2006/05/addressing/wsdl" xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/" xmlns:wsa10="http://www.w3.org/2005/08/addressing" xmlns:wsx="http://schemas.xmlsoap.org/ws/2004/09/mex" xmlns:wsam="http://www.w3.org/2007/05/addressing/metadata" name="ScannerService" targetNamespace="http://tempuri.org/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">
+  <wsdl:types>
+    <xsd:schema targetNamespace="http://tempuri.org/Imports">
+      <xsd:import schemaLocation="http://odgiisvm.opticaldg.com:8080/ScannerService/ScannerService.svc?xsd=xsd0" namespace="http://tempuri.org/" />
+      <xsd:import schemaLocation="http://odgiisvm.opticaldg.com:8080/ScannerService/ScannerService.svc?xsd=xsd1" namespace="http://schemas.microsoft.com/2003/10/Serialization/" />
+      <xsd:import schemaLocation="http://odgiisvm.opticaldg.com:8080/ScannerService/ScannerService.svc?xsd=xsd2" />
+    </xsd:schema>
+  </wsdl:types>
+  <wsdl:message name="IScannerService_GetItemInfo_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetItemInfo" />
+  </wsdl:message>
+  <wsdl:message name="IScannerService_GetItemInfo_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetItemInfoResponse" />
+  </wsdl:message>
+  <wsdl:message name="IScannerService_CheckBin_InputMessage">
+    <wsdl:part name="parameters" element="tns:CheckBin" />
+  </wsdl:message>
+  <wsdl:message name="IScannerService_CheckBin_OutputMessage">
+    <wsdl:part name="parameters" element="tns:CheckBinResponse" />
+  </wsdl:message>
+  <wsdl:message name="IScannerService_GetBin_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetBin" />
+  </wsdl:message>
+  <wsdl:message name="IScannerService_GetBin_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetBinResponse" />
+  </wsdl:message>
+  <wsdl:message name="IScannerService_IsBinValid_InputMessage">
+    <wsdl:part name="parameters" element="tns:IsBinValid" />
+  </wsdl:message>
+  <wsdl:message name="IScannerService_IsBinValid_OutputMessage">
+    <wsdl:part name="parameters" element="tns:IsBinValidResponse" />
+  </wsdl:message>
+  <wsdl:message name="IScannerService_GetScanData_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetScanData" />
+  </wsdl:message>
+  <wsdl:message name="IScannerService_GetScanData_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetScanDataResponse" />
+  </wsdl:message>
+  <wsdl:message name="IScannerService_UpdateItemInfo_InputMessage">
+    <wsdl:part name="parameters" element="tns:UpdateItemInfo" />
+  </wsdl:message>
+  <wsdl:message name="IScannerService_UpdateItemInfo_OutputMessage">
+    <wsdl:part name="parameters" element="tns:UpdateItemInfoResponse" />
+  </wsdl:message>
+  <wsdl:message name="IScannerService_LoadPO_InputMessage">
+    <wsdl:part name="parameters" element="tns:LoadPO" />
+  </wsdl:message>
+  <wsdl:message name="IScannerService_LoadPO_OutputMessage">
+    <wsdl:part name="parameters" element="tns:LoadPOResponse" />
+  </wsdl:message>
+  <wsdl:message name="IScannerService_UpdatePO_InputMessage">
+    <wsdl:part name="parameters" element="tns:UpdatePO" />
+  </wsdl:message>
+  <wsdl:message name="IScannerService_UpdatePO_OutputMessage">
+    <wsdl:part name="parameters" element="tns:UpdatePOResponse" />
+  </wsdl:message>
+  <wsdl:portType name="IScannerService">
+    <wsdl:operation name="GetItemInfo">
+      <wsdl:input wsaw:Action="http://tempuri.org/IScannerService/GetItemInfo" message="tns:IScannerService_GetItemInfo_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IScannerService/GetItemInfoResponse" message="tns:IScannerService_GetItemInfo_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="CheckBin">
+      <wsdl:input wsaw:Action="http://tempuri.org/IScannerService/CheckBin" message="tns:IScannerService_CheckBin_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IScannerService/CheckBinResponse" message="tns:IScannerService_CheckBin_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="GetBin">
+      <wsdl:input wsaw:Action="http://tempuri.org/IScannerService/GetBin" message="tns:IScannerService_GetBin_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IScannerService/GetBinResponse" message="tns:IScannerService_GetBin_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="IsBinValid">
+      <wsdl:input wsaw:Action="http://tempuri.org/IScannerService/IsBinValid" message="tns:IScannerService_IsBinValid_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IScannerService/IsBinValidResponse" message="tns:IScannerService_IsBinValid_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="GetScanData">
+      <wsdl:input wsaw:Action="http://tempuri.org/IScannerService/GetScanData" message="tns:IScannerService_GetScanData_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IScannerService/GetScanDataResponse" message="tns:IScannerService_GetScanData_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="UpdateItemInfo">
+      <wsdl:input wsaw:Action="http://tempuri.org/IScannerService/UpdateItemInfo" message="tns:IScannerService_UpdateItemInfo_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IScannerService/UpdateItemInfoResponse" message="tns:IScannerService_UpdateItemInfo_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="LoadPO">
+      <wsdl:input wsaw:Action="http://tempuri.org/IScannerService/LoadPO" message="tns:IScannerService_LoadPO_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IScannerService/LoadPOResponse" message="tns:IScannerService_LoadPO_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="UpdatePO">
+      <wsdl:input wsaw:Action="http://tempuri.org/IScannerService/UpdatePO" message="tns:IScannerService_UpdatePO_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IScannerService/UpdatePOResponse" message="tns:IScannerService_UpdatePO_OutputMessage" />
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:binding name="BasicHttpBinding_IScannerService" type="tns:IScannerService">
+    <soap:binding transport="http://schemas.xmlsoap.org/soap/http" />
+    <wsdl:operation name="GetItemInfo">
+      <soap:operation soapAction="http://tempuri.org/IScannerService/GetItemInfo" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="CheckBin">
+      <soap:operation soapAction="http://tempuri.org/IScannerService/CheckBin" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetBin">
+      <soap:operation soapAction="http://tempuri.org/IScannerService/GetBin" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="IsBinValid">
+      <soap:operation soapAction="http://tempuri.org/IScannerService/IsBinValid" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetScanData">
+      <soap:operation soapAction="http://tempuri.org/IScannerService/GetScanData" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="UpdateItemInfo">
+      <soap:operation soapAction="http://tempuri.org/IScannerService/UpdateItemInfo" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="LoadPO">
+      <soap:operation soapAction="http://tempuri.org/IScannerService/LoadPO" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="UpdatePO">
+      <soap:operation soapAction="http://tempuri.org/IScannerService/UpdatePO" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:service name="ScannerService">
+    <wsdl:port name="BasicHttpBinding_IScannerService" binding="tns:BasicHttpBinding_IScannerService">
+      <soap:address location="http://odgiisvm.opticaldg.com:8080/ScannerService/ScannerService.svc" />
+    </wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>
