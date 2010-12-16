@@ -680,6 +680,11 @@ Namespace OrdersImport
                 rowSOTORDR1.Item("CUST_SHIP_TO_NO") = CUST_SHIP_TO_NO
                 rowSOTORDR1.Item("ORDR_STATUS") = "O"
                 rowSOTORDR1.Item("ORDR_LOCK_SHIP_VIA") = (rowSOTORDRX.Item("ORDR_LOCK_SHIP_VIA") & String.Empty).ToString.Trim
+
+                rowSOTORDR1.Item("INIT_OPER") = ABSolution.ASCMAIN1.USER_ID
+                rowSOTORDR1.Item("LAST_OPER") = ABSolution.ASCMAIN1.USER_ID
+                rowSOTORDR1.Item("INIT_DATE") = DateTime.Now + ABSolution.ASCMAIN1.NowTSD
+                rowSOTORDR1.Item("LAST_DATE") = DateTime.Now + ABSolution.ASCMAIN1.NowTSD
                 dst.Tables("SOTORDR1").Rows.Add(rowSOTORDR1)
 
                 ORDR_SOURCE = (rowSOTORDRX.Item("ORDR_SOURCE") & String.Empty).ToString.Trim
@@ -1035,7 +1040,7 @@ Namespace OrdersImport
         Private Sub Record_Event(ByVal ORDR_NO As String, ByVal EVENT_DESC As String)
             Dim row As DataRow = dst.Tables("SOTORDRE").NewRow
             row.Item("ORDR_NO") = ORDR_NO
-            row.Item("INIT_DATE") = DateTime.Now
+            row.Item("INIT_DATE") = DateTime.Now + ABSolution.ASCMAIN1.NowTSD
             row.Item("INIT_OPER") = ABSolution.ASCMAIN1.USER_ID
             row.Item("EVENT_DESC") = EVENT_DESC
             dst.Tables("SOTORDRE").Rows.Add(row)
