@@ -1635,14 +1635,24 @@ Namespace OrdersImport
             With baseClass
                 Try
                     .BeginTrans()
-                    .Update_Record_TDA("SOTORDR1")
-                    .Update_Record_TDA("SOTORDR2")
-                    .Update_Record_TDA("SOTORDR3")
-                    .Update_Record_TDA("SOTORDR4")
-                    .Update_Record_TDA("SOTORDR5")
+                    .clsASCBASE1.Update_Record_TDA("SOTORDR1")
+                    .clsASCBASE1.Update_Record_TDA("SOTORDR2")
+                    .clsASCBASE1.Update_Record_TDA("SOTORDR3")
+                    .clsASCBASE1.Update_Record_TDA("SOTORDR5")
 
-                    .Update_Record_TDA("SOTORDRE")
-                    .Update_Record_TDA("SOTORDRP")
+                    .clsASCBASE1.Update_Record_TDA("SOTORDRE")
+
+                    dst.Tables("SOTORDR4").AcceptChanges()
+                    For Each row As DataRow In dst.Tables("SOTORDR4").Rows
+                        row.SetAdded()
+                    Next
+                    .clsASCBASE1.Update_Record_TDA("SOTORDR4")
+
+                    dst.Tables("SOTORDRP").AcceptChanges()
+                    For Each row As DataRow In dst.Tables("SOTORDRP").Rows
+                        row.SetAdded()
+                    Next
+                    .clsASCBASE1.Update_Record_TDA("SOTORDRP")
 
                     ' Log Errors on the order
                     dst.Tables("SOTORDRW").Clear()
@@ -1658,14 +1668,14 @@ Namespace OrdersImport
                         Next
                     Next
 
-                    .Update_Record_TDA("SOTORDRW")
+                    .clsASCBASE1.Update_Record_TDA("SOTORDRW")
 
                     If rowSOTORDR1.Item("ORDR_STATUS") & String.Empty = "O" AndAlso rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") & String.Empty = String.Empty Then
                         Dependent_Updates(rowSOTORDR1.Item("ORDR_NO"), 1)
                     End If
 
-                    .Update_Record_TDA("XSTORDR1")
-                    .Update_Record_TDA("XSTORDR2")
+                    .clsASCBASE1.Update_Record_TDA("XSTORDR1")
+                    .clsASCBASE1.Update_Record_TDA("XSTORDR2")
 
                     .CommitTrans()
 
