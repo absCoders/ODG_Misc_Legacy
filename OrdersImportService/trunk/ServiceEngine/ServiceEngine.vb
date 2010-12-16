@@ -9,7 +9,7 @@ Public Class ServiceEngine
 
     Public Event StatusUpdate As StatusUpdateEventHandler
 
-    Dim importer As OrdersImport.SalesOrderImporter
+    Private importer As OrdersImport.SalesOrderImporter = New OrdersImport.SalesOrderImporter
 
     'Public Sub New()
     '    MyBase.New()
@@ -92,12 +92,11 @@ Public Class ServiceEngine
             If Not .DirectoryExists(Me._config.FileFolder & "LOGS\") Then
                 .CreateDirectory(Me._config.FileFolder & "LOGS\")
             End If
+
             If Not .DirectoryExists(Me._config.FileFolder & "ARCHIVE\") Then
                 .CreateDirectory(Me._config.FileFolder & "ARCHIVE\")
             End If
         End With
-
-        importer = New OrdersImport.SalesOrderImporter
     End Sub
 
     Private Delegate Sub DataReceivedDelegate( _

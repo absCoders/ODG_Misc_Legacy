@@ -3,12 +3,13 @@
 Namespace OrdersImport
 
     Public Class SalesOrderImporter
+        Declare Function ProcessIdToSessionId Lib "kernel32.dll" (ByVal dwProcessId As Int32, ByRef pSessionId As Int32) As Int32
+
 
 #Region "Service Variables"
 
         Private baseClass As ABSolution.ASFBASE1
         Private pricingClass As ABSolution.TACMAIN1
-        Private rowSOTPARM1 As DataRow = Nothing
         Private DpdDefaultShipViaCode As String = String.Empty
 
         Private SOTINVH2_PC As String = String.Empty
@@ -35,19 +36,14 @@ Namespace OrdersImport
 
         Public Sub New()
 
-            baseClass = New ABSolution.ASFBASE1
-            pricingClass = New ABSolution.TACMAIN1
-
-            Dim sql As String = String.Empty
-
-            ' Log into Oracle
-            ABSolution.ASCMAIN1.USER_ID = "service"
             Dim svcConfig As New ServiceConfig
 
             filefolder = svcConfig.FileFolder
             OpenLogFile()
 
+            ' Log into Oracle
             If LogIntoDatabase() Then
+                InitializeSettings()
                 PrepareDatasetEntries()
                 ProcessSalesOrders()
             End If
@@ -109,8 +105,82 @@ Namespace OrdersImport
 
         End Function
 
+        Private Sub InitializeSettings()
+
+            Dim INIT_DATE As Date = DateTime.Now + ABSolution.ASCMAIN1.NowTSD
+
+            baseClass = New ABSolution.ASFBASE1
+            pricingClass = New ABSolution.TACMAIN1
+
+            ABSolution.ASCMAIN1.USER_ID = "service"
+
+            ABSolution.ASCMAIN1.Set_DBS_Dependent_Strings()
+
+            ABSolution.ASCMAIN1.SESSION_NO = ABSolution.ASCMAIN1.Next_Control_No("ASTLOGS1.SESSION_NO")
+            If ABSolution.ASCMAIN1.DBS_TYPE = ABSolution.ASCMAIN1.DBS_TYPE_types.SQLServer Then
+                ABSolution.ASCMAIN1.DBS_SESSION_ID = 1
+            Else
+                Dim rowSession As DataRow = ABSolution.ASCDATA1.GetDataRow("Select UserEnv('SESSIONID'), UserEnv('TERMINAL') from DUAL")
+                ABSolution.ASCMAIN1.DBS_SESSION_ID = rowSession.Item(0)
+            End If
+            ABSolution.ASCMAIN1.COMPUTER_NAME = My.Computer.Name
+
+
+            ABSolution.ASCMAIN1.Get_Current_YP()
+
+            ABSolution.ASCMAIN1.sql = "Select * from ASTPARM1 where AS_PARM_KEY = 'Z'"
+            Dim tblASTPARM1 As DataTable = ABSolution.ASCDATA1.GetDataTable
+            ABSolution.ASCMAIN1.rowASTPARM1 = tblASTPARM1.Rows(0)
+            ABSolution.ASCMAIN1.tblASTFFMT1 = ABSolution.ASCDATA1.GetDataTable("*", "ASTFFMT1")
+            ABSolution.ASCMAIN1.Temp_Table_Cleanup()
+
+            Dim tblASTOPST1 As New DataTable
+            With ABSolution.ASCDATA1.GetDataAdapter(tblASTOPST1, "ASTOPST1", "*", True, -1, False)
+                Dim rowASTOPST1 As DataRow = tblASTOPST1.NewRow
+                rowASTOPST1.Item("USER_ID") = ABSolution.ASCMAIN1.USER_ID
+                rowASTOPST1.Item("SESSION_NO") = ABSolution.ASCMAIN1.SESSION_NO
+                rowASTOPST1.Item("INIT_DATE") = INIT_DATE
+                rowASTOPST1.Item("YYYYPP") = ABSolution.ASCMAIN1.CYP
+                rowASTOPST1.Item("SELECTION_NO") = 0
+                rowASTOPST1.Item("RE_XNO") = 0
+                rowASTOPST1.Item("PRD_CLOSE_IND") = ABSolution.ASCMAIN1.EOM
+                rowASTOPST1.Item("FORM_INSTANCE_NO") = ABSolution.ASCMAIN1.Next_Control_No("ASFLOGON.FORM_INSTANCE_NO")
+                tblASTOPST1.Rows.Add(rowASTOPST1)
+                .Update(tblASTOPST1)
+                .Dispose()
+            End With
+
+            Dim tblASTLOGS1 As New DataTable
+            With ABSolution.ASCDATA1.GetDataAdapter(tblASTLOGS1, "ASTLOGS1", "*", True, -1, False)
+                Dim rowASTLOGS1 As DataRow = tblASTLOGS1.NewRow
+                rowASTLOGS1.Item("SESSION_NO") = ABSolution.ASCMAIN1.SESSION_NO
+                rowASTLOGS1.Item("USER_ID") = ABSolution.ASCMAIN1.USER_ID
+                rowASTLOGS1.Item("SESSION_ID") = ABSolution.ASCMAIN1.DBS_SESSION_ID
+                rowASTLOGS1.Item("COMPUTER_NAME") = ABSolution.ASCMAIN1.COMPUTER_NAME
+                rowASTLOGS1.Item("DATE_LOGGED_ON") = INIT_DATE
+                rowASTLOGS1.Item("SESSION_STATUS") = "A"
+                tblASTLOGS1.Rows.Add(rowASTLOGS1)
+                .Update(tblASTLOGS1)
+                .Dispose()
+            End With
+
+            ' WTS Session ID
+            ABSolution.ASCMAIN1.WTS_SESSION_ID = GetSessionId()
+
+        End Sub
+
+        Public Function GetSessionId() As Int32
+            Dim _currentProcess As Process = Process.GetCurrentProcess()
+            Dim _processID As Int32 = _currentProcess.Id
+            Dim _sessionID As Int32
+            Dim _result As Boolean = ProcessIdToSessionId(_processID, _sessionID)
+            Return _sessionID
+        End Function
+
         Private Sub ProcessSalesOrders()
             For Each orderSourceCode As String In "XOVFCY"
+
+                ClearDataSetTables(True)
 
                 Select Case orderSourceCode
                     Case "X" ' XML
@@ -134,41 +204,35 @@ Namespace OrdersImport
         ''' </summary>
         ''' <remarks></remarks>
         Private Sub ProcessOptiPortSalesOrders(ByVal ORDER_SOURCE_CODE As String)
-            ClearDataSetTables(True)
         End Sub
 
         Private Sub ProcessXmlSalesOrders(ByVal ORDER_SOURCE_CODE As String)
-            ClearDataSetTables(True)
         End Sub
 
         Private Sub ProcessVisionWebSalesOrders(ByVal ORDER_SOURCE_CODE As String)
-            ClearDataSetTables(True)
         End Sub
 
         Private Sub ProcessEyefinitySalesOrders(ByVal ORDER_SOURCE_CODE As String)
-            ClearDataSetTables(True)
         End Sub
 
         Private Sub ProcessExcelFormatSalesOrders(ByVal ORDER_SOURCE_CODE As String)
-            ClearDataSetTables(True)
         End Sub
 
         Private Sub ProcessEyeconicSalesOrders(ByVal ORDER_SOURCE As String)
 
-            ClearDataSetTables(True)
             Dim rowSOTORDRX As DataRow = Nothing
             Dim salesOrdersProcessed As Int16 = 0
             Dim ORDR_LINE_SOURCE As String = String.Empty
 
             Try
-                With baseClass
-                    .Fill_Records("XSTORDR1", String.Empty)
+                With baseClass.clsASCBASE1
+                    .Fill_Records("XSTORDR1", String.Empty, True, "SELECT * FROM XSTORDR1 WHERE NVL(PROCESS_IND, '0') = '0'")
                     If .dst.Tables("XSTORDR1").Rows.Count = 0 Then
                         RecordLogEntry("No Eyeconic Sales Orders to process.")
                         Exit Sub
                     End If
 
-                    RecordLogEntry(baseClass.dst.Tables("XSTORDR1").Rows.Count & " Eyeconic Sales Orders to process.")
+                    RecordLogEntry(.dst.Tables("XSTORDR1").Rows.Count & " Eyeconic Sales Orders to process.")
 
                     For Each rowXSTORDR1 As DataRow In .dst.Tables("XSTORDR1").Rows
                         ClearDataSetTables(False)
@@ -210,12 +274,18 @@ Namespace OrdersImport
 
                             rowSOTORDRX.Item("ORDR_LNO") = rowXSTORDR2.Item("XS_DOC_SEQ_LNO") & String.Empty
                             rowSOTORDRX.Item("CUST_LINE_REF") = TruncateField(rowXSTORDR2.Item("ITEM_ID") & String.Empty, "SOTORDR2", "CUST_LINE_REF")
-                            rowSOTORDRX.Item("ORDR_QTY") = rowXSTORDR2.Item("ORDR_QTY") & String.Empty
+                            rowSOTORDRX.Item("ORDR_QTY") = rowXSTORDR2.Item("ORDER_QTY") & String.Empty
                             rowSOTORDRX.Item("ORDR_UNIT_PRICE_PATIENT") = rowXSTORDR2.Item("PATIENT_PRICE") & String.Empty
-                            rowSOTORDRX.Item("ORDR_LR") = rowXSTORDR2.Item("ITEM_EYE") & String.Empty
+
+                            Select Case rowXSTORDR2.Item("ITEM_EYE") & String.Empty
+                                Case "OD"
+                                    rowSOTORDRX.Item("ORDR_LR") = "R"
+                                Case "OS"
+                                    rowSOTORDRX.Item("ORDR_LR") = "L"
+                            End Select
 
                             ' Convert Ordr_Line_Source to a code
-                            ORDR_LINE_SOURCE = rowXSTORDR2.Item("ORDR_LINE_SOURCE") & String.Empty
+                            ORDR_LINE_SOURCE = rowXSTORDR2.Item("ORDR_SOURCE") & String.Empty
                             If .dst.Tables("XMTXREF1").Select("XML_ORDR_SOURCE = '" & ORDR_LINE_SOURCE & "'", "").Length > 0 Then
                                 ORDR_LINE_SOURCE = .dst.Tables("XMTXREF1").Select("XML_ORDR_SOURCE = '" & ORDR_LINE_SOURCE & "'", "")(0).Item("ORDR_LINE_SOURCE") & String.Empty
                             Else
@@ -246,15 +316,13 @@ Namespace OrdersImport
                             rowSOTORDRX.Item("CUST_SHIP_TO_ZIP_CODE") = TruncateField(rowXSTORDR1.Item("OFFICE_SHIP_TO_ZIP") & String.Empty, "ARTCUST2", "CUST_SHIP_TO_ZIP_CODE")
                             rowSOTORDRX.Item("CUST_SHIP_TO_COUNTRY") = "US"
 
-                            rowSOTORDRX.Item("PATIENT_BILL_TO_NAME") = String.Empty
-                            rowSOTORDRX.Item("PATIENT_BILL_TO_PHONE") = String.Empty
-                            rowSOTORDRX.Item("PATIENT_BILL_TO_ADDR1") = String.Empty
-                            rowSOTORDRX.Item("PATIENT_BILL_TO_ADDR2") = String.Empty
-                            rowSOTORDRX.Item("PATIENT_BILL_TO_ADDR3") = String.Empty
-                            rowSOTORDRX.Item("PATIENT_BILL_TO_CITY") = String.Empty
-                            rowSOTORDRX.Item("PATIENT_BILL_TO_STATE") = String.Empty
-                            rowSOTORDRX.Item("PATIENT_BILL_TO_ZIP_CODE") = String.Empty
-                            rowSOTORDRX.Item("PATIENT_BILL_COUNTRY") = "US"
+                            rowSOTORDRX.Item("BILLING_NAME") = rowXSTORDR1.Item("BILLING_NAME") & String.Empty
+                            rowSOTORDRX.Item("BILLING_ADDRESS1") = rowXSTORDR1.Item("BILLING_ADDRESS1") & String.Empty
+                            rowSOTORDRX.Item("BILLING_ADDRESS2") = rowXSTORDR1.Item("BILLING_ADDRESS2") & String.Empty
+                            rowSOTORDRX.Item("BILLING_CITY") = rowXSTORDR1.Item("BILLING_CITY") & String.Empty
+                            rowSOTORDRX.Item("BILLING_STATE") = rowXSTORDR1.Item("BILLING_STATE") & String.Empty
+                            rowSOTORDRX.Item("BILLING_ZIP") = rowXSTORDR1.Item("BILLING_ZIP") & String.Empty
+                            rowSOTORDRX.Item("PAYMENT_METHOD") = rowXSTORDR1.Item("PAYMENT_METHOD") & String.Empty
 
                             rowSOTORDRX.Item("CUST_NAME") = TruncateField(rowXSTORDR1.Item("SHIP_TO_NAME") & String.Empty, "SOTORDR5", "CUST_NAME")
                             rowSOTORDRX.Item("CUST_PHONE") = TruncateField(rowXSTORDR1.Item("SHIP_TO_PHONE") & String.Empty, "SOTORDR5", "CUST_PHONE")
@@ -277,6 +345,11 @@ Namespace OrdersImport
 
                             rowSOTORDRX.Item("ORDR_LOCK_SHIP_VIA") = "1"
                             rowSOTORDRX.Item("ORDR_COMMENT") = String.Empty
+
+                            rowSOTORDRX.Item("PRESCRIBING_DOCTOR") = rowXSTORDR1.Item("PRESCRIBING_DOCTOR") & String.Empty
+                            rowSOTORDRX.Item("TAX_SHIPPING") = rowXSTORDR1.Item("TAX_SHIPPING") & String.Empty
+                            rowSOTORDRX.Item("PATIENT_STAX_RATE") = rowXSTORDR1.Item("PATIENT_STAX_RATE") & String.Empty
+                            rowSOTORDRX.Item("OFFICE_WEBSITE") = rowXSTORDR1.Item("OFFICE_WEBSITE") & String.Empty
 
                             .dst.Tables("SOTORDRX").Rows.Add(rowSOTORDRX)
                         Next
@@ -385,11 +458,11 @@ Namespace OrdersImport
 
         Private Sub CreateOrderBillTo(ByVal ORDR_NO As String)
 
-            Dim rowSOTORDR5 As DataRow = baseClass.dst.Tables("SOTORDR5").NewRow
+            Dim rowSOTORDR5 As DataRow = baseClass.clsASCBASE1.dst.Tables("SOTORDR5").NewRow
 
             rowSOTORDR5.Item("ORDR_NO") = ORDR_NO
             rowSOTORDR5.Item("CUST_ADDR_TYPE") = "BT"
-            baseClass.dst.Tables("SOTORDR5").Rows.Add(rowSOTORDR5)
+            baseClass.clsASCBASE1.dst.Tables("SOTORDR5").Rows.Add(rowSOTORDR5)
 
             ' Bill To
             If rowARTCUST1 IsNot Nothing Then
@@ -418,11 +491,11 @@ Namespace OrdersImport
         ''' <remarks></remarks>
         Private Sub CreateOrderErrorRecord(ByVal ORDR_NO As String, ByVal ORDR_LNO As Integer, ByVal ErrorCode As String, Optional ByVal ErrorMessage As String = "")
             Try
-                If baseClass.dst.Tables("SOTORDRW").Select("ORDR_NO = '" & ORDR_NO & "' AND ORDR_LNO = " & ORDR_LNO & " AND ORDR_ERROR_CODE = '" & ErrorCode & "'").Length > 0 Then
-                    baseClass.dst.Tables("SOTORDRW").Select("ORDR_NO = '" & ORDR_NO & "' AND ORDR_LNO = " & ORDR_LNO & " AND ORDR_ERROR_CODE = '" & ErrorCode & "'")(0).Delete()
+                If baseClass.clsASCBASE1.dst.Tables("SOTORDRW").Select("ORDR_NO = '" & ORDR_NO & "' AND ORDR_LNO = " & ORDR_LNO & " AND ORDR_ERROR_CODE = '" & ErrorCode & "'").Length > 0 Then
+                    baseClass.clsASCBASE1.dst.Tables("SOTORDRW").Select("ORDR_NO = '" & ORDR_NO & "' AND ORDR_LNO = " & ORDR_LNO & " AND ORDR_ERROR_CODE = '" & ErrorCode & "'")(0).Delete()
                 End If
 
-                Dim rowSOTORDRW As DataRow = baseClass.dst.Tables("SOTORDRW").NewRow
+                Dim rowSOTORDRW As DataRow = baseClass.clsASCBASE1.dst.Tables("SOTORDRW").NewRow
 
                 rowSOTORDRW.Item("ORDR_NO") = ORDR_NO
                 rowSOTORDRW.Item("ORDR_LNO") = ORDR_LNO
@@ -430,13 +503,13 @@ Namespace OrdersImport
 
                 If ErrorMessage.Length > 0 Then
                     rowSOTORDRW.Item("ORDR_ERROR_TEXT") = ErrorMessage
-                ElseIf baseClass.dst.Tables("SOTORDRO").Select("ORDR_REL_HOLD_CODES = '" & ErrorCode & "'").Length > 0 Then
-                    rowSOTORDRW.Item("ORDR_ERROR_TEXT") = baseClass.dst.Tables("SOTORDRO").Select("ORDR_REL_HOLD_CODES = '" & ErrorCode & "'")(0).Item("ORDR_COMMENT")
+                ElseIf baseClass.clsASCBASE1.dst.Tables("SOTORDRO").Select("ORDR_REL_HOLD_CODES = '" & ErrorCode & "'").Length > 0 Then
+                    rowSOTORDRW.Item("ORDR_ERROR_TEXT") = baseClass.clsASCBASE1.dst.Tables("SOTORDRO").Select("ORDR_REL_HOLD_CODES = '" & ErrorCode & "'")(0).Item("ORDR_COMMENT")
                 Else
                     rowSOTORDRW.Item("ORDR_ERROR_TEXT") = "Unknown Error"
                 End If
 
-                baseClass.dst.Tables("SOTORDRW").Rows.Add(rowSOTORDRW)
+                baseClass.clsASCBASE1.dst.Tables("SOTORDRW").Rows.Add(rowSOTORDRW)
 
             Catch ex As Exception
                 RecordLogEntry(ex.Message)
@@ -445,23 +518,23 @@ Namespace OrdersImport
 
         Private Sub CreateOrderPatientBillTo(ByVal ORDR_NO As String, ByRef rowSOTORDRX As DataRow)
 
-            If (rowSOTORDRX.Item("PATIENT_BILL_TO_NAME") & String.Empty).ToString.Trim.Length = 0 _
-                OrElse (rowSOTORDRX.Item("PATIENT_BILL_TO_ADDR1") & String.Empty).ToString.Trim.Length = 0 Then
+            If (rowSOTORDRX.Item("BILLING_NAME") & String.Empty).ToString.Trim.Length = 0 _
+                OrElse (rowSOTORDRX.Item("BILLING_ADDR1") & String.Empty).ToString.Trim.Length = 0 Then
                 Exit Sub
             End If
 
-            Dim rowSOTORDR5 As DataRow = baseClass.dst.Tables("SOTORDR5").NewRow
+            Dim rowSOTORDR5 As DataRow = baseClass.clsASCBASE1.dst.Tables("SOTORDR5").NewRow
             rowSOTORDR5.Item("ORDR_NO") = ORDR_NO
-            rowSOTORDR5.Item("CUST_ADDR_TYPE") = "PT"
-            baseClass.dst.Tables("SOTORDR5").Rows.Add(rowSOTORDR5)
+            rowSOTORDR5.Item("CUST_ADDR_TYPE") = "PB"
+            baseClass.clsASCBASE1.dst.Tables("SOTORDR5").Rows.Add(rowSOTORDR5)
 
-            rowSOTORDR5.Item("CUST_NAME") = rowSOTORDRX.Item("PATIENT_BILL_TO_NAME") & String.Empty
-            rowSOTORDR5.Item("CUST_ADDR1") = rowSOTORDRX.Item("PATIENT_BILL_TO_ADDR1") & String.Empty
-            rowSOTORDR5.Item("CUST_ADDR2") = rowSOTORDRX.Item("PATIENT_BILL_TO_ADDR2") & String.Empty
-            rowSOTORDR5.Item("CUST_CITY") = rowSOTORDRX.Item("PATIENT_BILL_TO_CITY") & String.Empty
-            rowSOTORDR5.Item("CUST_STATE") = rowSOTORDRX.Item("PATIENT_BILL_TO_STATE") & String.Empty
-            rowSOTORDR5.Item("CUST_ZIP_CODE") = rowSOTORDRX.Item("PATIENT_BILL_TO_ZIP_CODE") & String.Empty
-            rowSOTORDR5.Item("CUST_COUNTRY") = rowSOTORDRX.Item("PATIENT_BILL_COUNTRY") & String.Empty
+            rowSOTORDR5.Item("CUST_NAME") = rowSOTORDRX.Item("BILLING_NAME") & String.Empty
+            rowSOTORDR5.Item("CUST_ADDR1") = rowSOTORDRX.Item("BILLING_ADDR1") & String.Empty
+            rowSOTORDR5.Item("CUST_ADDR2") = rowSOTORDRX.Item("BILLING_ADDR2") & String.Empty
+            rowSOTORDR5.Item("CUST_CITY") = rowSOTORDRX.Item("BILLING_CITY") & String.Empty
+            rowSOTORDR5.Item("CUST_STATE") = rowSOTORDRX.Item("BILLING_STATE") & String.Empty
+            rowSOTORDR5.Item("CUST_ZIP_CODE") = rowSOTORDRX.Item("BILLING_ZIP_CODE") & String.Empty
+            rowSOTORDR5.Item("CUST_COUNTRY") = "US"
             rowSOTORDR5.Item("CUST_CONTACT") = String.Empty
 
             ' Remove trailing 0000 on a Zip Code
@@ -471,7 +544,7 @@ Namespace OrdersImport
                 End If
             End If
 
-            rowSOTORDR5.Item("CUST_PHONE") = rowSOTORDRX.Item("PATIENT_BILL_TO_PHONE") & String.Empty
+            rowSOTORDR5.Item("CUST_PHONE") = String.Empty
             rowSOTORDR5.Item("CUST_EXT") = String.Empty
             rowSOTORDR5.Item("CUST_FAX") = String.Empty
             rowSOTORDR5.Item("CUST_EMAIL") = String.Empty
@@ -480,11 +553,11 @@ Namespace OrdersImport
 
         Private Sub CreateOrderShipTo(ByVal ORDR_NO As String, ByRef rowSOTORDRX As DataRow, ByVal shipToPatient As Boolean)
 
-            Dim rowSOTORDR5 As DataRow = baseClass.dst.Tables("SOTORDR5").NewRow
+            Dim rowSOTORDR5 As DataRow = baseClass.clsASCBASE1.dst.Tables("SOTORDR5").NewRow
 
             rowSOTORDR5.Item("ORDR_NO") = ORDR_NO
             rowSOTORDR5.Item("CUST_ADDR_TYPE") = "ST"
-            baseClass.dst.Tables("SOTORDR5").Rows.Add(rowSOTORDR5)
+            baseClass.clsASCBASE1.dst.Tables("SOTORDR5").Rows.Add(rowSOTORDR5)
 
             If shipToPatient Then
                 rowSOTORDR5.Item("CUST_NAME") = rowSOTORDRX.Item("CUST_NAME") & String.Empty
@@ -493,7 +566,7 @@ Namespace OrdersImport
                 rowSOTORDR5.Item("CUST_CITY") = rowSOTORDRX.Item("CUST_CITY") & String.Empty
                 rowSOTORDR5.Item("CUST_STATE") = rowSOTORDRX.Item("CUST_STATE") & String.Empty
                 rowSOTORDR5.Item("CUST_ZIP_CODE") = rowSOTORDRX.Item("CUST_ZIP_CODE") & String.Empty
-                rowSOTORDR5.Item("CUST_COUNTRY") = rowSOTORDRX.Item("CUST_COUNTRY") & String.Empty
+                rowSOTORDR5.Item("CUST_COUNTRY") = "US"
                 rowSOTORDR5.Item("CUST_CONTACT") = String.Empty
 
                 ' Remove trailing 0000 on a Zip Code
@@ -544,7 +617,7 @@ Namespace OrdersImport
 
             Try
                 CreateSalesOrder = False
-                With baseClass
+                With baseClass.clsASCBASE1
 
                     ' See if we have any data to process
                     If .dst.Tables("SOTORDRX").Rows.Count = 0 Then
@@ -606,6 +679,7 @@ Namespace OrdersImport
                     rowSOTORDR1.Item("ORDR_TYPE_CODE") = "REG"
                     rowSOTORDR1.Item("CUST_CODE") = CUST_CODE
                     rowSOTORDR1.Item("CUST_SHIP_TO_NO") = CUST_SHIP_TO_NO
+                    rowSOTORDR1.Item("ORDR_STATUS") = "O"
                     rowSOTORDR1.Item("ORDR_LOCK_SHIP_VIA") = (rowSOTORDRX.Item("ORDR_LOCK_SHIP_VIA") & String.Empty).ToString.Trim
                     .dst.Tables("SOTORDR1").Rows.Add(rowSOTORDR1)
 
@@ -621,6 +695,10 @@ Namespace OrdersImport
                     Else
                         rowSOTORDR1.Item("ORDR_DPD") = "0"
                         shipToPatient = False
+                    End If
+
+                    If rowARTCUST1 IsNot Nothing AndAlso Not shipToPatient Then
+                        rowSOTORDR1.Item("ORDR_COD_ADDON_AMT") = Val(rowARTCUST1.Item("CUST_COD_ADDON_AMT") & String.Empty)
                     End If
 
                     errorCodes = String.Empty
@@ -658,11 +736,10 @@ Namespace OrdersImport
                         Me.SetShipToAttributes(rowSOTORDR1, SOTORDR1ErrorCodes)
                     End If
 
-                    ' Get DPD settings
+                    ' Set DPD settings
                     If shipToPatient = True Then
                         Me.SetDPDShipViaSettings(rowSOTORDR1, SOTORDR1ErrorCodes)
                     End If
-
 
                     ' ************ Other Order Header Fields ************
                     If IsDate(rowSOTORDRX.Item("ORDR_DATE") & String.Empty) Then
@@ -675,11 +752,6 @@ Namespace OrdersImport
                     rowSOTORDR1.Item("BRANCH_CODE") = "NY"
                     rowSOTORDR1.Item("DIVISION_CODE") = "ODG"
                     rowSOTORDR1.Item("WHSE_CODE") = "001"
-
-                    rowSOTORDR1.Item("INIT_OPER") = ABSolution.ASCMAIN1.USER_ID
-                    rowSOTORDR1.Item("LAST_OPER") = ABSolution.ASCMAIN1.USER_ID
-                    rowSOTORDR1.Item("INIT_DATE") = DateTime.Now
-                    rowSOTORDR1.Item("LAST_DATE") = DateTime.Now
 
                     rowSOTORDR1.Item("ORDR_PICK_SEQ") = 0
                     rowSOTORDR1.Item("ORDR_HOLD_SALES") = String.Empty
@@ -746,18 +818,18 @@ Namespace OrdersImport
                     ' ************ ORDER DETAILS ************
                     ORDR_LNO = 0
 
-                    For Each rowImportDetails As DataRow In baseClass.dst.Tables("SOTORDRX").Select(sqlSalesOrder, "ORDR_LNO")
+                    For Each rowImportDetails As DataRow In baseClass.clsASCBASE1.dst.Tables("SOTORDRX").Select(sqlSalesOrder, "ORDR_LNO")
 
                         SOTORDR2ErrorCodes = String.Empty
                         ORDR_LNO += 1
 
-                        rowSOTORDR2 = baseClass.dst.Tables("SOTORDR2").NewRow
+                        rowSOTORDR2 = baseClass.clsASCBASE1.dst.Tables("SOTORDR2").NewRow
                         rowSOTORDR2.Item("ORDR_NO") = ORDR_NO
                         rowSOTORDR2.Item("ORDR_LNO") = ORDR_LNO
                         rowSOTORDR2.Item("ITEM_CODE") = rowImportDetails.Item("ITEM_CODE") & String.Empty
                         rowSOTORDR2.Item("ITEM_DESC") = rowImportDetails.Item("ITEM_DESC") & String.Empty
                         rowSOTORDR2.Item("ITEM_DESC2") = rowImportDetails.Item("ITEM_DESC2") & String.Empty
-                        baseClass.dst.Tables("SOTORDR2").Rows.Add(rowSOTORDR2)
+                        baseClass.clsASCBASE1.dst.Tables("SOTORDR2").Rows.Add(rowSOTORDR2)
 
                         errorCodes = String.Empty
                         SetItemInfo(rowSOTORDR2, errorCodes)
@@ -802,26 +874,15 @@ Namespace OrdersImport
 
                     Next
 
-                    ' ******************** Write Header Record **********************
-                    rowSOTORDR1.Item("ORDR_STATUS") = "O"
                     rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") = SOTORDR1ErrorCodes.Trim
 
-                    ' ************ ORDER SHIP TO ************
-
-                    rowARTCUST1 = baseClass.LookUp("ARTCUST1", CUST_CODE)
-                    rowARTCUST2 = baseClass.LookUp("ARTCUST2", New String() {CUST_CODE, CUST_SHIP_TO_NO})
-
-                    If rowARTCUST1 IsNot Nothing AndAlso Not shipToPatient Then
-                        rowSOTORDR1.Item("ORDR_COD_ADDON_AMT") = Val(rowARTCUST1.Item("CUST_COD_ADDON_AMT") & String.Empty)
-                    End If
-
                     CreateOrderBillTo(ORDR_NO)
-                    CreateOrderShipTo(ORDR_NO, rowSOTORDR1, shipToPatient)
+                    CreateOrderShipTo(ORDR_NO, rowSOTORDRX, shipToPatient)
                     If shipToPatient Then
                         CreateOrderPatientBillTo(ORDR_NO, rowSOTORDRX)
                     End If
-                    CreateSalesOrderTax(ORDR_NO)
 
+                    CreateSalesOrderTax(ORDR_NO)
 
                     If (rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") & String.Empty).ToString.Trim.Length = 0 Then
                         Me.GetSalesOrderUnitPrices(ORDR_NO)
@@ -848,7 +909,7 @@ Namespace OrdersImport
             Dim STAX_CODE As String = String.Empty
             Dim STAX_RATE As Double = 0
 
-            Dim rowSOTORDR1 As DataRow = baseClass.dst.Tables("SOTORDR1").Select("ORDR_NO = '" & ORDR_NO & "'")(0)
+            Dim rowSOTORDR1 As DataRow = baseClass.clsASCBASE1.dst.Tables("SOTORDR1").Select("ORDR_NO = '" & ORDR_NO & "'")(0)
 
             If rowARTCUST2 IsNot Nothing Then
                 CUST_SHIP_TO_ZIP_TAX = (rowARTCUST2.Item("CUST_SHIP_TO_ZIP_CODE") & String.Empty).ToString.Trim
@@ -906,24 +967,25 @@ Namespace OrdersImport
 
         Private Sub GetSalesOrderUnitPrices(ByVal ORDR_NO As String)
 
-            Dim rowSOTORDR1 As DataRow = baseClass.dst.Tables("SOTORDR1").Select("ORDR_NO = '" & ORDR_NO & "'")(0)
+            Dim rowSOTORDR1 As DataRow = baseClass.clsASCBASE1.dst.Tables("SOTORDR1").Select("ORDR_NO = '" & ORDR_NO & "'")(0)
 
             Me.TestAuthorizationsAndBlocks(rowSOTORDR1)
 
+            'clsSOCORDR1.dst = baseClass.dst
             clsSOCORDR1.AffiliateFreeShipping()
             clsSOCORDR1.Price_and_Qty()
 
             ' Added on 1/22/2009 as per walter
             If clsSOCORDR1.SHIP_VIA_CODE_switch_to.Trim.Length > 0 Then
-                If (baseClass.dst.Tables("SOTORDR1").Rows(0).Item("ORDR_LOCK_SHIP_VIA") & String.Empty) <> "1" Then
-                    baseClass.dst.Tables("SOTORDR1").Rows(0).Item("SHIP_VIA_CODE") = clsSOCORDR1.SHIP_VIA_CODE_switch_to.Trim
+                If (baseClass.clsASCBASE1.dst.Tables("SOTORDR1").Rows(0).Item("ORDR_LOCK_SHIP_VIA") & String.Empty) <> "1" Then
+                    baseClass.clsASCBASE1.dst.Tables("SOTORDR1").Rows(0).Item("SHIP_VIA_CODE") = clsSOCORDR1.SHIP_VIA_CODE_switch_to.Trim
                 End If
             End If
 
             If clsSOCORDR1.ORDR_NO_FREIGHT & String.Empty = "1" _
-                AndAlso baseClass.dst.Tables("SOTORDR1").Rows(0).Item("ORDR_NO_FREIGHT") & String.Empty <> "1" Then
-                baseClass.dst.Tables("SOTORDR1").Rows(0).Item("ORDR_NO_FREIGHT") = "1"
-                baseClass.dst.Tables("SOTORDR1").Rows(0).Item("REASON_CODE_NO_FRT") = clsSOCORDR1.REASON_CODE_NO_FRT
+                AndAlso baseClass.clsASCBASE1.dst.Tables("SOTORDR1").Rows(0).Item("ORDR_NO_FREIGHT") & String.Empty <> "1" Then
+                baseClass.clsASCBASE1.dst.Tables("SOTORDR1").Rows(0).Item("ORDR_NO_FREIGHT") = "1"
+                baseClass.clsASCBASE1.dst.Tables("SOTORDR1").Rows(0).Item("REASON_CODE_NO_FRT") = clsSOCORDR1.REASON_CODE_NO_FRT
             End If
 
         End Sub
@@ -931,8 +993,7 @@ Namespace OrdersImport
         ''' <summary>
         ''' Overrides Order Settings for DPD orders
         ''' </summary>
-        ''' <param name="CUST_CODE"></param>
-        ''' <param name="rowHeader"></param>
+        ''' <param name="rowSOTORDR1"></param>
         ''' <param name="errorCodes"></param>
         ''' <remarks></remarks>
         Private Sub SetDPDShipViaSettings(ByRef rowSOTORDR1 As DataRow, ByRef errorCodes As String)
@@ -975,19 +1036,20 @@ Namespace OrdersImport
         ''' <param name="EVENT_DESC"></param>
         ''' <remarks></remarks>
         Private Sub Record_Event(ByVal ORDR_NO As String, ByVal EVENT_DESC As String)
-            Dim row As DataRow = baseClass.dst.Tables("SOTORDRE").NewRow
+            Dim row As DataRow = baseClass.clsASCBASE1.dst.Tables("SOTORDRE").NewRow
             row.Item("ORDR_NO") = ORDR_NO
             row.Item("INIT_DATE") = DateTime.Now
             row.Item("INIT_OPER") = ABSolution.ASCMAIN1.USER_ID
             row.Item("EVENT_DESC") = EVENT_DESC
-            baseClass.dst.Tables("SOTORDRE").Rows.Add(row)
+            baseClass.clsASCBASE1.dst.Tables("SOTORDRE").Rows.Add(row)
         End Sub
 
         ''' <summary>
         ''' Sets Order Header Information based on the Bill To Customer Attributes
         ''' </summary>
         ''' <param name="CUST_CODE"></param>
-        ''' <param name="row"></param>
+        ''' <param name="CUST_SHIP_TO_NO"></param>
+        ''' <param name="rowSOTORDR1"></param>
         ''' <param name="errorCodes"></param>
         ''' <remarks></remarks>
         Private Sub SetOrderCustomerInfo(ByVal CUST_CODE As String, ByVal CUST_SHIP_TO_NO As String, ByRef rowSOTORDR1 As DataRow, ByRef errorCodes As String)
@@ -1009,7 +1071,6 @@ Namespace OrdersImport
                 rowSOTORDR1.Item("SHIP_VIA_CODE") = String.Empty
             End If
 
-            rowSOTORDR1.Item("SHIP_VIA_DESC") = String.Empty
             rowSOTORDR1.Item("POST_CODE") = String.Empty
             rowSOTORDR1.Item("TERM_CODE") = String.Empty
             rowSOTORDR1.Item("SREP_CODE") = String.Empty
@@ -1031,7 +1092,6 @@ Namespace OrdersImport
                 rowTATTERM1 = baseClass.LookUp("TATTERM1", TERM_CODE)
                 If rowTATTERM1 IsNot Nothing Then
                     rowSOTORDR1.Item("TERM_CODE") = TERM_CODE
-                    errorCodes = errorCodes.Replace("T", String.Empty)
                 Else
                     AddCharNoDups("T", errorCodes)
                 End If
@@ -1082,8 +1142,7 @@ Namespace OrdersImport
         ''' <summary>
         ''' Sets Order Detail Information based on the Item's Attributes
         ''' </summary>
-        ''' <param name="ITEM_CODE"></param>
-        ''' <param name="row"></param>
+        ''' <param name="rowSOTORDR2"></param>
         ''' <param name="errorCodes"></param>
         ''' <remarks></remarks>
         Private Sub SetItemInfo(ByRef rowSOTORDR2 As DataRow, ByRef errorCodes As String)
@@ -1169,9 +1228,7 @@ Namespace OrdersImport
         ''' <summary>
         ''' Ship Tos have Overrides to the Customer Master data.
         ''' </summary>
-        ''' <param name="CUST_CODE"></param>
-        ''' <param name="CUST_SHIP_TO_NO"></param>
-        ''' <param name="row"></param>
+        ''' <param name="rowSOTORDR1"></param>
         ''' <param name="errorCodes"></param>
         ''' <remarks></remarks>
         Private Sub SetShipToAttributes(ByRef rowSOTORDR1 As DataRow, ByRef errorCodes As String)
@@ -1190,7 +1247,6 @@ Namespace OrdersImport
                 ' Ship to's have overrides for Tax code, Ship Via Code and Term Code
                 If (rowARTCUST2.Item("CUST_SHIP_TO_STAX_CODE") & String.Empty).ToString.Length > 0 Then
                     rowSOTORDR1.Item("STAX_CODE") = rowARTCUST2.Item("CUST_SHIP_TO_STAX_CODE") & String.Empty
-                    errorCodes = Replace(errorCodes, "X", String.Empty)
                 End If
 
                 If (rowSOTORDR1.Item("ORDR_LOCK_SHIP_VIA") & String.Empty) <> "1" Then
@@ -1198,13 +1254,11 @@ Namespace OrdersImport
                         SetDPDShipViaSettings(rowSOTORDR1, errorCodes)
                     ElseIf (rowARTCUST2.Item("CUST_SHIP_TO_SHIP_VIA_CODE") & String.Empty).ToString.Length > 0 Then
                         rowSOTORDR1.Item("SHIP_VIA_CODE") = rowARTCUST2.Item("CUST_SHIP_TO_SHIP_VIA_CODE") & String.Empty
-                        errorCodes = Replace(errorCodes, "V", String.Empty)
                     End If
                 End If
 
                 If rowARTCUST2.Item("CUST_SHIP_TO_STATUS") & String.Empty = "C" Or _
                     rowARTCUST2.Item("CUST_SHIP_TO_ORDER_BLOCK") & String.Empty = "1" Then
-                    errorCodes = Replace(errorCodes, "S", String.Empty)
                 End If
 
                 rowSOTORDR1.Item("CUST_SHIP_TO_STATE") = rowARTCUST2.Item("CUST_SHIP_TO_STATE") & String.Empty
@@ -1234,7 +1288,7 @@ Namespace OrdersImport
 
             ORDR_REL_HOLD_CODES = String.Empty
 
-            For Each rowSOTORDR2 As DataRow In baseClass.dst.Tables("SOTORDR2").Select("ISNULL(ORDR_REL_HOLD_CODES,'@@@') <> '@@@'")
+            For Each rowSOTORDR2 As DataRow In baseClass.clsASCBASE1.dst.Tables("SOTORDR2").Select("ISNULL(ORDR_REL_HOLD_CODES,'@@@') <> '@@@'")
                 ITEM_LIST = "'" & rowSOTORDR2.Item("ITEM_CODE") & "'"
                 ORDR_REL_HOLD_CODES = rowSOTORDR2.Item("ORDR_REL_HOLD_CODES") & String.Empty
 
@@ -1276,16 +1330,16 @@ Namespace OrdersImport
 
             Dim rValue As String = fieldValue
 
-            If Not baseClass.dst.Tables.Contains(TableName) Then
+            If Not baseClass.clsASCBASE1.dst.Tables.Contains(TableName) Then
                 Return rValue
             End If
 
-            If Not baseClass.dst.Tables(TableName).Columns.Contains(FieldName) Then
+            If Not baseClass.clsASCBASE1.dst.Tables(TableName).Columns.Contains(FieldName) Then
                 Return rValue
             End If
 
             Dim maxLength As Int16 = 0
-            maxLength = baseClass.dst.Tables(TableName).Columns(FieldName).MaxLength
+            maxLength = baseClass.clsASCBASE1.dst.Tables(TableName).Columns(FieldName).MaxLength
 
             If rValue.Length > maxLength Then
                 rValue = rValue.Substring(0, maxLength).Trim
@@ -1302,12 +1356,12 @@ Namespace OrdersImport
         Private Sub UpdateSalesDollars(ByVal OrderNumber As String)
 
             Try
-                Dim rowSOTORDR1 As DataRow = baseClass.dst.Tables("SOTORDR1").Rows(0)
-                Dim tblSOTORDR2 As DataTable = baseClass.dst.Tables("SOTORDR2")
+                Dim rowSOTORDR1 As DataRow = baseClass.clsASCBASE1.dst.Tables("SOTORDR1").Rows(0)
+                Dim tblSOTORDR2 As DataTable = baseClass.clsASCBASE1.dst.Tables("SOTORDR2")
                 Dim ORDR_FREIGHT As Double = 0
 
-                Dim ORDR_TOTAL_QTY As Integer = Val(baseClass.dst.Tables("SOTORDR2").Compute("SUM(ORDR_QTY)", "ORDR_NO = '" & OrderNumber & "'") & String.Empty)
-                Dim ORDR_TOTAL_SALES As Double = Val(baseClass.dst.Tables("SOTORDR2").Compute("SUM(ORDR_LNO_EXT)", "ORDR_NO = '" & OrderNumber & "'") & String.Empty)
+                Dim ORDR_TOTAL_QTY As Integer = Val(baseClass.clsASCBASE1.dst.Tables("SOTORDR2").Compute("SUM(ORDR_QTY)", "ORDR_NO = '" & OrderNumber & "'") & String.Empty)
+                Dim ORDR_TOTAL_SALES As Double = Val(baseClass.clsASCBASE1.dst.Tables("SOTORDR2").Compute("SUM(ORDR_LNO_EXT)", "ORDR_NO = '" & OrderNumber & "'") & String.Empty)
                 Dim shipToPatient As Boolean = rowSOTORDR1.Item("ORDR_DPD") & String.Empty = "1"
 
                 rowSOTORDR1.Item("ORDR_SALES") = Math.Round(ORDR_TOTAL_SALES, 2, MidpointRounding.AwayFromZero)
@@ -1320,7 +1374,7 @@ Namespace OrdersImport
 
                 rowSOTORDR1.Item("ORDR_FREIGHT") = Math.Round(ORDR_FREIGHT, 2, MidpointRounding.AwayFromZero)
 
-                rowSOTORDR1.Item("ORDR_STAX") = Me.GetOrderSalesTaxByState(rowSOTORDR1, baseClass.dst.Tables("SOTORDR2"))
+                rowSOTORDR1.Item("ORDR_STAX") = Me.GetOrderSalesTaxByState(rowSOTORDR1, baseClass.clsASCBASE1.dst.Tables("SOTORDR2"))
                 rowSOTORDR1.Item("ORDR_TOTAL_AMT") = Val(rowSOTORDR1.Item("ORDR_SALES") & String.Empty) _
                     + Val(rowSOTORDR1.Item("ORDR_FREIGHT") & String.Empty) _
                     + Val(rowSOTORDR1.Item("ORDR_STAX") & String.Empty) _
@@ -1338,15 +1392,15 @@ Namespace OrdersImport
 
         Private Sub ClearDataSetTables(ByVal ClearXMTtables As Boolean)
 
-            With baseClass.dst
+            With baseClass.clsASCBASE1.dst
                 .Tables("SOTORDR1").Clear()
                 .Tables("SOTORDR2").Clear()
                 .Tables("SOTORDR3").Clear()
-                .Tables("SOTORDR4").Clear()
+                '.Tables("SOTORDR4").Clear()
                 .Tables("SOTORDR5").Clear()
 
                 .Tables("SOTORDRE").Clear()
-                .Tables("SOTORDRP").Clear()
+                '.Tables("SOTORDRP").Clear()
                 .Tables("SOTORDRW").Clear()
                 .Tables("SOTORDRX").Clear()
 
@@ -1413,7 +1467,7 @@ Namespace OrdersImport
 
         Private Sub LoadTablesForPricing()
 
-            With baseClass.dst
+            With baseClass.clsASCBASE1.dst
 
                 .Tables("SOTORDR1").Columns.Add("ORDR_REL_HOLD_CODES", GetType(System.String))
                 .Tables("SOTORDR2").Columns.Add("QTY_ONH", GetType(System.Int32))
@@ -1438,29 +1492,33 @@ Namespace OrdersImport
 
             Dim sql As String = String.Empty
 
-            With baseClass.dst
+            With baseClass.clsASCBASE1.dst
 
                 baseClass.Create_TDA(.Tables.Add, "SOTORDR1", "*")
                 baseClass.Create_TDA(.Tables.Add, "SOTORDR2", "*", 1)
+
+                With .Tables("SOTORDR2")
+                    .Columns.Add("ORDR_LNO_EXT", GetType(System.Double), "ISNULL(ORDR_QTY, 0) * ISNULL(ORDR_UNIT_PRICE, 0)")
+                End With
+
                 baseClass.Create_TDA(.Tables.Add, "SOTORDR3", "*", 1)
                 baseClass.Create_TDA(.Tables.Add, "SOTORDR5", "*", 1)
 
                 baseClass.Create_TDA(.Tables.Add, "SOTORDRW", "*", 1)
-                baseClass.Create_TDA(.Tables.Add, "SOTORDRE", "*")
+                baseClass.Create_TDA(.Tables.Add, "SOTORDRE", "*", 0)
 
-                sql = "SELECT * FROM XSTORDR1 WHERE NVL(PROCESS_IND, '0') = '0'"
-                baseClass.Create_TDA(.Tables.Add, "XSTORDR1", sql)
+                baseClass.Create_TDA(.Tables.Add, "XSTORDR1", "*", 1)
                 baseClass.Create_TDA(.Tables.Add, "XSTORDR2", "*", 1)
 
-                baseClass.Create_TDA(.Tables.Add, "XMTXREF1", "*", 1)
+                baseClass.Create_TDA(.Tables.Add, "XMTXREF1", "*")
                 baseClass.Fill_Records("XMTXREF1", String.Empty, True, "Select * From XMTXREF1")
 
                 LoadTablesForPricing()
 
-                baseClass.Create_TDA(.Tables.Add, "PPTPARM1", "*", 1)
+                baseClass.Create_TDA(.Tables.Add, "PPTPARM1", "*")
                 baseClass.Fill_Records("PPTPARM1", String.Empty, True, "Select * From PPTPARM1")
 
-                rowSOTPARM1 = ABSolution.ASCDATA1.GetDataRow("SELECT * FROM SOTPARM1 WHERE SO_PARM_KEY = 'Z'")
+                Dim rowSOTPARM1 As DataRow = ABSolution.ASCDATA1.GetDataRow("SELECT * FROM SOTPARM1 WHERE SO_PARM_KEY = 'Z'")
 
                 If rowSOTPARM1 IsNot Nothing Then
                     DpdDefaultShipViaCode = (rowSOTPARM1.Item("SO_PARM_SHIP_VIA_CODE_DPD") & String.Empty).ToString.Trim
@@ -1542,15 +1600,13 @@ Namespace OrdersImport
                 .Tables("SOTORDRX").Columns.Add("CUST_SHIP_TO_PHONE", GetType(System.String))
                 .Tables("SOTORDRX").Columns.Add("CUST_SHIP_TO_COUNTRY", GetType(System.String))
 
-                .Tables("SOTORDRX").Columns.Add("PATIENT_BILL_TO_NAME", GetType(System.String))
-                .Tables("SOTORDRX").Columns.Add("PATIENT_BILL_TO_ADDR1", GetType(System.String))
-                .Tables("SOTORDRX").Columns.Add("PATIENT_BILL_TO_ADDR2", GetType(System.String))
-                .Tables("SOTORDRX").Columns.Add("PATIENT_BILL_TO_ADDR3", GetType(System.String))
-                .Tables("SOTORDRX").Columns.Add("PATIENT_BILL_TO_CITY", GetType(System.String))
-                .Tables("SOTORDRX").Columns.Add("PATIENT_BILL_TO_STATE", GetType(System.String))
-                .Tables("SOTORDRX").Columns.Add("PATIENT_BILL_TO_ZIP_CODE", GetType(System.String))
-                .Tables("SOTORDRX").Columns.Add("PATIENT_BILL_TO_PHONE", GetType(System.String))
-                .Tables("SOTORDRX").Columns.Add("PATIENT_BILL_COUNTRY", GetType(System.String))
+                .Tables("SOTORDRX").Columns.Add("BILLING_NAME", GetType(System.String))
+                .Tables("SOTORDRX").Columns.Add("BILLING_ADDRESS1", GetType(System.String))
+                .Tables("SOTORDRX").Columns.Add("BILLING_ADDRESS2", GetType(System.String))
+                .Tables("SOTORDRX").Columns.Add("BILLING_CITY", GetType(System.String))
+                .Tables("SOTORDRX").Columns.Add("BILLING_STATE", GetType(System.String))
+                .Tables("SOTORDRX").Columns.Add("BILLING_ZIP", GetType(System.String))
+                .Tables("SOTORDRX").Columns.Add("PAYMENT_METHOD", GetType(System.String))
 
                 .Tables("SOTORDRX").Columns.Add("CUST_NAME", GetType(System.String))
                 .Tables("SOTORDRX").Columns.Add("CUST_ADDR1", GetType(System.String))
@@ -1564,6 +1620,11 @@ Namespace OrdersImport
                 .Tables("SOTORDRX").Columns.Add("ORDR_LOCK_SHIP_VIA", GetType(System.String))
                 .Tables("SOTORDRX").Columns.Add("ORDR_COMMENT", GetType(System.String))
 
+                .Tables("SOTORDRX").Columns.Add("PRESCRIBING_DOCTOR", GetType(System.String))
+                .Tables("SOTORDRX").Columns.Add("TAX_SHIPPING", GetType(System.String))
+                .Tables("SOTORDRX").Columns.Add("PATIENT_STAX_RATE", GetType(System.String))
+                .Tables("SOTORDRX").Columns.Add("OFFICE_WEBSITE", GetType(System.String))
+
             End With
 
         End Sub
@@ -1575,6 +1636,7 @@ Namespace OrdersImport
             With baseClass
                 Try
                     .BeginTrans()
+                    .INIT_LAST("SOTORDR1", True, String.Empty, True)
                     .Update_Record_TDA("SOTORDR1")
                     .Update_Record_TDA("SOTORDR2")
                     .Update_Record_TDA("SOTORDR3")
