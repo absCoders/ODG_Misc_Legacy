@@ -3,6 +3,8 @@
 Namespace OrdersImport
 
     Public Class SalesOrderImporter
+
+        Private WithEvents importTimer As System.Threading.Timer
         Declare Function ProcessIdToSessionId Lib "kernel32.dll" (ByVal dwProcessId As Int32, ByRef pSessionId As Int32) As Int32
 
 
@@ -56,6 +58,15 @@ Namespace OrdersImport
 #End Region
 
 #Region "Data Management"
+
+        Public Sub LogIn()
+            importTimer = New System.Threading.Timer _
+                (New System.Threading.TimerCallback(AddressOf StartingProcess), Nothing, 10000, 1800000) ' every 30 mins 
+        End Sub
+
+        Private Sub StartingProcess()
+            ' Do nothing. just a way to start the service
+        End Sub
 
         Private Function LogIntoDatabase() As Boolean
             LogIntoDatabase = False
@@ -180,7 +191,28 @@ Namespace OrdersImport
         End Function
 
         Private Sub ProcessSalesOrders()
-            For Each orderSourceCode As String In "XOVFCY"
+
+            Dim orderSourceHash As New Hashtable
+            orderSourceHash.Add("X", "XML")
+            orderSourceHash.Add("O", "OptiPort")
+            orderSourceHash.Add("V", "Vision Web")
+            orderSourceHash.Add("F", "eyeFinity")
+            orderSourceHash.Add("C", "Customer Excel")
+            orderSourceHash.Add("Y", "Eyeconic")
+
+            ABSolution.ASCMAIN1.SESSION_NO = "123456"
+
+            If ABSolution.ASCMAIN1.ActiveForm Is Nothing Then
+                ABSolution.ASCMAIN1.ActiveForm = New ABSolution.ASFBASE1
+            End If
+            ABSolution.ASCMAIN1.ActiveForm.SELECTION_NO = "1"
+
+            For Each orderSourceCode As String In orderSourceHash.Keys
+
+                If Not ABSolution.ASCMAIN1.Logical_Lock("IMPSVC01", orderSourceCode, False, False, True, 1) Then
+                    RecordLogEntry("Order Import Type: " & orderSourceHash(orderSourceCode) & " locked by previous instance.")
+                    Continue For
+                End If
 
                 ClearDataSetTables(True)
 
@@ -198,6 +230,8 @@ Namespace OrdersImport
                     Case "Y" ' Eyeconic
                         ProcessEyeconicSalesOrders(orderSourceCode)
                 End Select
+
+                ABSolution.ASCMAIN1.MultiTask_Release(, , 1)
             Next
         End Sub
 

@@ -97,6 +97,8 @@ Public Class ServiceEngine
                 .CreateDirectory(Me._config.FileFolder & "ARCHIVE\")
             End If
         End With
+
+        importer.LogIn()
     End Sub
 
     Private Delegate Sub DataReceivedDelegate( _
