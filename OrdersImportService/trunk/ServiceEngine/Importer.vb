@@ -261,7 +261,7 @@ Namespace OrdersImport
             Dim ORDR_LINE_SOURCE As String = String.Empty
 
             Try
-                baseClass.clsASCBASE1.Fill_Records("XSTORDR1", String.Empty, True, "SELECT * FROM XSTORDR1 WHERE NVL(PROCESS_IND, '0') = '0'")
+                baseClass.clsASCBASE1.Fill_Records("XSTORDR1", String.Empty, True, "SELECT * FROM XSTORDR1 WHERE NVL(PROCESS_IND, '0') = '0' AND ORDR_SOURCE = 'VSP'")
                 If dst.Tables("XSTORDR1").Rows.Count = 0 Then
                     RecordLogEntry("No Eyeconic Sales Orders to process.")
                     Exit Sub
