@@ -1012,7 +1012,7 @@ Namespace OrdersImport
                 End If
 
                 If (rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") & String.Empty).ToString.Trim.Length = 0 Then
-                    If Not Me.UpdateSalesDollars(ORDR_NO) Then
+                    If Not Me.UpdateSalesOrderTotal(ORDR_NO) Then
                         rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") = rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") & "J"
                     End If
                 End If
@@ -1111,7 +1111,7 @@ Namespace OrdersImport
                 RecordLogEntry("GetOrderSalesTaxByState: (" & ORDR_NO & ")" & ex.Message)
                 Return -1
             End Try
-           
+
 
         End Function
 
@@ -1461,7 +1461,7 @@ Namespace OrdersImport
                 RecordLogEntry("SetShipToAttributes: (" & rowSOTORDR1.Item("ORDR_NO") & ") " & ex.Message)
                 Return False
             End Try
-           
+
         End Function
 
         Private Function TestAuthorizationsAndBlocks(ByRef rowSOTORDR1 As DataRow) As Boolean
@@ -1561,7 +1561,7 @@ Namespace OrdersImport
         ''' </summary>
         ''' <param name="OrderNumber"></param>
         ''' <remarks></remarks>
-        Private Function UpdateSalesDollars(ByVal ORDR_NO As String) As Boolean
+        Private Function UpdateSalesOrderTotal(ByVal ORDR_NO As String) As Boolean
 
             Dim rowSOTORDR1 As DataRow = Nothing
 
