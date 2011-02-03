@@ -52,9 +52,13 @@ Namespace OrdersImport
                 Exit Sub
             End If
 
+            System.Threading.Thread.Sleep(2000)
             If LogIntoDatabase() Then
+                System.Threading.Thread.Sleep(2000)
                 If InitializeSettings() Then
+                    System.Threading.Thread.Sleep(2000)
                     If PrepareDatasetEntries() Then
+                        System.Threading.Thread.Sleep(2000)
                         ProcessSalesOrders()
                     End If
                 End If
@@ -118,10 +122,11 @@ Namespace OrdersImport
                 ABSolution.ASCMAIN1.DBS_SERVER_NAME = myWorkstation
 
                 RecordLogEntry("Successful log into Oracle.")
+                Return True
 
             Catch ex As Exception
-                LogIntoDatabase = False
-                RecordLogEntry("Error logging into Oracle: " & ex.Message)
+                RecordLogEntry("LogIntoDatabase: " & ex.Message)
+                Return False
             End Try
 
         End Function
@@ -193,6 +198,7 @@ Namespace OrdersImport
                 Return True
 
             Catch ex As Exception
+                RecordLogEntry("InitializeSettings: " & ex.Message)
                 Return False
             End Try
 
