@@ -19,6 +19,9 @@ Public Class ServiceConfig
     Private Const DefaultFileFolder = "C:\ABS\ORDERIMP\"
     Private _FileFolder As String = DefaultFileFolder
 
+    Private _created As Date
+    Private _backcolor As System.Drawing.Color
+
     <DefaultValue(DefaultTNS)> _
     <Category("Oracle")> _
     <Description("This is the TNS Name of the Oracle Database that the Service write results to")> _
@@ -71,8 +74,6 @@ Public Class ServiceConfig
         End Set
     End Property
 
-
-    Private _created As Date
     Public Property Created() As Date
         Get
             Return Me._created
@@ -82,7 +83,6 @@ Public Class ServiceConfig
         End Set
     End Property
 
-    Private _backcolor As System.Drawing.Color
     Public Property BackColor() As System.Drawing.Color
         Get
             Return Me._backcolor
@@ -91,4 +91,5 @@ Public Class ServiceConfig
             Me._backcolor = value
         End Set
     End Property
+
 End Class

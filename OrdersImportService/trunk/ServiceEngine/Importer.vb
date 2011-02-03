@@ -42,7 +42,11 @@ Namespace OrdersImport
 
             Dim svcConfig As New ServiceConfig
 
-            filefolder = svcConfig.FileFolder
+            If UCase(My.Application.Info.DirectoryPath) Like "C:\VS\*" Then
+                filefolder = svcConfig.FileFolder
+            Else
+                filefolder = My.Application.Info.DirectoryPath
+            End If
 
             If Not OpenLogFile() Then
                 Exit Sub
@@ -531,13 +535,22 @@ Namespace OrdersImport
 
         End Sub
 
-        Private Function CreateCustomerShipTo(ByVal CUST_CODE As String, ByVal CUST_SHIP_TO_NO As String, ByRef rowSOTORDRX As DataRow) As Boolean
+        Private Function CreateCustomerShipTo(ByVal CUST_CODE As String, ByVal CUST_SHIP_TO_NO As String _
+                                            , ByRef rowSOTORDRX As DataRow, ByRef rowARTCUST1 As DataRow) As Boolean
 
             Try
+
+                If rowARTCUST1 Is Nothing OrElse (rowARTCUST1.Item("CUST_CODE") & String.Empty).ToString.Trim.Length = 0 Then
+                    Return True
+                End If
+
                 Dim sql As String = String.Empty
                 Dim CUST_SHIP_TO_SHIP_VIA_CODE As String = String.Empty
                 Dim CUST_SHIP_TO_STATE As String = (rowSOTORDRX.Item("CUST_SHIP_TO_STATE") & String.Empty).ToString.Replace("'", "").Trim
+                Dim STAX_EXEMPT As String = (rowARTCUST1.Item("STAX_EXEMPT") & String.Empty).ToString.Trim
+                If STAX_EXEMPT.Length = 0 Then STAX_EXEMPT = "0"
 
+                ' See if we have predetermined Ship vias for the customer / state combination
                 Dim rowSOTSVIAE As DataRow = ABSolution.ASCDATA1.GetDataRow("SELECT * FROM SOTSVIAE WHERE CUST_CODE = '" & CUST_CODE & "' AND STATE_CODE = '" & CUST_SHIP_TO_STATE & "'")
                 If rowSOTSVIAE IsNot Nothing Then
                     CUST_SHIP_TO_SHIP_VIA_CODE = (rowSOTSVIAE.Item("SHIP_VIA_CODE") & String.Empty).ToString.Trim
@@ -549,7 +562,7 @@ Namespace OrdersImport
                 sql &= " CUST_SHIP_TO_ADDR1, CUST_SHIP_TO_ADDR2, CUST_SHIP_TO_ADDR3,"
                 sql &= " CUST_SHIP_TO_CITY, CUST_SHIP_TO_STATE, CUST_SHIP_TO_ZIP_CODE,"
                 sql &= " CUST_SHIP_TO_COUNTRY, INIT_DATE, INIT_OPER,"
-                sql &= " LAST_DATE, LAST_OPER, CUST_SHIP_TO_STATUS, CUST_SHIP_TO_SHIP_VIA_CODE"
+                sql &= " LAST_DATE, LAST_OPER, CUST_SHIP_TO_STATUS, CUST_SHIP_TO_SHIP_VIA_CODE, STAX_EXEMPT"
                 sql &= ")"
                 sql &= " VALUES "
                 sql &= " ("
@@ -569,6 +582,7 @@ Namespace OrdersImport
                 sql &= ", '" & ABSolution.ASCMAIN1.USER_ID & "'"
                 sql &= ", 'A'"
                 sql &= ", '" & CUST_SHIP_TO_SHIP_VIA_CODE & "'"
+                sql &= ", '" & STAX_EXEMPT & "'"
                 sql &= ")"
 
                 ABSolution.ASCDATA1.ExecuteSQL(sql)
@@ -781,8 +795,8 @@ Namespace OrdersImport
                 rowARTCUST2 = baseClass.LookUp("ARTCUST2", New String() {CUST_CODE, CUST_SHIP_TO_NO})
                 rowARTCUST3 = baseClass.LookUp("ARTCUST3", CUST_CODE)
 
-                If CreateShipTo = True AndAlso CUST_SHIP_TO_NO.Length > 0 AndAlso rowARTCUST2 Is Nothing Then
-                    CreateCustomerShipTo(CUST_CODE, CUST_SHIP_TO_NO, rowSOTORDRX)
+                If rowARTCUST2 Is Nothing AndAlso rowARTCUST1 IsNot Nothing AndAlso CreateShipTo = True AndAlso CUST_SHIP_TO_NO.Length > 0 Then
+                    CreateCustomerShipTo(CUST_CODE, CUST_SHIP_TO_NO, rowSOTORDRX, rowARTCUST1)
                 End If
 
                 rowSOTORDR1 = dst.Tables("SOTORDR1").NewRow
