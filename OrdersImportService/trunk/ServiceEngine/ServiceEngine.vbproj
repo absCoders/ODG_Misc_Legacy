@@ -55,9 +55,9 @@
     <PlatformTarget>x86</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ABS, Version=1.1.203.4, Culture=neutral, processorArchitecture=x86">
+    <Reference Include="ABS, Version=1.1.203.10, Culture=neutral, processorArchitecture=x86">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\ODG\ABS\bin\x86\Release\ABS.exe</HintPath>
+      <HintPath>..\DLLS\ABS.exe</HintPath>
     </Reference>
     <Reference Include="Oracle.DataAccess, Version=2.112.1.0, Culture=neutral, PublicKeyToken=89b483f429c47342" />
     <Reference Include="System" />
@@ -69,7 +69,7 @@
     <Reference Include="System.Xml" />
     <Reference Include="TAC, Version=1.0.0.0, Culture=neutral, processorArchitecture=x86">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\ODG\TAC\bin\x86\Release\TAC.dll</HintPath>
+      <HintPath>..\DLLS\TAC.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>

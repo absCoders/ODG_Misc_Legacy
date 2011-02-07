@@ -1579,7 +1579,7 @@ Namespace OrdersImport
         ''' <summary>
         ''' Updates the Freight for an Order
         ''' </summary>
-        ''' <param name="OrderNumber"></param>
+        ''' <param name="ORDR_NO"></param>
         ''' <remarks></remarks>
         Private Function UpdateSalesOrderTotal(ByVal ORDR_NO As String) As Boolean
 
