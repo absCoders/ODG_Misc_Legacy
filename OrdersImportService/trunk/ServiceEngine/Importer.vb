@@ -42,10 +42,15 @@ Namespace OrdersImport
 
             Dim svcConfig As New ServiceConfig
 
-            If UCase(My.Application.Info.DirectoryPath) Like "C:\VS\*" Then
-                filefolder = svcConfig.FileFolder
-            Else
-                filefolder = My.Application.Info.DirectoryPath
+            filefolder = svcConfig.FileFolder
+            'If UCase(My.Application.Info.DirectoryPath) Like "C:\VS\*" Then
+            '    filefolder = svcConfig.FileFolder
+            'Else
+            '    filefolder = My.Application.Info.DirectoryPath
+            'End If
+
+            If Not My.Computer.FileSystem.DirectoryExists(filefolder) Then
+                My.Computer.FileSystem.CreateDirectory(filefolder)
             End If
 
             If Not OpenLogFile() Then
