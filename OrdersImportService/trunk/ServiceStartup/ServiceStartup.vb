@@ -12,6 +12,7 @@ Public Class ServiceStartup
     Private Const ConfigFileName As String = "OrdersImportService.xml"
     Private _configFileName As String = _
     Application.StartupPath & "\" & ConfigFileName
+    Private _engine As ServiceEngine.ServiceEngine
 
     Protected Overrides Sub OnStart(ByVal args() As String)
         ' Add code here to start your service. This method should set things
@@ -33,6 +34,11 @@ Public Class ServiceStartup
         'Me.WriteToLog(0, "Listening on Port " & Me._config.Port.ToString)
 
         Try
+            Me._engine = ServiceEngine.ServiceEngine.GetInstance(Me._config)
+
+            AddHandler _engine.StatusUpdate, AddressOf StatusUpdate
+            '        AddHandler cmbctl.KeyDown, AddressOf cmb_KeyDown
+            Me._engine.Start()
 
         Catch ex As Exception
             Me.WriteToLog(0, "Fatal Error Starting Engine (" & ex.Message & ")")

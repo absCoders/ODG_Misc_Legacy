@@ -43,42 +43,45 @@ Namespace OrdersImport
             Dim svcConfig As New ServiceConfig
 
             filefolder = svcConfig.FileFolder
-            'If UCase(My.Application.Info.DirectoryPath) Like "C:\VS\*" Then
-            '    filefolder = svcConfig.FileFolder
-            'Else
-            '    filefolder = My.Application.Info.DirectoryPath
-            'End If
 
             If Not My.Computer.FileSystem.DirectoryExists(filefolder) Then
                 My.Computer.FileSystem.CreateDirectory(filefolder)
             End If
 
-            If Not OpenLogFile() Then
-                Exit Sub
-            End If
-
-            System.Threading.Thread.Sleep(2000)
-            If LogIntoDatabase() Then
-                System.Threading.Thread.Sleep(2000)
-                If InitializeSettings() Then
-                    System.Threading.Thread.Sleep(2000)
-                    If PrepareDatasetEntries() Then
-                        System.Threading.Thread.Sleep(2000)
-                        ProcessSalesOrders()
-                    End If
-                End If
-            End If
-
-            CloseLog()
         End Sub
 
 #End Region
 
 #Region "Data Management"
 
+        Private Sub MainProcess()
+            Try
+                If Not OpenLogFile() Then
+                    Exit Sub
+                End If
+
+                System.Threading.Thread.Sleep(2000)
+                If LogIntoDatabase() Then
+                    System.Threading.Thread.Sleep(2000)
+                    If InitializeSettings() Then
+                        System.Threading.Thread.Sleep(2000)
+                        If PrepareDatasetEntries() Then
+                            System.Threading.Thread.Sleep(2000)
+                            ProcessSalesOrders()
+                        End If
+                    End If
+                End If
+
+                CloseLog()
+            Catch ex As Exception
+
+            End Try
+
+        End Sub
+
         Public Sub LogIn()
             importTimer = New System.Threading.Timer _
-                (New System.Threading.TimerCallback(AddressOf StartingProcess), Nothing, 60000, 600000) ' every 10 mins 
+                (New System.Threading.TimerCallback(AddressOf MainProcess), Nothing, 3000, 600000) ' every 10 mins 
         End Sub
 
         Private Sub StartingProcess()
@@ -1954,7 +1957,12 @@ Namespace OrdersImport
                     logStreamWriter.Close()
                     logStreamWriter.Dispose()
                 End If
-                logStreamWriter = New System.IO.StreamWriter(filefolder & logFilename, True)
+
+                Dim logdirectory As String = filefolder
+                If Not logdirectory.EndsWith("\") Then logdirectory &= "\"
+                logdirectory &= "Logs\"
+
+                logStreamWriter = New System.IO.StreamWriter(logdirectory & logFilename, True)
 
                 Return True
             Catch ex As Exception
