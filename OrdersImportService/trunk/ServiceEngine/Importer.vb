@@ -7,7 +7,6 @@ Namespace OrdersImport
         Private WithEvents importTimer As System.Threading.Timer
         Declare Function ProcessIdToSessionId Lib "kernel32.dll" (ByVal dwProcessId As Int32, ByRef pSessionId As Int32) As Int32
 
-
 #Region "Service Variables"
 
         Private baseClass As ABSolution.ASFBASE1
@@ -33,6 +32,28 @@ Namespace OrdersImport
         Private rowICTITEM1 As DataRow = Nothing
 
         Private dst As DataSet
+
+        Private Const testMode As Boolean = True
+
+        ' Header Errors
+        Private Const InvalidSoldTo = "B"
+        Private Const InvalidShipTo = "S"
+        Private Const InvalidShipVia = "V"
+        Private Const ReviewSpecInstr = "R"
+        Private Const InvalidTaxCode = "X"
+        Private Const InvalidTermsCode = "T"
+        Private Const InvalidSalesTax = "G"
+        Private Const InvalidDPD = "D"
+        Private Const InvalidPricing = "H"
+        Private Const InvalidSalesOrderTotal = "J"
+
+        'Detail Errors
+        Private Const QtyOrdered = "Q"
+        Private Const InvalidItem = "I"
+        Private Const InvalidUOM = "U"
+        Private Const FrozenInactiveItem = "F"
+        Private Const ItemAuthorizationError = "0"
+        Private Const RevenueItemNoPrice = "N"
 
 #End Region
 
@@ -60,6 +81,8 @@ Namespace OrdersImport
                     Exit Sub
                 End If
 
+                If testMode Then RecordLogEntry("Enter MainProcess.")
+
                 System.Threading.Thread.Sleep(2000)
                 If LogIntoDatabase() Then
                     System.Threading.Thread.Sleep(2000)
@@ -72,9 +95,11 @@ Namespace OrdersImport
                     End If
                 End If
 
+                If testMode Then RecordLogEntry("Exit MainProcess.")
                 CloseLog()
-            Catch ex As Exception
 
+            Catch ex As Exception
+                RecordLogEntry("MainProcess: " & ex.Message)
             End Try
 
         End Sub
@@ -92,6 +117,9 @@ Namespace OrdersImport
             LogIntoDatabase = False
 
             Try
+
+                If testMode Then RecordLogEntry("Enter LogIntoDatabase.")
+
                 Dim svcConfig As New ServiceConfig
                 ABSolution.ASCMAIN1.DBS_COMPANY = svcConfig.UID
                 ABSolution.ASCMAIN1.DBS_PASSWORD = svcConfig.PWD
@@ -145,8 +173,30 @@ Namespace OrdersImport
 
                 Dim INIT_DATE As Date = DateTime.Now + ABSolution.ASCMAIN1.NowTSD
 
+                If testMode Then RecordLogEntry("Enter InitializeSettings.")
+
                 baseClass = New ABSolution.ASFBASE1
                 pricingClass = New ABSolution.TACMAIN1
+
+                DpdDefaultShipViaCode = String.Empty
+
+                SOTINVH2_PC = String.Empty
+                SOTORDR2_pricing = String.Empty
+                SOTORDRP = String.Empty
+                STAX_CODE_states = New List(Of String)
+
+                logFilename = String.Empty
+                filefolder = String.Empty
+
+                rowARTCUST1 = Nothing
+                rowARTCUST2 = Nothing
+                rowARTCUST3 = Nothing
+
+                rowSOTSVIA1 = Nothing
+                rowTATTERM1 = Nothing
+                rowICTITEM1 = Nothing
+
+                dst = New DataSet
 
                 ABSolution.ASCMAIN1.USER_ID = "service"
 
@@ -202,6 +252,7 @@ Namespace OrdersImport
 
                 ' WTS Session ID
                 ABSolution.ASCMAIN1.WTS_SESSION_ID = GetSessionId()
+                If testMode Then RecordLogEntry("Exit InitializeSettings.")
 
                 Return True
 
@@ -229,6 +280,8 @@ Namespace OrdersImport
 
             Try
 
+                If testMode Then RecordLogEntry("Enter ProcessSalesOrders.")
+
                 Dim orderSourceHash As New Hashtable
                 orderSourceHash.Add("X", "XML")
                 orderSourceHash.Add("O", "OptiPort")
@@ -251,7 +304,9 @@ Namespace OrdersImport
                         Continue For
                     End If
 
-                    ClearDataSetTables(True)
+                    If Not ClearDataSetTables(True) Then
+                        Continue For
+                    End If
 
                     Select Case orderSourceCode
                         Case "X" ' XML
@@ -271,8 +326,10 @@ Namespace OrdersImport
                     ABSolution.ASCMAIN1.MultiTask_Release(, , 1)
                 Next
 
+                If testMode Then RecordLogEntry("Exit ProcessSalesOrders.")
+
             Catch ex As Exception
-                RecordLogEntry("ProcessSalesOrders" & ex.Message)
+                RecordLogEntry("ProcessSalesOrders: " & ex.Message)
             End Try
 
         End Sub
@@ -283,45 +340,82 @@ Namespace OrdersImport
         ''' <remarks></remarks>
         Private Sub ProcessOptiPortSalesOrders(ByVal ORDER_SOURCE_CODE As String)
             Try
+                If testMode Then RecordLogEntry("Enter ProcessOptiPortSalesOrders.")
+
+                ' Place loop here to process the sales orders
+
+                If testMode Then RecordLogEntry("Exit ProcessOptiPortSalesOrders.")
+
+                RecordLogEntry("0 OptiPort sales orders to process")
 
             Catch ex As Exception
-
+                RecordLogEntry("ProcessOptiPortSalesOrders: " & ex.Message)
             End Try
         End Sub
 
         Private Sub ProcessXmlSalesOrders(ByVal ORDER_SOURCE_CODE As String)
 
             Try
+                If testMode Then RecordLogEntry("Enter ProcessXmlSalesOrders.")
+
+                ' Place loop here to process the sales orders
+
+                If testMode Then RecordLogEntry("Exit ProcessXmlSalesOrders.")
+
+                RecordLogEntry("0 Xml sales orders to process")
 
             Catch ex As Exception
-
+                RecordLogEntry("ProcessXmlSalesOrders: " & ex.Message)
             End Try
         End Sub
 
         Private Sub ProcessVisionWebSalesOrders(ByVal ORDER_SOURCE_CODE As String)
 
             Try
+                If testMode Then RecordLogEntry("Enter ProcessVisionWebSalesOrders.")
+
+                ' Place loop here to process the sales orders
+
+                If testMode Then RecordLogEntry("Exit ProcessVisionWebSalesOrders.")
+
+                RecordLogEntry("0 Vision Web sales orders to process")
 
             Catch ex As Exception
-
+                RecordLogEntry("ProcessVisionWebSalesOrders: " & ex.Message)
             End Try
+
         End Sub
 
         Private Sub ProcessEyefinitySalesOrders(ByVal ORDER_SOURCE_CODE As String)
 
             Try
+                If testMode Then RecordLogEntry("Enter ProcessEyefinitySalesOrders.")
+
+                ' Place loop here to process the sales orders
+
+                If testMode Then RecordLogEntry("Exit ProcessEyefinitySalesOrders.")
+
+                RecordLogEntry("0 Eyefinity sales orders to process")
 
             Catch ex As Exception
-
+                RecordLogEntry("ProcessEyefinitySalesOrders: " & ex.Message)
             End Try
+
         End Sub
 
         Private Sub ProcessExcelFormatSalesOrders(ByVal ORDER_SOURCE_CODE As String)
 
             Try
+                If testMode Then RecordLogEntry("Enter ProcessExcelFormatSalesOrders.")
+
+                ' Place loop here to process the sales orders
+
+                If testMode Then RecordLogEntry("Exit ProcessExcelFormatSalesOrders.")
+
+                RecordLogEntry("0 Excel Format sales orders to process")
 
             Catch ex As Exception
-
+                RecordLogEntry("ProcessExcelFormatSalesOrders: " & ex.Message)
             End Try
         End Sub
 
@@ -334,6 +428,8 @@ Namespace OrdersImport
             Dim ORDR_LNO As Int16 = 0
 
             Try
+                If testMode Then RecordLogEntry("Enter ProcessEyeconicSalesOrders.")
+
                 baseClass.clsASCBASE1.Fill_Records("XSTORDR1", String.Empty, True, "SELECT * FROM XSTORDR1 WHERE NVL(PROCESS_IND, '0') = '0' AND ORDR_SOURCE = 'VSP'")
                 If dst.Tables("XSTORDR1").Rows.Count = 0 Then
                     RecordLogEntry("No Eyeconic Sales Orders to process.")
@@ -496,6 +592,8 @@ Namespace OrdersImport
                     End If
                 Next
 
+                If testMode Then RecordLogEntry("Exit ProcessEyeconicSalesOrders.")
+
             Catch ex As Exception
                 RecordLogEntry("ProcessEyeconicSalesOrders: " & ex.Message)
             Finally
@@ -519,6 +617,8 @@ Namespace OrdersImport
         Private Sub AddCharNoDups(ByVal charsToAdd As String, ByRef addToString As String)
 
             Try
+                If testMode Then RecordLogEntry("Enter AddCharNoDups.")
+
                 If addToString Is Nothing Then addToString = String.Empty
                 If charsToAdd Is Nothing Then charsToAdd = String.Empty
 
@@ -543,6 +643,9 @@ Namespace OrdersImport
                 For Each ss As String In stringArray
                     addToString &= ss
                 Next
+
+                If testMode Then RecordLogEntry("Exit AddCharNoDups.")
+
             Catch ex As Exception
                 RecordLogEntry("AddCharNoDups: " & ex.Message)
             End Try
@@ -553,6 +656,7 @@ Namespace OrdersImport
                                             , ByRef rowSOTORDRX As DataRow, ByRef rowARTCUST1 As DataRow) As Boolean
 
             Try
+                If testMode Then RecordLogEntry("Enter CreateCustomerShipTo: " & CUST_CODE)
 
                 If rowARTCUST1 Is Nothing OrElse (rowARTCUST1.Item("CUST_CODE") & String.Empty).ToString.Trim.Length = 0 Then
                     Return True
@@ -603,9 +707,11 @@ Namespace OrdersImport
                 System.Threading.Thread.Sleep(2000)
                 rowARTCUST2 = baseClass.LookUp("ARTCUST2", New String() {CUST_CODE, CUST_SHIP_TO_NO})
 
+                If testMode Then RecordLogEntry("Exit CreateCustomerShipTo: " & CUST_CODE)
+
                 Return True
             Catch ex As Exception
-                RecordLogEntry("CreateCustomerShipTo: " & ex.Message)
+                RecordLogEntry("CreateCustomerShipTo: (" & CUST_CODE & ") " & ex.Message)
                 Return False
             End Try
 
@@ -615,6 +721,9 @@ Namespace OrdersImport
 
             Dim rowSOTORDR5 As DataRow = Nothing
             Try
+
+                If testMode Then RecordLogEntry("Exter CreateOrderBillTo: " & ORDR_NO)
+
                 rowSOTORDR5 = dst.Tables("SOTORDR5").NewRow
 
                 rowSOTORDR5.Item("ORDR_NO") = ORDR_NO
@@ -637,6 +746,8 @@ Namespace OrdersImport
                     rowSOTORDR5.Item("CUST_FAX") = rowARTCUST1.Item("CUST_FAX") & String.Empty
                     rowSOTORDR5.Item("CUST_EMAIL") = rowARTCUST1.Item("CUST_EMAIL") & String.Empty
                 End If
+
+                If testMode Then RecordLogEntry("Exit CreateOrderBillTo: " & ORDR_NO)
                 Return True
 
             Catch ex As Exception
@@ -655,6 +766,8 @@ Namespace OrdersImport
         Private Sub CreateOrderErrorRecord(ByVal ORDR_NO As String, ByVal ORDR_LNO As Integer, ByVal ErrorCode As String, Optional ByVal ErrorMessage As String = "")
 
             Try
+                If testMode Then RecordLogEntry("Enter CreateOrderErrorRecord: " & ORDR_NO)
+
                 If dst.Tables("SOTORDRW").Select("ORDR_NO = '" & ORDR_NO & "' AND ORDR_LNO = " & ORDR_LNO & " AND ORDR_ERROR_CODE = '" & ErrorCode & "'").Length > 0 Then
                     dst.Tables("SOTORDRW").Select("ORDR_NO = '" & ORDR_NO & "' AND ORDR_LNO = " & ORDR_LNO & " AND ORDR_ERROR_CODE = '" & ErrorCode & "'")(0).Delete()
                 End If
@@ -674,9 +787,10 @@ Namespace OrdersImport
                 End If
 
                 dst.Tables("SOTORDRW").Rows.Add(rowSOTORDRW)
+                If testMode Then RecordLogEntry("Exit CreateOrderErrorRecord: " & ORDR_NO)
 
             Catch ex As Exception
-                RecordLogEntry(ex.Message)
+                RecordLogEntry("CreateOrderErrorRecord: " & ex.Message)
             End Try
 
         End Sub
@@ -686,6 +800,9 @@ Namespace OrdersImport
             Dim rowSOTORDR5 As DataRow = Nothing
 
             Try
+
+                If testMode Then RecordLogEntry("Enter CreateOrderShipTo: " & ORDR_NO)
+
                 rowSOTORDR5 = dst.Tables("SOTORDR5").NewRow
                 rowSOTORDR5.Item("ORDR_NO") = ORDR_NO
                 rowSOTORDR5.Item("CUST_ADDR_TYPE") = "ST"
@@ -744,6 +861,7 @@ Namespace OrdersImport
                     rowSOTORDR5.Item("CUST_EMAIL") = rowARTCUST1.Item("CUST_EMAIL") & String.Empty
                 End If
 
+                If testMode Then RecordLogEntry("Exit CreateOrderShipTo: " & ORDR_NO)
                 Return True
 
             Catch ex As Exception
@@ -756,6 +874,9 @@ Namespace OrdersImport
         Private Function CreateSalesOrder(ByVal CreateShipTo As Boolean, ByRef ORDR_NO As String) As Boolean
 
             Try
+
+                If testMode Then RecordLogEntry("Enter CreateSalesOrder: " & ORDR_NO)
+
                 CreateSalesOrder = False
                 ORDR_NO = String.Empty
 
@@ -782,6 +903,7 @@ Namespace OrdersImport
                 Dim rowSOTORDR1 As DataRow = Nothing
                 Dim rowSOTORDR2 As DataRow = Nothing
                 Dim rowSOTORDR3 As DataRow = Nothing
+                Dim rowICTPCAT1 As DataRow = Nothing
 
                 Dim errorCodes As String = String.Empty
 
@@ -871,20 +993,20 @@ Namespace OrdersImport
                 Me.AddCharNoDups(errorCodes, SOTORDR1ErrorCodes)
 
                 If (rowSOTORDR1.Item("SHIP_VIA_CODE") & String.Empty).ToString.Trim.Length = 0 Then
-                    Me.AddCharNoDups("V", SOTORDR1ErrorCodes)
+                    Me.AddCharNoDups(InvalidShipVia, SOTORDR1ErrorCodes)
                 End If
 
                 ' Ship To
                 If CUST_SHIP_TO_NO.Length > 0 Then
                     If Not Me.SetShipToAttributes(rowSOTORDR1, SOTORDR1ErrorCodes) Then
-                        Me.AddCharNoDups("C", SOTORDR1ErrorCodes)
+                        Me.AddCharNoDups(InvalidShipTo, SOTORDR1ErrorCodes)
                     End If
                 End If
 
                 ' Set DPD settings
                 If shipToPatient = True Then
                     If Not Me.SetDPDShipViaSettings(rowSOTORDR1, SOTORDR1ErrorCodes) Then
-                        Me.AddCharNoDups("D", SOTORDR1ErrorCodes)
+                        Me.AddCharNoDups(InvalidDPD, SOTORDR1ErrorCodes)
                     End If
                 End If
 
@@ -935,7 +1057,7 @@ Namespace OrdersImport
 
                 Dim ORDR_COMMENT As String = (rowSOTORDRX.Item("ORDR_COMMENT") & String.Empty).ToString.Trim
                 If ORDR_COMMENT.Length > 0 Then
-                    Me.AddCharNoDups("R", SOTORDR1ErrorCodes)
+                    Me.AddCharNoDups(ReviewSpecInstr, SOTORDR1ErrorCodes)
 
                     rowSOTORDR1.Item("ORDR_COMMENT") = TruncateField(ORDR_COMMENT, "SOTORDR1", "ORDR_COMMENT")
 
@@ -997,7 +1119,7 @@ Namespace OrdersImport
                     rowSOTORDR2.Item("ORDR_LR") = rowImportDetails.Item("ORDR_LR")
 
                     If ORDR_QTY <= 0 Then
-                        Me.AddCharNoDups("Q", SOTORDR1ErrorCodes)
+                        Me.AddCharNoDups(QtyOrdered, SOTORDR1ErrorCodes)
                     End If
 
                     rowSOTORDR2.Item("ORDR_QTY_PICK") = 0
@@ -1019,15 +1141,15 @@ Namespace OrdersImport
                 Next
 
                 If Not CreateOrderBillTo(ORDR_NO) Then
-                    Me.AddCharNoDups("E", SOTORDR1ErrorCodes)
+                    Me.AddCharNoDups(InvalidSoldTo, SOTORDR1ErrorCodes)
                 End If
 
                 If Not CreateOrderShipTo(ORDR_NO, rowSOTORDRX, shipToPatient) Then
-                    Me.AddCharNoDups("F", SOTORDR1ErrorCodes)
+                    Me.AddCharNoDups(InvalidShipTo, SOTORDR1ErrorCodes)
                 End If
 
                 If Not CreateSalesOrderTax(ORDR_NO) Then
-                    Me.AddCharNoDups("G", SOTORDR1ErrorCodes)
+                    Me.AddCharNoDups(InvalidSalesTax, SOTORDR1ErrorCodes)
                 End If
 
                 SOTORDR1ErrorCodes &= String.Empty
@@ -1035,13 +1157,26 @@ Namespace OrdersImport
 
                 If (rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") & String.Empty).ToString.Trim.Length = 0 Then
                     If Not Me.GetSalesOrderUnitPrices(ORDR_NO) Then
-                        rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") = rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") & "H"
+                        rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") = rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") & InvalidPricing
+                    Else
+                        ' Make sure there are no Revenue items where the Order Unit Price is 0
+                        Dim revenueAtZero As Boolean = False
+                        For Each rowSOTORDR2_P As DataRow In dst.Tables("SOTORDR2").Select("ORDR_UNIT_PRICE = 0")
+                            rowICTPCAT1 = baseClass.LookUp("ICTPCAT1", rowSOTORDR2_P.Item("PRICE_CATGY_CODE") & String.Empty)
+                            If rowICTPCAT1.Item("PRICE_CATGY_SAMPLE_IND") & String.Empty <> "1" Then
+                                rowSOTORDR2_P.Item("ORDR_REL_HOLD_CODES") = (rowSOTORDR2_P.Item("ORDR_REL_HOLD_CODES") & String.Empty).ToString.Trim & RevenueItemNoPrice
+                                revenueAtZero = True
+                            End If
+                        Next
+                        If revenueAtZero Then
+                            rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") = rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") & RevenueItemNoPrice
+                        End If
                     End If
                 End If
 
                 If (rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") & String.Empty).ToString.Trim.Length = 0 Then
                     If Not Me.UpdateSalesOrderTotal(ORDR_NO) Then
-                        rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") = rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") & "J"
+                        rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") = rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") & InvalidSalesOrderTotal
                     End If
                 End If
 
@@ -1055,6 +1190,7 @@ Namespace OrdersImport
                 rowSOTORDR1.Item("INIT_OPER") = ABSolution.ASCMAIN1.USER_ID
                 rowSOTORDR1.Item("LAST_OPER") = ABSolution.ASCMAIN1.USER_ID
 
+                If testMode Then RecordLogEntry("Exit CreateSalesOrder: " & ORDR_NO)
                 CreateSalesOrder = True
 
             Catch ex As Exception
@@ -1069,6 +1205,8 @@ Namespace OrdersImport
             Dim rowSOTORDR1 As DataRow = Nothing
 
             Try
+                If testMode Then RecordLogEntry("Enter CreateSalesOrderTax.")
+
                 Dim CUST_SHIP_TO_ZIP_TAX As String = String.Empty
                 Dim CUST_SHIP_TO_STATE As String = String.Empty
                 Dim STAX_EXEMPT As String = String.Empty
@@ -1101,7 +1239,9 @@ Namespace OrdersImport
                 rowSOTORDR1.Item("STAX_CODE") = IIf(STAX_CODE_states.Contains(STAX_CODE), STAX_CODE, String.Empty)
                 rowSOTORDR1.Item("STAX_RATE") = STAX_RATE
 
+                If testMode Then RecordLogEntry("Exit CreateSalesOrderTax.")
                 Return True
+
             Catch ex As Exception
                 RecordLogEntry("CreateSalesOrderTax: (" & ORDR_NO & ") " & ex.Message)
                 Return False
@@ -1113,6 +1253,8 @@ Namespace OrdersImport
             Dim ORDR_NO As String = String.Empty
 
             Try
+                If testMode Then RecordLogEntry("Enter GetOrderSalesTaxByState.")
+
                 ORDR_NO = rowSOTORDR1.Item("ORDR_NO") & String.Empty
                 Dim CUST_CODE As String = rowSOTORDR1.Item("CUST_CODE") & String.Empty
                 Dim CUST_SHIP_TO_NO As String = rowSOTORDR1.Item("CUST_SHIP_TO_NO") & String.Empty
@@ -1133,6 +1275,7 @@ Namespace OrdersImport
                     rowSOTORDR1.Item("STAX_CODE") = String.Empty
                 End If
 
+                If testMode Then RecordLogEntry("Exit GetOrderSalesTaxByState.")
                 Return Math.Round((taxableAmount * rowSOTORDR1.Item("STAX_RATE")) / 100, 2, MidpointRounding.AwayFromZero)
 
             Catch ex As Exception
@@ -1148,6 +1291,8 @@ Namespace OrdersImport
             Dim rowSOTORDR1 As DataRow = Nothing
 
             Try
+                If testMode Then RecordLogEntry("Enter GetSalesOrderUnitPrices.")
+
                 rowSOTORDR1 = dst.Tables("SOTORDR1").Select("ORDR_NO = '" & ORDR_NO & "'")(0)
                 If Not Me.TestAuthorizationsAndBlocks(rowSOTORDR1) Then
                     Return False
@@ -1169,6 +1314,7 @@ Namespace OrdersImport
                     rowSOTORDR1.Item("REASON_CODE_NO_FRT") = clsSOCORDR1.REASON_CODE_NO_FRT
                 End If
 
+                If testMode Then RecordLogEntry("Exit GetSalesOrderUnitPrices.")
                 Return True
 
             Catch ex As Exception
@@ -1187,6 +1333,9 @@ Namespace OrdersImport
         Private Function SetDPDShipViaSettings(ByRef rowSOTORDR1 As DataRow, ByRef errorCodes As String) As Boolean
 
             Try
+
+                If testMode Then RecordLogEntry("Enter SetDPDShipViaSettings.")
+
                 If (rowSOTORDR1.Item("ORDR_DPD") & String.Empty) <> "1" Then Return True
                 If (rowSOTORDR1.Item("ORDR_LOCK_SHIP_VIA") & String.Empty) = "1" Then Return True
 
@@ -1213,9 +1362,10 @@ Namespace OrdersImport
 
                 If rowSOTSVIA1 IsNot Nothing Then
                     rowSOTORDR1.Item("SHIP_VIA_CODE") = rowSOTSVIA1.Item("SHIP_VIA_CODE") & String.Empty
-                    errorCodes = Replace(errorCodes, "V", String.Empty)
+                    errorCodes = Replace(errorCodes, InvalidShipVia, String.Empty)
                 End If
 
+                If testMode Then RecordLogEntry("Exit SetDPDShipViaSettings.")
                 Return True
             Catch ex As Exception
                 RecordLogEntry("SetDPDShipViaSettings: (" & rowSOTORDR1.Item("ORDR_NO") & ") " & ex.Message)
@@ -1233,12 +1383,17 @@ Namespace OrdersImport
         Private Sub Record_Event(ByVal ORDR_NO As String, ByVal EVENT_DESC As String)
 
             Try
+
+                If testMode Then RecordLogEntry("Enter Record_Event.")
+
                 Dim row As DataRow = dst.Tables("SOTORDRE").NewRow
                 row.Item("ORDR_NO") = ORDR_NO
                 row.Item("INIT_DATE") = DateTime.Now
                 row.Item("INIT_OPER") = ABSolution.ASCMAIN1.USER_ID
                 row.Item("EVENT_DESC") = EVENT_DESC
                 dst.Tables("SOTORDRE").Rows.Add(row)
+
+                If testMode Then RecordLogEntry("Exit Record_Event.")
 
             Catch ex As Exception
                 RecordLogEntry("Record_Event: (" & ORDR_NO & ") " & ex.Message)
@@ -1256,6 +1411,9 @@ Namespace OrdersImport
         Private Function SetBillToAttributes(ByVal CUST_CODE As String, ByVal CUST_SHIP_TO_NO As String, ByRef rowSOTORDR1 As DataRow, ByRef errorCodes As String) As Boolean
 
             Try
+
+                If testMode Then RecordLogEntry("Enter SetBillToAttributes.")
+
                 Dim STAX_CODE As String = String.Empty
                 Dim TERM_CODE As String = String.Empty
                 Dim SHIP_VIA_CODE_FIELD As String = String.Empty
@@ -1293,7 +1451,7 @@ Namespace OrdersImport
                     If rowTATTERM1 IsNot Nothing Then
                         rowSOTORDR1.Item("TERM_CODE") = TERM_CODE
                     Else
-                        AddCharNoDups("T", errorCodes)
+                        AddCharNoDups(InvalidTermsCode, errorCodes)
                     End If
 
                     rowSOTORDR1.Item("POST_CODE") = rowARTCUST1.Item("POST_CODE") & String.Empty
@@ -1304,7 +1462,7 @@ Namespace OrdersImport
                 Else
                     rowSOTORDR1.Item("CUST_NAME") = "Unknown Customer"
                     rowSOTORDR1.Item("CUST_BILL_TO_CUST") = String.Empty
-                    Me.AddCharNoDups("B", errorCodes)
+                    Me.AddCharNoDups(InvalidSoldTo, errorCodes)
                 End If
 
                 If rowSOTORDR1.Item("ORDR_DPD") & String.Empty = "1" Then
@@ -1337,7 +1495,9 @@ Namespace OrdersImport
                     rowSOTORDR1.Item("FRT_CONT_NO") = rowARTCUST3.Item("FRT_CONT_NO") & String.Empty
                 End If
 
+                If testMode Then RecordLogEntry("Exit SetBillToAttributes.")
                 Return True
+
             Catch ex As Exception
                 RecordLogEntry("SetBillToAttributes: (" & rowSOTORDR1.Item("ORDR_NO") & ") " & ex.Message)
                 Return False
@@ -1353,6 +1513,8 @@ Namespace OrdersImport
         ''' <remarks></remarks>
         Private Sub SetItemInfo(ByRef rowSOTORDR2 As DataRow, ByRef errorCodes As String)
             Try
+
+                If testMode Then RecordLogEntry("Enter SetItemInfo.")
 
                 Dim ITEM_CODE As String = rowSOTORDR2.Item("ITEM_CODE") & String.Empty
                 Dim ITEM_DESC2 As String = rowSOTORDR2.Item("ITEM_DESC2") & String.Empty
@@ -1417,7 +1579,7 @@ Namespace OrdersImport
                 End If
 
                 If rowICTITEM1 Is Nothing Then
-                    Me.AddCharNoDups("I", errorCodes)
+                    Me.AddCharNoDups(InvalidItem, errorCodes)
                 Else
                     rowSOTORDR2.Item("ITEM_CODE") = rowICTITEM1.Item("ITEM_CODE") & String.Empty
                     rowSOTORDR2.Item("ITEM_DESC") = rowICTITEM1.Item("ITEM_DESC") & String.Empty
@@ -1426,13 +1588,15 @@ Namespace OrdersImport
                     rowSOTORDR2.Item("PRICE_CATGY_CODE") = rowICTITEM1.Item("PRICE_CATGY_CODE") & String.Empty
 
                     If rowICTITEM1.Item("ITEM_ORDER_CODE") & String.Empty = "X" OrElse rowICTITEM1.Item("ITEM_STATUS") & String.Empty = "I" Then
-                        Me.AddCharNoDups("F", errorCodes)
+                        Me.AddCharNoDups(FrozenInactiveItem, errorCodes)
                     End If
                 End If
 
+                If testMode Then RecordLogEntry("Exit SetItemInfo.")
+
             Catch ex As Exception
-                RecordLogEntry("rowSOTORDR2: (" & rowSOTORDR2.Item("ORDR_NO") & ") " & ex.Message)
-                Me.AddCharNoDups("I", errorCodes)
+                RecordLogEntry("SetItemInfo: (" & rowSOTORDR2.Item("ORDR_NO") & ") " & ex.Message)
+                Me.AddCharNoDups(InvalidItem, errorCodes)
             End Try
 
         End Sub
@@ -1446,6 +1610,9 @@ Namespace OrdersImport
         Private Function SetShipToAttributes(ByRef rowSOTORDR1 As DataRow, ByRef errorCodes As String) As Boolean
 
             Try
+
+                If testMode Then RecordLogEntry("Enter SetShipToAttributes.")
+
                 Dim CUST_CODE As String = rowSOTORDR1.Item("CUST_CODE")
                 Dim CUST_SHIP_TO_NO As String = rowSOTORDR1.Item("CUST_SHIP_TO_NO")
 
@@ -1481,9 +1648,10 @@ Namespace OrdersImport
                 ElseIf CUST_SHIP_TO_NO.Trim.Length > 0 Then
                     rowSOTORDR1.Item("CUST_SHIP_TO_NO") = CUST_SHIP_TO_NO
                     rowSOTORDR1.Item("CUST_SHIP_TO_NAME") = "Unknown"
-                    Me.AddCharNoDups("S", errorCodes)
+                    Me.AddCharNoDups(InvalidShipTo, errorCodes)
                 End If
 
+                If testMode Then RecordLogEntry("Exit SetShipToAttributes.")
                 Return True
             Catch ex As Exception
                 RecordLogEntry("SetShipToAttributes: (" & rowSOTORDR1.Item("ORDR_NO") & ") " & ex.Message)
@@ -1497,6 +1665,7 @@ Namespace OrdersImport
             If clsSOCORDR1 Is Nothing Then Return True
 
             Try
+                If testMode Then RecordLogEntry("Enter TestAuthorizationsAndBlocks.")
 
                 Dim CUST_CODE As String = (rowSOTORDR1.Item("CUST_CODE") & String.Empty).ToString.Trim
                 Dim CUST_SHIP_TO_NO As String = (rowSOTORDR1.Item("CUST_SHIP_TO_NO") & String.Empty).ToString.Trim
@@ -1506,7 +1675,7 @@ Namespace OrdersImport
 
                 ' Remove Header Error Code
                 ORDR_REL_HOLD_CODES = rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") & String.Empty
-                ORDR_REL_HOLD_CODES = ORDR_REL_HOLD_CODES.Replace("0", "") & String.Empty
+                ORDR_REL_HOLD_CODES = ORDR_REL_HOLD_CODES.Replace(ItemAuthorizationError, "") & String.Empty
                 rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") = ORDR_REL_HOLD_CODES
 
                 ORDR_REL_HOLD_CODES = String.Empty
@@ -1516,30 +1685,31 @@ Namespace OrdersImport
                     ORDR_REL_HOLD_CODES = rowSOTORDR2.Item("ORDR_REL_HOLD_CODES") & String.Empty
 
                     ' Remove Detail Error Code
-                    ORDR_REL_HOLD_CODES = ORDR_REL_HOLD_CODES.Replace("0", "") & String.Empty
+                    ORDR_REL_HOLD_CODES = ORDR_REL_HOLD_CODES.Replace(ItemAuthorizationError, "") & String.Empty
 
                     Dim errors As String = clsSOCORDR1.TestAuthorizationsAndBlocks(CUST_CODE, CUST_SHIP_TO_NO, ITEM_LIST, False)
 
                     errors = errors.Trim
                     If errors.Length = 0 Then Continue For
 
-                    ORDR_REL_HOLD_CODES &= "0"
+                    ORDR_REL_HOLD_CODES &= ItemAuthorizationError
 
                     For Each authError As String In errors.Split(vbCr)
                         authError = authError.Trim
                         If authError.Length > 0 Then
-                            CreateOrderErrorRecord(ORDR_NO, 0, "0", authError)
+                            CreateOrderErrorRecord(ORDR_NO, 0, ItemAuthorizationError, authError)
                         End If
                     Next
 
                     ' Place the error on the header
-                    If Not (rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") & String.Empty).ToString.Contains("0") Then
-                        rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") &= "0"
+                    If Not (rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") & String.Empty).ToString.Contains(ItemAuthorizationError) Then
+                        rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") &= ItemAuthorizationError
                     End If
 
                     rowSOTORDR2.Item("ORDR_REL_HOLD_CODES") = ORDR_REL_HOLD_CODES
                 Next
 
+                If testMode Then RecordLogEntry("Exit TestAuthorizationsAndBlocks.")
                 Return True
 
             Catch ex As Exception
@@ -1560,6 +1730,8 @@ Namespace OrdersImport
         Private Function TruncateField(ByVal fieldValue As String, ByVal TableName As String, ByVal FieldName As String) As String
 
             Try
+                If testMode Then RecordLogEntry("Enter TruncateField.")
+
                 Dim rValue As String = fieldValue
 
                 If Not dst.Tables.Contains(TableName) Then
@@ -1577,9 +1749,10 @@ Namespace OrdersImport
                     rValue = rValue.Substring(0, maxLength).Trim
                 End If
 
+                If testMode Then RecordLogEntry("Exit TruncateField.")
                 Return rValue
             Catch ex As Exception
-
+                RecordLogEntry("TruncateField: " & ex.Message)
                 Return fieldValue & String.Empty
             End Try
         End Function
@@ -1594,6 +1767,8 @@ Namespace OrdersImport
             Dim rowSOTORDR1 As DataRow = Nothing
 
             Try
+                If testMode Then RecordLogEntry("Enter UpdateSalesOrderTotal. " & ORDR_NO)
+
                 rowSOTORDR1 = dst.Tables("SOTORDR1").Rows(0)
                 Dim tblSOTORDR2 As DataTable = dst.Tables("SOTORDR2")
                 Dim ORDR_FREIGHT As Double = 0
@@ -1624,10 +1799,11 @@ Namespace OrdersImport
                     + Val(rowSOTORDR1.Item("ORDR_SAMPLE_SURCHARGE") & String.Empty) _
                     + Val(rowSOTORDR1.Item("ORDR_MISC_CHG_AMT") & String.Empty)
 
+                If testMode Then RecordLogEntry("Exit UpdateSalesOrderTotal. " & ORDR_NO)
                 Return True
 
             Catch ex As Exception
-                RecordLogEntry("UpdateSalesDollars: (" & ORDR_NO & ") " & ex.Message)
+                RecordLogEntry("UpdateSalesOrderTotal: (" & ORDR_NO & ") " & ex.Message)
                 Return False
             End Try
         End Function
@@ -1636,28 +1812,40 @@ Namespace OrdersImport
 
 #Region "DataSet Functions"
 
-        Private Sub ClearDataSetTables(ByVal ClearXMTtables As Boolean)
+        Private Function ClearDataSetTables(ByVal ClearXMTtables As Boolean) As Boolean
 
-            With dst
-                .Tables("SOTORDR1").Clear()
-                .Tables("SOTORDR2").Clear()
-                .Tables("SOTORDR3").Clear()
-                .Tables("SOTORDR4").Clear()
-                .Tables("SOTORDR5").Clear()
+            Try
 
-                .Tables("SOTORDRE").Clear()
-                .Tables("SOTORDRP").Clear()
-                .Tables("SOTORDRW").Clear()
-                .Tables("SOTORDRX").Clear()
+                If testMode Then RecordLogEntry("Enter ClearDataSetTables.")
 
-                If ClearXMTtables Then
-                    .Tables("XSTORDR1").Clear()
-                    .Tables("XSTORDR2").Clear()
-                End If
+                With dst
+                    .Tables("SOTORDR1").Clear()
+                    .Tables("SOTORDR2").Clear()
+                    .Tables("SOTORDR3").Clear()
+                    .Tables("SOTORDR4").Clear()
+                    .Tables("SOTORDR5").Clear()
 
-            End With
+                    .Tables("SOTORDRE").Clear()
+                    .Tables("SOTORDRP").Clear()
+                    .Tables("SOTORDRW").Clear()
+                    .Tables("SOTORDRX").Clear()
 
-        End Sub
+                    If ClearXMTtables Then
+                        .Tables("XSTORDR1").Clear()
+                        .Tables("XSTORDR2").Clear()
+                    End If
+
+                End With
+
+                If testMode Then RecordLogEntry("Exit ClearDataSetTables.")
+                Return True
+
+            Catch ex As Exception
+                RecordLogEntry("ClearDataSetTables: " & ex.Message)
+                Return False
+            End Try
+
+        End Function
 
         Private Sub Dependent_Updates(ByVal ORDR_NO As String, ByVal S As Integer)
 
@@ -1667,6 +1855,8 @@ Namespace OrdersImport
             If S = -1 Then
                 PLUS_OR_MINUS = "-1*"
             End If
+
+            If testMode Then RecordLogEntry("Enter Dependent_Updates.")
 
             sql = "" _
             & "BEGIN DECLARE CURSOR C1 IS " _
@@ -1709,13 +1899,18 @@ Namespace OrdersImport
                 ABSolution.ASCDATA1.ExecuteSQL(sql)
             End If
 
+            If testMode Then RecordLogEntry("Exit Dependent_Updates.")
+
         End Sub
 
         Private Sub LoadTablesForPricing()
 
             With dst
 
+                If testMode Then RecordLogEntry("Enter LoadTablesForPricing.")
+
                 .Tables("SOTORDR1").Columns.Add("ORDR_REL_HOLD_CODES", GetType(System.String))
+
                 .Tables("SOTORDR2").Columns.Add("QTY_ONH", GetType(System.Int32))
                 .Tables("SOTORDR2").Columns.Add("QTY_AVA", GetType(System.Int32))
                 .Tables("SOTORDR2").Columns.Add("QTY_OPO", GetType(System.Int32))
@@ -1727,8 +1922,11 @@ Namespace OrdersImport
                 .Tables("SOTORDR2").Columns.Add("ASP_MESSAGE")
                 .Tables("SOTORDR2").Columns.Add("ORDR_REL_HOLD_CODES", GetType(System.String))
                 .Tables("SOTORDR2").Columns.Add("SAMPLE_IND", GetType(System.String))
+                .Tables("SOTORDR2").Columns.Add("PRICE_CATGY_SAMPLE_IND", GetType(System.String))
 
                 clsSOCORDR1 = New TAC.SOCORDR1(SOTINVH2_PC, SOTORDRP, SOTORDR2_pricing, baseClass.clsASCBASE1)
+
+                If testMode Then RecordLogEntry("Exit LoadTablesForPricing.")
 
             End With
 
@@ -1739,8 +1937,10 @@ Namespace OrdersImport
             Try
 
                 Dim sql As String = String.Empty
+                If testMode Then RecordLogEntry("Enter PrepareDatasetEntries.")
 
                 dst = baseClass.clsASCBASE1.dst
+                dst.Tables.Clear()
 
                 With dst
 
@@ -1762,6 +1962,8 @@ Namespace OrdersImport
 
                     baseClass.Create_TDA(.Tables.Add, "XMTXREF1", "*")
                     baseClass.Fill_Records("XMTXREF1", String.Empty, True, "Select * From XMTXREF1")
+
+                    baseClass.Create_TDA(dst.Tables.Add, "SOTORDRO", "Select LPAD( ' ', 15) ORDR_REL_HOLD_CODES, ORDR_COMMENT From SOTORDR1", , False)
 
                     LoadTablesForPricing()
 
@@ -1878,7 +2080,9 @@ Namespace OrdersImport
 
                 End With
 
+                If testMode Then RecordLogEntry("Exit PrepareDatasetEntries.")
                 Return True
+
             Catch ex As Exception
                 RecordLogEntry("PrepareDatasetEntries: " & ex.Message)
                 Return False
@@ -1892,6 +2096,8 @@ Namespace OrdersImport
 
             With baseClass
                 Try
+                    If testMode Then RecordLogEntry("Enter UpdateDataSetTables.")
+
                     .BeginTrans()
                     .clsASCBASE1.Update_Record_TDA("SOTORDR1")
                     .clsASCBASE1.Update_Record_TDA("SOTORDR2")
@@ -1936,12 +2142,105 @@ Namespace OrdersImport
                     .clsASCBASE1.Update_Record_TDA("XSTORDR2")
 
                     .CommitTrans()
+                    If testMode Then RecordLogEntry("Exit UpdateDataSetTables.")
 
                 Catch ex As Exception
                     .Rollback()
                     RecordLogEntry("UpdateDataSetTables  : " & ex.Message)
                 End Try
             End With
+
+        End Sub
+
+        ''' <summary>
+        ''' Creates a Table of Order Release Hold Codes
+        ''' </summary>
+        ''' <remarks></remarks>
+        Private Sub CreateOrderRelCodesTable()
+
+            Dim rowSOTORDRO As DataRow = Nothing
+
+            ' Order Header Errors
+            rowSOTORDRO = dst.Tables("SOTORDRO").NewRow
+            rowSOTORDRO.Item("ORDR_REL_HOLD_CODES") = "B"
+            rowSOTORDRO.Item("ORDR_COMMENT") = "Invalid Sold To"
+            dst.Tables("SOTORDRO").Rows.Add(rowSOTORDRO)
+
+            rowSOTORDRO = dst.Tables("SOTORDRO").NewRow
+            rowSOTORDRO.Item("ORDR_REL_HOLD_CODES") = "S"
+            rowSOTORDRO.Item("ORDR_COMMENT") = "Invalid Ship To"
+            dst.Tables("SOTORDRO").Rows.Add(rowSOTORDRO)
+
+            rowSOTORDRO = dst.Tables("SOTORDRO").NewRow
+            rowSOTORDRO.Item("ORDR_REL_HOLD_CODES") = "V"
+            rowSOTORDRO.Item("ORDR_COMMENT") = "Invalid Ship Via"
+            dst.Tables("SOTORDRO").Rows.Add(rowSOTORDRO)
+
+            rowSOTORDRO = dst.Tables("SOTORDRO").NewRow
+            rowSOTORDRO.Item("ORDR_REL_HOLD_CODES") = "R"
+            rowSOTORDRO.Item("ORDR_COMMENT") = "Review Spec Instr"
+            dst.Tables("SOTORDRO").Rows.Add(rowSOTORDRO)
+
+            rowSOTORDRO = dst.Tables("SOTORDRO").NewRow
+            rowSOTORDRO.Item("ORDR_REL_HOLD_CODES") = "X"
+            rowSOTORDRO.Item("ORDR_COMMENT") = "Invalid Tax Code"
+            dst.Tables("SOTORDRO").Rows.Add(rowSOTORDRO)
+
+            rowSOTORDRO = dst.Tables("SOTORDRO").NewRow
+            rowSOTORDRO.Item("ORDR_REL_HOLD_CODES") = "T"
+            rowSOTORDRO.Item("ORDR_COMMENT") = "Invalid Terms Code"
+            dst.Tables("SOTORDRO").Rows.Add(rowSOTORDRO)
+
+            rowSOTORDRO = dst.Tables("SOTORDRO").NewRow
+            rowSOTORDRO.Item("ORDR_REL_HOLD_CODES") = "G"
+            rowSOTORDRO.Item("ORDR_COMMENT") = "Invalid Sales Tax"
+            dst.Tables("SOTORDRO").Rows.Add(rowSOTORDRO)
+
+            rowSOTORDRO = dst.Tables("SOTORDRO").NewRow
+            rowSOTORDRO.Item("ORDR_REL_HOLD_CODES") = "D"
+            rowSOTORDRO.Item("ORDR_COMMENT") = "Invalid DPD"
+            dst.Tables("SOTORDRO").Rows.Add(rowSOTORDRO)
+
+            rowSOTORDRO = dst.Tables("SOTORDRO").NewRow
+            rowSOTORDRO.Item("ORDR_REL_HOLD_CODES") = "H"
+            rowSOTORDRO.Item("ORDR_COMMENT") = "Invalid Pricing"
+            dst.Tables("SOTORDRO").Rows.Add(rowSOTORDRO)
+
+            rowSOTORDRO = dst.Tables("SOTORDRO").NewRow
+            rowSOTORDRO.Item("ORDR_REL_HOLD_CODES") = "J"
+            rowSOTORDRO.Item("ORDR_COMMENT") = "Invalid Sales Order Total"
+            dst.Tables("SOTORDRO").Rows.Add(rowSOTORDRO)
+
+            ' Order Detail Errors
+            rowSOTORDRO = dst.Tables("SOTORDRO").NewRow
+            rowSOTORDRO.Item("ORDR_REL_HOLD_CODES") = "Q"
+            rowSOTORDRO.Item("ORDR_COMMENT") = "Qty Ordered"
+            dst.Tables("SOTORDRO").Rows.Add(rowSOTORDRO)
+
+            rowSOTORDRO = dst.Tables("SOTORDRO").NewRow
+            rowSOTORDRO.Item("ORDR_REL_HOLD_CODES") = "I"
+            rowSOTORDRO.Item("ORDR_COMMENT") = "Invalid Item"
+            dst.Tables("SOTORDRO").Rows.Add(rowSOTORDRO)
+
+            rowSOTORDRO = dst.Tables("SOTORDRO").NewRow
+            rowSOTORDRO.Item("ORDR_REL_HOLD_CODES") = "U"
+            rowSOTORDRO.Item("ORDR_COMMENT") = "Invalid UOM"
+            dst.Tables("SOTORDRO").Rows.Add(rowSOTORDRO)
+
+            rowSOTORDRO = dst.Tables("SOTORDRO").NewRow
+            rowSOTORDRO.Item("ORDR_REL_HOLD_CODES") = "F"
+            rowSOTORDRO.Item("ORDR_COMMENT") = "Frozen / Inactive Item"
+            dst.Tables("SOTORDRO").Rows.Add(rowSOTORDRO)
+
+            rowSOTORDRO = dst.Tables("SOTORDRO").NewRow
+            rowSOTORDRO.Item("ORDR_REL_HOLD_CODES") = "0"
+            rowSOTORDRO.Item("ORDR_COMMENT") = "Item Authorization Error"
+            dst.Tables("SOTORDRO").Rows.Add(rowSOTORDRO)
+
+            rowSOTORDRO = dst.Tables("SOTORDRO").NewRow
+            rowSOTORDRO.Item("ORDR_REL_HOLD_CODES") = "N"
+            rowSOTORDRO.Item("ORDR_COMMENT") = "Revenue at 0 cost"
+            dst.Tables("SOTORDRO").Rows.Add(rowSOTORDRO)
 
         End Sub
 
@@ -1964,7 +2263,10 @@ Namespace OrdersImport
 
                 logStreamWriter = New System.IO.StreamWriter(logdirectory & logFilename, True)
 
+                If testMode Then RecordLogEntry(Environment.NewLine & Environment.NewLine & "Open Log File.")
+
                 Return True
+
             Catch ex As Exception
                 Return False
             End Try
