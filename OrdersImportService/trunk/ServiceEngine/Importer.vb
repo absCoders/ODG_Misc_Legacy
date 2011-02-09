@@ -73,6 +73,10 @@ Namespace OrdersImport
                     Exit Sub
                 End If
 
+                ' Place a blank line in file to better see
+                ' where each call starts.
+                RecordLogEntry("")
+
                 If testMode Then RecordLogEntry("Enter MainProcess.")
 
                 System.Threading.Thread.Sleep(2000)
@@ -425,7 +429,7 @@ Namespace OrdersImport
 
                 baseClass.clsASCBASE1.Fill_Records("XSTORDR1", String.Empty, True, "SELECT * FROM XSTORDR1 WHERE NVL(PROCESS_IND, '0') = '0' AND ORDR_SOURCE = 'VSP'")
                 If dst.Tables("XSTORDR1").Rows.Count = 0 Then
-                    RecordLogEntry("No Eyeconic Sales Orders to process.")
+                    RecordLogEntry("0 Eyeconic Sales Orders to process.")
                     Exit Sub
                 End If
 
@@ -916,6 +920,12 @@ Namespace OrdersImport
                 CUST_SHIP_TO_NO = (rowSOTORDRX.Item("CUST_SHIP_TO_NO") & String.Empty).ToString.Trim
 
                 CUST_CODE = ABSolution.ASCMAIN1.Format_Field(CUST_CODE, "CUST_CODE")
+
+                If CUST_CODE.Length = 0 Then
+                    CUST_CODE = (rowSOTORDRX.Item("CUST_CODE") & String.Empty).ToString.Trim
+                    CUST_CODE = TruncateField(CUST_CODE, "SOTORDR1", "CUST_CODE")
+                End If
+
                 If CUST_SHIP_TO_NO.Length > 0 Then
                     CUST_SHIP_TO_NO = ABSolution.ASCMAIN1.Format_Field(CUST_SHIP_TO_NO, "CUST_SHIP_TO_NO")
                 End If
