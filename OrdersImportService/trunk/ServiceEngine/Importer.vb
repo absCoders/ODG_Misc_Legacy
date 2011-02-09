@@ -33,7 +33,7 @@ Namespace OrdersImport
 
         Private dst As DataSet
 
-        Private Const testMode As Boolean = True
+        Private Const testMode As Boolean = False
 
         ' Header Errors
         Private Const InvalidSoldTo = "B"
@@ -60,14 +60,6 @@ Namespace OrdersImport
 #Region "Instaniate Service"
 
         Public Sub New()
-
-            Dim svcConfig As New ServiceConfig
-
-            filefolder = svcConfig.FileFolder
-
-            If Not My.Computer.FileSystem.DirectoryExists(filefolder) Then
-                My.Computer.FileSystem.CreateDirectory(filefolder)
-            End If
 
         End Sub
 
@@ -96,6 +88,7 @@ Namespace OrdersImport
                 End If
 
                 If testMode Then RecordLogEntry("Exit MainProcess.")
+                RecordLogEntry("Closing Log file.")
                 CloseLog()
 
             Catch ex As Exception
@@ -2251,6 +2244,15 @@ Namespace OrdersImport
         Private Function OpenLogFile() As Boolean
 
             Try
+
+                Dim svcConfig As New ServiceConfig
+
+                filefolder = svcConfig.FileFolder
+
+                If Not My.Computer.FileSystem.DirectoryExists(filefolder) Then
+                    My.Computer.FileSystem.CreateDirectory(filefolder)
+                End If
+
                 logFilename = Format(Now, "yyyyMMdd") & ".log"
                 If logStreamWriter IsNot Nothing Then
                     logStreamWriter.Close()
@@ -2280,6 +2282,7 @@ Namespace OrdersImport
             If logStreamWriter IsNot Nothing Then
                 logStreamWriter.Close()
                 logStreamWriter.Dispose()
+                logStreamWriter = Nothing
             End If
         End Sub
 
