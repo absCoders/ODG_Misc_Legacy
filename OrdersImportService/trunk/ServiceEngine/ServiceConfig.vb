@@ -16,7 +16,7 @@ Public Class ServiceConfig
     Private Const DefaultPWD = "TST"
     Private _PWD As String = DefaultPWD
 
-    Private Const DefaultFileFolder = "C:\Orders\"
+    Private Const DefaultFileFolder = "C:\OrdersImport\"
     Private _FileFolder As String = DefaultFileFolder
 
     Private _created As Date

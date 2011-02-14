@@ -18,6 +18,7 @@ Namespace OrdersImport
         Private SOTORDRP As String = String.Empty
         Private STAX_CODE_states As List(Of String)
         Private clsSOCORDR1 As TAC.SOCORDR1
+        Private importInProcess As Boolean = False
 
         Private logFilename As String = String.Empty
         Private filefolder As String = String.Empty
@@ -33,7 +34,7 @@ Namespace OrdersImport
 
         Private dst As DataSet
 
-        Private Const testMode As Boolean = False
+        Private Const testMode As Boolean = True
 
         ' Header Errors
         Private Const InvalidSoldTo = "B"
@@ -69,15 +70,19 @@ Namespace OrdersImport
 
         Private Sub MainProcess()
             Try
+
+                ' Prevent the code from firing if still importing
+                If importInProcess Then Exit Sub
+                importInProcess = True
+
                 If Not OpenLogFile() Then
                     Exit Sub
                 End If
 
                 ' Place a blank line in file to better see
                 ' where each call starts.
-                RecordLogEntry("")
-
-                If testMode Then RecordLogEntry("Enter MainProcess.")
+                RecordLogEntry(String.Empty)
+                RecordLogEntry("Enter MainProcess.")
 
                 System.Threading.Thread.Sleep(2000)
                 If LogIntoDatabase() Then
@@ -97,6 +102,8 @@ Namespace OrdersImport
 
             Catch ex As Exception
                 RecordLogEntry("MainProcess: " & ex.Message)
+            Finally
+                importInProcess = False
             End Try
 
         End Sub
@@ -550,7 +557,8 @@ Namespace OrdersImport
                             rowSOTORDRX.Item("ITEM_DESC2") = rowICTITEM1.Item("ITEM_DESC2") & String.Empty
                         End If
 
-                        rowSOTORDRX.Item("ORDR_LOCK_SHIP_VIA") = "1"
+                        ' As per Maria do not lock Ship Via
+                        rowSOTORDRX.Item("ORDR_LOCK_SHIP_VIA") = "0"
                         rowSOTORDRX.Item("ORDR_COMMENT") = String.Empty
 
                         rowSOTORDRX.Item("PRESCRIBING_DOCTOR") = rowXSTORDR1.Item("PRESCRIBING_DOCTOR") & String.Empty
@@ -671,13 +679,24 @@ Namespace OrdersImport
                     CUST_SHIP_TO_SHIP_VIA_CODE = (rowSOTSVIAE.Item("SHIP_VIA_CODE") & String.Empty).ToString.Trim
                 End If
 
+                Dim CUST_SHIP_TO_PHONE As String = String.Empty
+                For Each chPhone As Char In rowSOTORDRX.Item("CUST_SHIP_TO_PHONE") & String.Empty
+                    If Char.IsDigit(chPhone) Then
+                        CUST_SHIP_TO_PHONE &= chPhone
+                    End If
+                Next
+                CUST_SHIP_TO_PHONE = TruncateField(CUST_SHIP_TO_PHONE, "ARTCUST2", "CUST_SHIP_TO_PHONE")
+
+                Dim OFFICE_WEBSITE As String = TruncateField(rowSOTORDRX.Item("OFFICE_WEBSITE") & String.Empty, "ARTCUST2", "CUST_SHIP_TO_URL")
+
                 sql = "INSERT INTO ARTCUST2 "
                 sql &= " ("
                 sql &= "CUST_CODE, CUST_SHIP_TO_NO, CUST_SHIP_TO_NAME,"
                 sql &= " CUST_SHIP_TO_ADDR1, CUST_SHIP_TO_ADDR2, CUST_SHIP_TO_ADDR3,"
                 sql &= " CUST_SHIP_TO_CITY, CUST_SHIP_TO_STATE, CUST_SHIP_TO_ZIP_CODE,"
                 sql &= " CUST_SHIP_TO_COUNTRY, INIT_DATE, INIT_OPER,"
-                sql &= " LAST_DATE, LAST_OPER, CUST_SHIP_TO_STATUS, CUST_SHIP_TO_SHIP_VIA_CODE, STAX_EXEMPT"
+                sql &= " LAST_DATE, LAST_OPER, CUST_SHIP_TO_STATUS, CUST_SHIP_TO_SHIP_VIA_CODE, STAX_EXEMPT,"
+                sql &= " CUST_SHIP_TO_PHONE, CUST_SHIP_TO_URL"
                 sql &= ")"
                 sql &= " VALUES "
                 sql &= " ("
@@ -698,6 +717,8 @@ Namespace OrdersImport
                 sql &= ", 'A'"
                 sql &= ", '" & CUST_SHIP_TO_SHIP_VIA_CODE & "'"
                 sql &= ", '" & STAX_EXEMPT & "'"
+                sql &= ", '" & CUST_SHIP_TO_PHONE & "'"
+                sql &= ", '" & OFFICE_WEBSITE & "'"
                 sql &= ")"
 
                 ABSolution.ASCDATA1.ExecuteSQL(sql)
@@ -936,6 +957,8 @@ Namespace OrdersImport
 
                 If rowARTCUST2 Is Nothing AndAlso rowARTCUST1 IsNot Nothing AndAlso CreateShipTo = True AndAlso CUST_SHIP_TO_NO.Length > 0 Then
                     CreateCustomerShipTo(CUST_CODE, CUST_SHIP_TO_NO, rowSOTORDRX, rowARTCUST1)
+                ElseIf rowARTCUST2 IsNot Nothing AndAlso rowARTCUST1 IsNot Nothing AndAlso CreateShipTo = True AndAlso CUST_SHIP_TO_NO.Length > 0 Then
+                    UpdateCustomerShipTo(CUST_CODE, CUST_SHIP_TO_NO, rowSOTORDRX, rowARTCUST2)
                 End If
 
                 rowSOTORDR1 = dst.Tables("SOTORDR1").NewRow
@@ -1759,6 +1782,83 @@ Namespace OrdersImport
                 Return fieldValue & String.Empty
             End Try
         End Function
+
+        Private Function UpdateCustomerShipTo(ByVal CUST_CODE As String, ByVal CUST_SHIP_TO_NO As String _
+                                           , ByRef rowSOTORDRX As DataRow, ByRef rowARTCUST2 As DataRow) As Boolean
+
+            Try
+
+                If testMode Then RecordLogEntry("Enter UpdateCustomerShipTo: " & CUST_CODE)
+
+                If rowARTCUST2 Is Nothing Then Exit Function
+                If rowSOTORDRX Is Nothing Then Exit Function
+
+                Dim sql As String = ""
+
+                Dim CUST_SHIP_TO_NAME As String = StrConv((rowSOTORDRX.Item("CUST_SHIP_TO_NAME") & String.Empty).ToString.Replace("'", "").Trim, VbStrConv.ProperCase)
+                Dim CUST_SHIP_TO_ADDR1 As String = StrConv((rowSOTORDRX.Item("CUST_SHIP_TO_ADDR1") & String.Empty).ToString.Replace("'", "").Trim, VbStrConv.ProperCase)
+                Dim CUST_SHIP_TO_ADDR2 As String = StrConv((rowSOTORDRX.Item("CUST_SHIP_TO_ADDR2") & String.Empty).ToString.Replace("'", "").Trim, VbStrConv.ProperCase)
+                Dim CUST_SHIP_TO_ADDR3 As String = StrConv((rowSOTORDRX.Item("CUST_SHIP_TO_ADDR3") & String.Empty).ToString.Replace("'", "").Trim, VbStrConv.ProperCase)
+                Dim CUST_SHIP_TO_CITY As String = StrConv((rowSOTORDRX.Item("CUST_SHIP_TO_CITY") & String.Empty).ToString.Replace("'", "").Trim, VbStrConv.ProperCase)
+                Dim CUST_SHIP_TO_STATE As String = (rowSOTORDRX.Item("CUST_SHIP_TO_STATE") & String.Empty).ToString.Replace("'", "").Trim
+                Dim CUST_SHIP_TO_ZIP_CODE As String = (rowSOTORDRX.Item("CUST_SHIP_TO_ZIP_CODE") & String.Empty).ToString.Replace("'", "").Trim
+                Dim CUST_SHIP_TO_COUNTRY As String = (rowSOTORDRX.Item("CUST_SHIP_TO_COUNTRY") & String.Empty).ToString.Replace("'", "").Trim
+
+                Dim CUST_SHIP_TO_PHONE As String = String.Empty
+                For Each chPhone As Char In rowSOTORDRX.Item("CUST_SHIP_TO_PHONE") & String.Empty
+                    If Char.IsDigit(chPhone) Then
+                        CUST_SHIP_TO_PHONE &= chPhone
+                    End If
+                Next
+                CUST_SHIP_TO_PHONE = TruncateField(CUST_SHIP_TO_PHONE, "ARTCUST2", "CUST_SHIP_TO_PHONE")
+
+                Dim CUST_SHIP_TO_URL As String = TruncateField(rowSOTORDRX.Item("CUST_SHIP_TO_URL") & String.Empty, "ARTCUST2", "CUST_SHIP_TO_URL").ToLower
+
+                CUST_SHIP_TO_NAME = TruncateField(CUST_SHIP_TO_NAME, "ARTCUST2", "CUST_SHIP_TO_NAME")
+                CUST_SHIP_TO_ADDR1 = TruncateField(CUST_SHIP_TO_NAME, "ARTCUST2", "CUST_SHIP_TO_ADDR1")
+                CUST_SHIP_TO_ADDR2 = TruncateField(CUST_SHIP_TO_NAME, "ARTCUST2", "CUST_SHIP_TO_ADDR2")
+                CUST_SHIP_TO_ADDR3 = TruncateField(CUST_SHIP_TO_NAME, "ARTCUST2", "CUST_SHIP_TO_ADDR3")
+                CUST_SHIP_TO_CITY = TruncateField(CUST_SHIP_TO_NAME, "ARTCUST2", "CUST_SHIP_TO_CITY")
+                CUST_SHIP_TO_STATE = TruncateField(CUST_SHIP_TO_NAME, "ARTCUST2", "CUST_SHIP_TO_STATE")
+                CUST_SHIP_TO_ZIP_CODE = TruncateField(CUST_SHIP_TO_NAME, "ARTCUST2", "CUST_SHIP_TO_ZIP_CODE")
+                CUST_SHIP_TO_COUNTRY = TruncateField(CUST_SHIP_TO_NAME, "ARTCUST2", "CUST_SHIP_TO_COUNTRY")
+                CUST_SHIP_TO_PHONE = TruncateField(CUST_SHIP_TO_NAME, "ARTCUST2", "CUST_SHIP_TO_PHONE")
+                CUST_SHIP_TO_URL = TruncateField(CUST_SHIP_TO_NAME, "ARTCUST2", "CUST_SHIP_TO_URL")
+
+
+                If rowARTCUST2.Item("CUST_SHIP_TO_PHONE") & String.Empty <> CUST_SHIP_TO_PHONE _
+                    OrElse rowARTCUST2.Item("CUST_SHIP_TO_URL") & String.Empty <> CUST_SHIP_TO_URL _
+                    OrElse rowARTCUST2.Item("CUST_SHIP_TO_NAME") & String.Empty <> CUST_SHIP_TO_NAME _
+                    OrElse rowARTCUST2.Item("CUST_SHIP_TO_ADDR1") & String.Empty <> CUST_SHIP_TO_ADDR1 _
+                    OrElse rowARTCUST2.Item("CUST_SHIP_TO_ADDR2") & String.Empty <> CUST_SHIP_TO_ADDR2 _
+                    OrElse rowARTCUST2.Item("CUST_SHIP_TO_ADDR3") & String.Empty <> CUST_SHIP_TO_ADDR3 _
+                    OrElse rowARTCUST2.Item("CUST_SHIP_TO_CITY") & String.Empty <> CUST_SHIP_TO_CITY _
+                    OrElse rowARTCUST2.Item("CUST_SHIP_TO_STATE") & String.Empty <> CUST_SHIP_TO_STATE _
+                    OrElse rowARTCUST2.Item("CUST_SHIP_TO_ZIP_CODE") & String.Empty <> CUST_SHIP_TO_ZIP_CODE _
+                    OrElse rowARTCUST2.Item("CUST_SHIP_TO_COUNTRY") & String.Empty <> CUST_SHIP_TO_COUNTRY Then
+
+                    sql = "Update ARTCUST2 SET "
+                    sql &= "   CUST_SHIP_TO_PHONE = '" & CUST_SHIP_TO_PHONE & "'"
+                    sql &= " , CUST_SHIP_TO_URL = '" & CUST_SHIP_TO_URL & "'"
+                    sql &= " , CUST_SHIP_TO_NAME = '" & CUST_SHIP_TO_NAME & "'"
+                    sql &= " , CUST_SHIP_TO_ADDR1 = '" & CUST_SHIP_TO_ADDR1 & "'"
+                    sql &= " , CUST_SHIP_TO_ADDR2 = '" & CUST_SHIP_TO_ADDR2 & "'"
+                    sql &= " , CUST_SHIP_TO_ADDR3 = '" & CUST_SHIP_TO_ADDR3 & "'"
+                    sql &= " , CUST_SHIP_TO_CITY = '" & CUST_SHIP_TO_CITY & "'"
+                    sql &= " , CUST_SHIP_TO_URL = '" & CUST_SHIP_TO_URL & "'"
+                    sql &= " , CUST_SHIP_TO_STATE = '" & CUST_SHIP_TO_STATE & "'"
+                    sql &= " , CUST_SHIP_TO_ZIP_CODE = '" & CUST_SHIP_TO_ZIP_CODE & "'"
+                    sql &= " , CUST_SHIP_TO_COUNTRY = '" & CUST_SHIP_TO_COUNTRY & "'"
+                    sql &= " Where CUST_CODE = :PARM1 AND CUST_SHIP_TO_NO = :PARM2"
+                    ABSolution.ASCDATA1.ExecuteSQL(sql, "VV", New Object() {CUST_CODE, CUST_SHIP_TO_NO})
+                End If
+
+            Catch ex As Exception
+                RecordLogEntry("UpdateCustomerShipTo: " & ex.Message)
+            End Try
+
+        End Function
+
 
         ''' <summary>
         ''' Updates the Freight for an Order
