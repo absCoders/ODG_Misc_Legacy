@@ -687,7 +687,7 @@ Namespace OrdersImport
                 Next
                 CUST_SHIP_TO_PHONE = TruncateField(CUST_SHIP_TO_PHONE, "ARTCUST2", "CUST_SHIP_TO_PHONE")
 
-                Dim OFFICE_WEBSITE As String = TruncateField(rowSOTORDRX.Item("OFFICE_WEBSITE") & String.Empty, "ARTCUST2", "CUST_SHIP_TO_URL")
+                Dim CUST_SHIP_TO_URL As String = TruncateField(rowSOTORDRX.Item("OFFICE_WEBSITE") & String.Empty, "ARTCUST2", "CUST_SHIP_TO_URL").ToLower
 
                 sql = "INSERT INTO ARTCUST2 "
                 sql &= " ("
@@ -718,7 +718,7 @@ Namespace OrdersImport
                 sql &= ", '" & CUST_SHIP_TO_SHIP_VIA_CODE & "'"
                 sql &= ", '" & STAX_EXEMPT & "'"
                 sql &= ", '" & CUST_SHIP_TO_PHONE & "'"
-                sql &= ", '" & OFFICE_WEBSITE & "'"
+                sql &= ", '" & CUST_SHIP_TO_URL & "'"
                 sql &= ")"
 
                 ABSolution.ASCDATA1.ExecuteSQL(sql)
@@ -1366,6 +1366,7 @@ Namespace OrdersImport
                 If (rowSOTORDR1.Item("ORDR_LOCK_SHIP_VIA") & String.Empty) = "1" Then Return True
 
                 Dim SHIP_VIA_CODE_DPD As String = String.Empty
+                Dim originalSHIP_VIA_CODE_DPD As String = rowSOTORDR1.Item("SHIP_VIA_CODE") & String.Empty
 
                 ' Look at Ship-To First
                 If rowARTCUST2 IsNot Nothing Then
@@ -1381,7 +1382,17 @@ Namespace OrdersImport
 
                 ' If not Customer DPD contract then use system default
                 If SHIP_VIA_CODE_DPD.Length = 0 Then
-                    SHIP_VIA_CODE_DPD = DpdDefaultShipViaCode
+                    Select Case rowSOTORDR1.Item("ORDR_SOURCE") & String.Empty
+                        Case "Y"
+                            SHIP_VIA_CODE_DPD = originalSHIP_VIA_CODE_DPD
+
+                        Case Else
+                            SHIP_VIA_CODE_DPD = DpdDefaultShipViaCode
+                    End Select
+
+                    If SHIP_VIA_CODE_DPD.Length = 0 Then
+                        SHIP_VIA_CODE_DPD = DpdDefaultShipViaCode
+                    End If
                 End If
 
                 rowSOTSVIA1 = baseClass.LookUp("SOTSVIA1", SHIP_VIA_CODE_DPD)
@@ -1454,7 +1465,7 @@ Namespace OrdersImport
                 rowSOTORDR1.Item("CUST_BILL_TO_CUST") = String.Empty
 
                 If (rowSOTORDR1.Item("ORDR_LOCK_SHIP_VIA") & String.Empty) <> "1" Then
-                    rowSOTORDR1.Item("SHIP_VIA_CODE") = String.Empty
+                    'rowSOTORDR1.Item("SHIP_VIA_CODE") = String.Empty
                 End If
 
                 rowSOTORDR1.Item("POST_CODE") = String.Empty
@@ -1812,7 +1823,7 @@ Namespace OrdersImport
                 Next
                 CUST_SHIP_TO_PHONE = TruncateField(CUST_SHIP_TO_PHONE, "ARTCUST2", "CUST_SHIP_TO_PHONE")
 
-                Dim CUST_SHIP_TO_URL As String = TruncateField(rowSOTORDRX.Item("CUST_SHIP_TO_URL") & String.Empty, "ARTCUST2", "CUST_SHIP_TO_URL").ToLower
+                Dim CUST_SHIP_TO_URL As String = TruncateField(rowSOTORDRX.Item("OFFICE_WEBSITE") & String.Empty, "ARTCUST2", "CUST_SHIP_TO_URL").ToLower
 
                 CUST_SHIP_TO_NAME = TruncateField(CUST_SHIP_TO_NAME, "ARTCUST2", "CUST_SHIP_TO_NAME")
                 CUST_SHIP_TO_ADDR1 = TruncateField(CUST_SHIP_TO_NAME, "ARTCUST2", "CUST_SHIP_TO_ADDR1")
@@ -1845,7 +1856,6 @@ Namespace OrdersImport
                     sql &= " , CUST_SHIP_TO_ADDR2 = '" & CUST_SHIP_TO_ADDR2 & "'"
                     sql &= " , CUST_SHIP_TO_ADDR3 = '" & CUST_SHIP_TO_ADDR3 & "'"
                     sql &= " , CUST_SHIP_TO_CITY = '" & CUST_SHIP_TO_CITY & "'"
-                    sql &= " , CUST_SHIP_TO_URL = '" & CUST_SHIP_TO_URL & "'"
                     sql &= " , CUST_SHIP_TO_STATE = '" & CUST_SHIP_TO_STATE & "'"
                     sql &= " , CUST_SHIP_TO_ZIP_CODE = '" & CUST_SHIP_TO_ZIP_CODE & "'"
                     sql &= " , CUST_SHIP_TO_COUNTRY = '" & CUST_SHIP_TO_COUNTRY & "'"
