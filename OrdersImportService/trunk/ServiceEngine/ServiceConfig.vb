@@ -1,4 +1,5 @@
 Imports System.ComponentModel
+Imports System.Xml
 
 Public Class ServiceConfig
 
@@ -7,20 +8,44 @@ Public Class ServiceConfig
     ' 2) ConfigFileName in ServiceStartup.vb
     ' 3) ServiceName, DisplayName and Description in ServiceInstallation.vb
 
-    Private Const DefaultTNS = "TST"
+    Private Const DefaultTNS = "ODG"
     Private _TNS As String = DefaultTNS
 
-    Private Const DefaultUID = "TST"
+    Private Const DefaultUID = "ODG"
     Private _UID As String = DefaultUID
 
-    Private Const DefaultPWD = "TST"
+    Private Const DefaultPWD = "ODG"
     Private _PWD As String = DefaultPWD
 
-    Private Const DefaultFileFolder = "C:\OrdersImport\"
+    Private Const DefaultFileFolder = "C:\OrdersImport\Live"
     Private _FileFolder As String = DefaultFileFolder
 
     Private _created As Date
     Private _backcolor As System.Drawing.Color
+
+    Public Sub New()
+        'Get settings from folder
+        If My.Computer.FileSystem.FileExists(My.Application.Info.DirectoryPath & "\SvcConfig.xml") Then
+            Using xReader As Xml.XmlTextReader = New XmlTextReader(My.Application.Info.DirectoryPath & "\SvcConfig.xml")
+                Do While xReader.Read()
+                    Select Case xReader.NodeType
+                        Case XmlNodeType.Element
+                            Select Case xReader.Name
+                                Case "DefaultTNS"
+                                    _TNS = xReader.ReadElementContentAsString()
+                                Case "DefaultUID"
+                                    _UID = xReader.ReadElementContentAsString()
+                                Case "DefaultPWD"
+                                    _PWD = xReader.ReadElementContentAsString()
+                                Case "DefaultFileFolder"
+                                    _FileFolder = xReader.ReadElementContentAsString()
+                            End Select
+                    End Select
+                Loop
+                xReader.Close()
+            End Using
+        End If
+    End Sub
 
     <DefaultValue(DefaultTNS)> _
     <Category("Oracle")> _

@@ -34,7 +34,7 @@ Namespace OrdersImport
 
         Private dst As DataSet
 
-        Private Const testMode As Boolean = True
+        Private Const testMode As Boolean = False
 
         ' Header Errors
         Private Const InvalidSoldTo = "B"
