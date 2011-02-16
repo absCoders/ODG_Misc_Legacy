@@ -17,7 +17,7 @@ Public Class ServiceConfig
     Private Const DefaultPWD = "ODG"
     Private _PWD As String = DefaultPWD
 
-    Private Const DefaultFileFolder = "C:\OrdersImport\Live"
+    Private Const DefaultFileFolder = "C:\OrdersImport\Live\"
     Private _FileFolder As String = DefaultFileFolder
 
     Private _created As Date
