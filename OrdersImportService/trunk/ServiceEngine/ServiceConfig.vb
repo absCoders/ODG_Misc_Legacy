@@ -25,6 +25,7 @@ Public Class ServiceConfig
 
     Public Sub New()
         'Get settings from folder
+
         If My.Computer.FileSystem.FileExists(My.Application.Info.DirectoryPath & "\SvcConfig.xml") Then
             Using xReader As Xml.XmlTextReader = New XmlTextReader(My.Application.Info.DirectoryPath & "\SvcConfig.xml")
                 Do While xReader.Read()
@@ -39,12 +40,16 @@ Public Class ServiceConfig
                                     _PWD = xReader.ReadElementContentAsString()
                                 Case "DefaultFileFolder"
                                     _FileFolder = xReader.ReadElementContentAsString()
+                                Case "DefaultFolder"
+                                    _FileFolder = My.Application.Info.DirectoryPath & "\" & xReader.ReadElementContentAsString()
                             End Select
                     End Select
                 Loop
                 xReader.Close()
             End Using
         End If
+
+        _FileFolder = My.Application.Info.DirectoryPath
     End Sub
 
     <DefaultValue(DefaultTNS)> _
