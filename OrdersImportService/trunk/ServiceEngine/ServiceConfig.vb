@@ -17,7 +17,7 @@ Public Class ServiceConfig
     Private Const DefaultPWD = "ODG"
     Private _PWD As String = DefaultPWD
 
-    Private Const DefaultFileFolder = "C:\OrdersImport\Live\"
+    Private Const DefaultFileFolder = "C:\OrdersImport\" & DefaultTNS & "\"
     Private _FileFolder As String = DefaultFileFolder
 
     Private _created As Date
@@ -41,15 +41,16 @@ Public Class ServiceConfig
                                 Case "DefaultFileFolder"
                                     _FileFolder = xReader.ReadElementContentAsString()
                                 Case "DefaultFolder"
-                                    _FileFolder = My.Application.Info.DirectoryPath & "\" & xReader.ReadElementContentAsString()
+                                    _FileFolder = My.Application.Info.DirectoryPath & "\" ' & xReader.ReadElementContentAsString() & "\"
                             End Select
                     End Select
                 Loop
                 xReader.Close()
             End Using
+        Else
+            _FileFolder = My.Application.Info.DirectoryPath & "\"
         End If
 
-        _FileFolder = My.Application.Info.DirectoryPath
     End Sub
 
     <DefaultValue(DefaultTNS)> _
