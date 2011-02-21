@@ -35,6 +35,7 @@ Namespace OrdersImport
         Private dst As DataSet
 
         Private Const testMode As Boolean = False
+        Private numErrors As Int16 = 0
 
         ' Header Errors
         Private Const InvalidSoldTo = "B"
@@ -286,13 +287,8 @@ Namespace OrdersImport
 
                 If testMode Then RecordLogEntry("Enter ProcessSalesOrders.")
 
-                Dim orderSourceHash As New Hashtable
-                orderSourceHash.Add("X", "XML")
-                orderSourceHash.Add("O", "OptiPort")
-                orderSourceHash.Add("V", "Vision Web")
-                orderSourceHash.Add("F", "eyeFinity")
-                orderSourceHash.Add("C", "Customer Excel")
-                orderSourceHash.Add("Y", "Eyeconic")
+                Dim ORDR_SOURCE As String = String.Empty
+                Dim ORDR_SOURCE_DESC As String = String.Empty
 
                 ABSolution.ASCMAIN1.SESSION_NO = "123456"
 
@@ -301,10 +297,13 @@ Namespace OrdersImport
                 End If
                 ABSolution.ASCMAIN1.ActiveForm.SELECTION_NO = "1"
 
-                For Each orderSourceCode As String In orderSourceHash.Keys
+                For Each rowSOTORDRS As DataRow In ABSolution.ASCDATA1.GetDataTable("SELECT * FROM SOTORDRS WHERE ORDR_SOURCE_STATUS = 'A' ORDER BY ORDR_SOURCE").Rows
 
-                    If Not ABSolution.ASCMAIN1.Logical_Lock("IMPSVC01", orderSourceCode, False, False, True, 1) Then
-                        RecordLogEntry("Order Import Type: " & orderSourceHash(orderSourceCode) & " locked by previous instance.")
+                    ORDR_SOURCE = rowSOTORDRS.Item("ORDR_SOURCE") & String.Empty
+                    ORDR_SOURCE_DESC = rowSOTORDRS.Item("ORDR_SOURCE_DESC") & String.Empty
+
+                    If Not ABSolution.ASCMAIN1.Logical_Lock("IMPSVC01", ORDR_SOURCE, False, False, True, 1) Then
+                        RecordLogEntry("Order Import Type: " & ORDR_SOURCE_DESC & " locked by previous instance.")
                         Continue For
                     End If
 
@@ -312,22 +311,33 @@ Namespace OrdersImport
                         Continue For
                     End If
 
-                    Select Case orderSourceCode
-                        Case "X" ' XML
-                            ProcessXmlSalesOrders(orderSourceCode)
-                        Case "O" ' OptiPort
-                            ProcessOptiPortSalesOrders(orderSourceCode)
-                        Case "V" ' Vision Web
-                            ProcessVisionWebSalesOrders(orderSourceCode)
-                        Case "F" ' eyeFinity
-                            ProcessEyefinitySalesOrders(orderSourceCode)
+                    numErrors = 0
+
+                    Select Case ORDR_SOURCE
                         Case "C" ' Customer Excel
-                            ProcessExcelFormatSalesOrders(orderSourceCode)
+                            ProcessExcelFormatSalesOrders(ORDR_SOURCE)
+                            numErrors = 2
+                        Case "E"
+                            ProcessEDISalesOrders(ORDR_SOURCE)
+                            numErrors = 3
+                        Case "F" ' eyeFinity
+                            ProcessEyefinitySalesOrders(ORDR_SOURCE)
+                            numErrors = 4
+                        Case "V" ' Vision Web
+                            ProcessVisionWebSalesOrders(ORDR_SOURCE)
+                            numErrors = 5
+                        Case "X" ' XML
+                            ProcessXmlSalesOrders(ORDR_SOURCE)
+                            numErrors = 6
                         Case "Y" ' Eyeconic
-                            ProcessEyeconicSalesOrders(orderSourceCode)
+                            ProcessEyeconicSalesOrders(ORDR_SOURCE)
                     End Select
 
                     ABSolution.ASCMAIN1.MultiTask_Release(, , 1)
+
+                    If numErrors > 0 Then
+                        emailErrors(ORDR_SOURCE, numErrors)
+                    End If
                 Next
 
                 If testMode Then RecordLogEntry("Exit ProcessSalesOrders.")
@@ -336,25 +346,6 @@ Namespace OrdersImport
                 RecordLogEntry("ProcessSalesOrders: " & ex.Message)
             End Try
 
-        End Sub
-
-        ''' <summary>
-        ''' Process Optiport sales orders
-        ''' </summary>
-        ''' <remarks></remarks>
-        Private Sub ProcessOptiPortSalesOrders(ByVal ORDER_SOURCE_CODE As String)
-            Try
-                If testMode Then RecordLogEntry("Enter ProcessOptiPortSalesOrders.")
-
-                ' Place loop here to process the sales orders
-
-                If testMode Then RecordLogEntry("Exit ProcessOptiPortSalesOrders.")
-
-                RecordLogEntry("0 OptiPort sales orders to process")
-
-            Catch ex As Exception
-                RecordLogEntry("ProcessOptiPortSalesOrders: " & ex.Message)
-            End Try
         End Sub
 
         Private Sub ProcessXmlSalesOrders(ByVal ORDER_SOURCE_CODE As String)
@@ -372,6 +363,23 @@ Namespace OrdersImport
                 RecordLogEntry("ProcessXmlSalesOrders: " & ex.Message)
             End Try
         End Sub
+
+        Private Sub ProcessEDISalesOrders(ByVal ORDER_SOURCE_CODE As String)
+
+            Try
+                If testMode Then RecordLogEntry("Enter ProcessEDISalesOrders.")
+
+                ' Place loop here to process the sales orders
+
+                If testMode Then RecordLogEntry("Exit ProcessEDISalesOrders.")
+
+                RecordLogEntry("0 EDI sales orders to process")
+
+            Catch ex As Exception
+                RecordLogEntry("ProcessEDISalesOrders: " & ex.Message)
+            End Try
+        End Sub
+
 
         Private Sub ProcessVisionWebSalesOrders(ByVal ORDER_SOURCE_CODE As String)
 
@@ -1208,6 +1216,7 @@ Namespace OrdersImport
 
                 If (rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") & String.Empty).ToString.Trim.Length > 0 Then
                     rowSOTORDR1.Item("ORDR_STATUS_WEB") = ORDR_SOURCE
+                    numErrors += 1
                 End If
 
                 rowSOTORDR1.Item("INIT_DATE") = DateTime.Now + ABSolution.ASCMAIN1.NowTSD
@@ -1932,6 +1941,7 @@ Namespace OrdersImport
                 If testMode Then RecordLogEntry("Enter ClearDataSetTables.")
 
                 With dst
+                    .Tables("SOTORDRS").Clear()
                     .Tables("SOTORDR1").Clear()
                     .Tables("SOTORDR2").Clear()
                     .Tables("SOTORDR3").Clear()
@@ -1947,7 +1957,6 @@ Namespace OrdersImport
                         .Tables("XSTORDR1").Clear()
                         .Tables("XSTORDR2").Clear()
                     End If
-
                 End With
 
                 If testMode Then RecordLogEntry("Exit ClearDataSetTables.")
@@ -2057,6 +2066,7 @@ Namespace OrdersImport
 
                 With dst
 
+                    baseClass.Create_TDA(.Tables.Add, "SOTORDRS", "*", 1)
                     baseClass.Create_TDA(.Tables.Add, "SOTORDR1", "*")
                     baseClass.Create_TDA(.Tables.Add, "SOTORDR2", "*", 1)
 
@@ -2404,6 +2414,19 @@ Namespace OrdersImport
                 logStreamWriter.Dispose()
                 logStreamWriter = Nothing
             End If
+        End Sub
+
+        Private Sub emailErrors(ByRef ORDR_SOURCE As String, ByVal numErrors As Int16)
+            Try
+
+                Dim clsASTNOTE1 As New TAC.ASCNOTE1("IMPERROR_" & ORDR_SOURCE, dst, "")
+                Dim note As String = "There were " & numErrors & " import error(s) on " & DateTime.Now.ToLongDateString & " " & DateTime.Now.ToLongTimeString
+                clsASTNOTE1.Note = note
+                clsASTNOTE1.CreateComponents()
+                clsASTNOTE1.EmailDocument()
+            Catch ex As Exception
+                RecordLogEntry("Send Email: " & ex.Message)
+            End Try
         End Sub
 
 #End Region
