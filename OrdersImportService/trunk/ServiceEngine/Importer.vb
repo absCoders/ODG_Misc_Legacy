@@ -35,7 +35,7 @@ Namespace OrdersImport
         Private dst As DataSet
 
         Private Const testMode As Boolean = False
-        Private numErrors As Int16 = 0
+        Private ImportErrorNotification As Hashtable
 
         ' Header Errors
         Private Const InvalidSoldTo = "B"
@@ -311,7 +311,7 @@ Namespace OrdersImport
                         Continue For
                     End If
 
-                    numErrors = 0
+                    ImportErrorNotification = New Hashtable
 
                     Select Case ORDR_SOURCE
                         Case "C" ' Customer Excel
@@ -330,8 +330,10 @@ Namespace OrdersImport
 
                     ABSolution.ASCMAIN1.MultiTask_Release(, , 1)
 
-                    If numErrors > 0 Then
-                        emailErrors(ORDR_SOURCE, numErrors)
+                    If ImportErrorNotification.Keys.Count > 0 Then
+                        For Each Item As DictionaryEntry In ImportErrorNotification
+                            emailErrors(Item.Key, Item.Value)
+                        Next
                     End If
                 Next
 
@@ -1240,7 +1242,11 @@ Namespace OrdersImport
 
                 If (rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") & String.Empty).ToString.Trim.Length > 0 Then
                     rowSOTORDR1.Item("ORDR_STATUS_WEB") = rowSOTORDR1.Item("ORDR_SOURCE") & String.Empty
-                    numErrors += 1
+                    If ImportErrorNotification.ContainsKey(rowSOTORDR1.Item("ORDR_SOURCE")) Then
+                        ImportErrorNotification.Item(rowSOTORDR1.Item("ORDR_SOURCE")) += 1
+                    Else
+                        ImportErrorNotification.Add(rowSOTORDR1.Item("ORDR_SOURCE"), 1)
+                    End If
                 End If
 
                 rowSOTORDR1.Item("INIT_DATE") = DateTime.Now + ABSolution.ASCMAIN1.NowTSD
