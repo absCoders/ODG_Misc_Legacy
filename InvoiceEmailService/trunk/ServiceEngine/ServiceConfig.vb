@@ -99,7 +99,6 @@ Public Class ServiceConfig
         End Set
     End Property
 
-
     <DefaultValue("Application Directory")> _
     <Category("EmailInvoice")> _
     <Description("This is the Name of the FileFolder where Logs will be stored")> _

@@ -1,6 +1,6 @@
 ﻿Imports InvoiceEmail.Extensions
 
-Namespace InoviceEmail
+Namespace InvoiceEmail
 
     Public Class InvoiceEmailer
 
@@ -22,6 +22,7 @@ Namespace InoviceEmail
         Private sqlDPD As String = String.Empty
         Private sqlCRM As String = String.Empty
         Private sqlECP As String = String.Empty
+        Private okToSendEmails As Boolean = False
 
 #End Region
 
@@ -74,7 +75,7 @@ Namespace InoviceEmail
 
         Public Sub LogIn()
             importTimer = New System.Threading.Timer _
-                (New System.Threading.TimerCallback(AddressOf MainProcess), Nothing, 3000, 3300000) ' every 55 mins 
+                (New System.Threading.TimerCallback(AddressOf MainProcess), Nothing, 3000, 3600000) ' every hour 
         End Sub
 
         Private Sub StartingProcess()
@@ -305,12 +306,16 @@ Namespace InoviceEmail
 
                 Select Case DateTime.Compare(localTime, processTime)
                     Case Is < 0
-                        RecordLogEntry("EmailInvoicesToCustomers: To early to process invoices")
-                        'Return numEmails
+                        RecordLogEntry("EmailInvoicesToCustomers: To early to process invoices.")
+                        okToSendEmails = True
                     Case Else
-                        ' No message at this time
+                        If Not okToSendEmails Then
+                            RecordLogEntry("EmailInvoicesToCustomers: Invoices already emailed.")
+                        End If
                 End Select
 
+                ' Do not trey tos end twice in one day
+                okToSendEmails = False
 
                 ' Process email invoices by customer
                 sql = "SELECT CUST_CODE, 'D' EMAIL_TYPE  FROM ARTCUST1 WHERE DPD_COPIES = 'E'"
@@ -633,7 +638,6 @@ Namespace InoviceEmail
             End Try
         End Sub
 
-
 #End Region
 
 #Region "DataSet Functions"
@@ -775,19 +779,6 @@ Namespace InoviceEmail
                 logStreamWriter.Dispose()
                 logStreamWriter = Nothing
             End If
-        End Sub
-
-        Private Sub emailErrors(ByRef ORDR_SOURCE As String, ByVal numErrors As Int16)
-            Try
-
-                Dim clsASTNOTE1 As New TAC.ASCNOTE1("IMPERROR_" & ORDR_SOURCE, dst, "")
-                Dim note As String = "There were " & numErrors & " import error(s) on " & DateTime.Now.ToLongDateString & " " & DateTime.Now.ToLongTimeString
-                clsASTNOTE1.Note = note
-                clsASTNOTE1.CreateComponents()
-                clsASTNOTE1.EmailDocument()
-            Catch ex As Exception
-                RecordLogEntry("Send Email: " & ex.Message)
-            End Try
         End Sub
 
 #End Region

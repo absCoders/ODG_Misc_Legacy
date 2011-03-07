@@ -9,7 +9,7 @@ Public Class ServiceEngine
 
     Public Event StatusUpdate As StatusUpdateEventHandler
 
-    Private emailer As New InoviceEmail.InvoiceEmailer
+    Private emailer As New InvoiceEmail.InvoiceEmailer
 
     'Public Sub New()
     '    MyBase.New()
