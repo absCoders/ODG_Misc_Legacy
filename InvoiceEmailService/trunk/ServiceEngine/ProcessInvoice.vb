@@ -308,9 +308,11 @@ Namespace InvoiceEmail
                     Case Is < 0
                         RecordLogEntry("EmailInvoicesToCustomers: To early to process invoices.")
                         okToSendEmails = True
+                        Return 0
                     Case Else
                         If Not okToSendEmails Then
                             RecordLogEntry("EmailInvoicesToCustomers: Invoices already emailed.")
+                            Return 0
                         End If
                 End Select
 
@@ -318,11 +320,11 @@ Namespace InvoiceEmail
                 okToSendEmails = False
 
                 ' Process email invoices by customer
-                sql = "SELECT CUST_CODE, 'D' EMAIL_TYPE  FROM ARTCUST1 WHERE DPD_COPIES = 'E'"
+                sql = "SELECT CUST_CODE, 'D' EMAIL_TYPE FROM ARTCUST1 WHERE DPD_COPIES = 'E'"
                 sql &= " Union "
-                sql &= "SELECT CUST_CODE, 'C' EMAIL_TYPE  FROM ARTCUST1 WHERE CRM_COPIES = 'E'"
+                sql &= "SELECT CUST_CODE, 'C' EMAIL_TYPE FROM ARTCUST1 WHERE CRM_COPIES = 'E'"
                 sql &= " Union "
-                sql &= "SELECT CUST_CODE, 'E' EMAIL_TYPE  FROM ARTCUST1 WHERE ECP_COPIES = 'E'"
+                sql &= "SELECT CUST_CODE, 'E' EMAIL_TYPE FROM ARTCUST1 WHERE ECP_COPIES = 'E'"
 
                 Dim tblCustomers As DataTable = ABSolution.ASCDATA1.GetDataTable(sql)
 
