@@ -1305,6 +1305,7 @@ Namespace OrdersImport
 
                 If testMode Then RecordLogEntry("Enter SetDPDShipViaSettings.")
 
+                If (rowSOTORDR1.Item("SHIP_VIA_CODE") & String.Empty) <> String.Empty Then Return True
                 If (rowSOTORDR1.Item("ORDR_DPD") & String.Empty) <> "1" Then Return True
                 If (rowSOTORDR1.Item("ORDR_LOCK_SHIP_VIA") & String.Empty) = "1" Then Return True
 
