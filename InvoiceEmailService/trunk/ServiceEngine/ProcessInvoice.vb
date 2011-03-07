@@ -75,7 +75,7 @@ Namespace InvoiceEmail
 
         Public Sub LogIn()
             importTimer = New System.Threading.Timer _
-                (New System.Threading.TimerCallback(AddressOf MainProcess), Nothing, 3000, 3600000) ' every hour 
+                (New System.Threading.TimerCallback(AddressOf MainProcess), Nothing, 3000, 10800000) ' every 3 hours
         End Sub
 
         Private Sub StartingProcess()
@@ -480,6 +480,7 @@ Namespace InvoiceEmail
                 Return outputFilenames
 
             Catch ex As Exception
+                RecordLogEntry("CreateDPDInvoiceFile: " & ex.Message)
                 Return String.Empty
             End Try
 
@@ -524,6 +525,7 @@ Namespace InvoiceEmail
                 Return outputFilenames
 
             Catch ex As Exception
+                RecordLogEntry("CreateECPInvoiceFile: " & ex.Message)
                 Return String.Empty
             End Try
         End Function
@@ -557,6 +559,7 @@ Namespace InvoiceEmail
                 Return outputFilenames
 
             Catch ex As Exception
+                RecordLogEntry("CreateCrmFile: " & ex.Message)
                 Return String.Empty
             End Try
 
