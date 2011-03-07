@@ -111,7 +111,7 @@ Namespace OrdersImport
 
         Public Sub LogIn()
             importTimer = New System.Threading.Timer _
-                (New System.Threading.TimerCallback(AddressOf MainProcess), Nothing, 3000, 600000) ' every 10 mins 
+                (New System.Threading.TimerCallback(AddressOf MainProcess), Nothing, 3000, 3600000) ' every 10 mins 600000
         End Sub
 
         Private Sub StartingProcess()
@@ -288,22 +288,20 @@ Namespace OrdersImport
                 If testMode Then RecordLogEntry("Enter ProcessSalesOrders.")
 
                 Dim ORDR_SOURCE As String = String.Empty
-                Dim ORDR_SOURCE_DESC As String = String.Empty
 
-                ABSolution.ASCMAIN1.SESSION_NO = "123456"
+                ABSolution.ASCMAIN1.SESSION_NO = ABSolution.ASCMAIN1.Next_Control_No("ASTLOGS1.SESSION_NO", 1)
 
                 If ABSolution.ASCMAIN1.ActiveForm Is Nothing Then
                     ABSolution.ASCMAIN1.ActiveForm = New ABSolution.ASFBASE1
                 End If
                 ABSolution.ASCMAIN1.ActiveForm.SELECTION_NO = "1"
 
-                For Each rowSOTORDRS As DataRow In ABSolution.ASCDATA1.GetDataTable("SELECT * FROM SOTORDRS WHERE ORDR_SOURCE_STATUS = 'A' ORDER BY ORDR_SOURCE").Rows
+                For Each rowXMTXREF1 As DataRow In ABSolution.ASCDATA1.GetDataTable("SELECT DISTINCT ORDR_SOURCE FROM XMTXREF1 WHERE ORDR_SOURCE IS NOT NULL").Rows
 
-                    ORDR_SOURCE = rowSOTORDRS.Item("ORDR_SOURCE") & String.Empty
-                    ORDR_SOURCE_DESC = rowSOTORDRS.Item("ORDR_SOURCE_DESC") & String.Empty
+                    ORDR_SOURCE = rowXMTXREF1.Item("ORDR_SOURCE") & String.Empty
 
                     If Not ABSolution.ASCMAIN1.Logical_Lock("IMPSVC01", ORDR_SOURCE, False, False, True, 1) Then
-                        RecordLogEntry("Order Import Type: " & ORDR_SOURCE_DESC & " locked by previous instance.")
+                        RecordLogEntry("Order Import Type: " & ORDR_SOURCE & " locked by previous instance.")
                         Continue For
                     End If
 
@@ -314,17 +312,7 @@ Namespace OrdersImport
                     ImportErrorNotification = New Hashtable
 
                     Select Case ORDR_SOURCE
-                        Case "C" ' Customer Excel
-                            ProcessExcelFormatSalesOrders(ORDR_SOURCE)
-                        Case "E" ' Edi Sales
-                            ProcessEDISalesOrders(ORDR_SOURCE)
-                        Case "F" ' eyeFinity
-                            ProcessEyefinitySalesOrders(ORDR_SOURCE)
-                        Case "V" ' Vision Web
-                            ProcessVisionWebSalesOrders(ORDR_SOURCE)
-                        Case "X" ' XML
-                            ProcessXmlSalesOrders(ORDR_SOURCE)
-                        Case "S" ' Web Service
+                        Case "X" ' Web Service
                             ProcessWebServiceSalesOrders(ORDR_SOURCE)
                     End Select
 
@@ -345,124 +333,66 @@ Namespace OrdersImport
 
         End Sub
 
-        Private Sub ProcessXmlSalesOrders(ByVal ORDER_SOURCE_CODE As String)
+        Private Sub ProcessShellSalesOrders(ByVal ORDER_SOURCE_CODE As String)
 
             Try
-                If testMode Then RecordLogEntry("Enter ProcessXmlSalesOrders.")
+                If testMode Then RecordLogEntry("Enter ProcessShellSalesOrders.")
 
                 ' Place loop here to process the sales orders
 
-                If testMode Then RecordLogEntry("Exit ProcessXmlSalesOrders.")
+                If testMode Then RecordLogEntry("Exit ProcessShellSalesOrders.")
 
-                RecordLogEntry("0 Xml sales orders to process")
+                RecordLogEntry("0 Sales Orders to rocess")
 
             Catch ex As Exception
-                RecordLogEntry("ProcessXmlSalesOrders: " & ex.Message)
+                RecordLogEntry("ProcessShellSalesOrders: " & ex.Message)
             End Try
         End Sub
 
-        Private Sub ProcessEDISalesOrders(ByVal ORDER_SOURCE_CODE As String)
-
-            Try
-                If testMode Then RecordLogEntry("Enter ProcessEDISalesOrders.")
-
-                ' Place loop here to process the sales orders
-
-                If testMode Then RecordLogEntry("Exit ProcessEDISalesOrders.")
-
-                RecordLogEntry("0 EDI sales orders to process")
-
-            Catch ex As Exception
-                RecordLogEntry("ProcessEDISalesOrders: " & ex.Message)
-            End Try
-        End Sub
-
-
-        Private Sub ProcessVisionWebSalesOrders(ByVal ORDER_SOURCE_CODE As String)
-
-            Try
-                If testMode Then RecordLogEntry("Enter ProcessVisionWebSalesOrders.")
-
-                ' Place loop here to process the sales orders
-
-                If testMode Then RecordLogEntry("Exit ProcessVisionWebSalesOrders.")
-
-                RecordLogEntry("0 Vision Web sales orders to process")
-
-            Catch ex As Exception
-                RecordLogEntry("ProcessVisionWebSalesOrders: " & ex.Message)
-            End Try
-
-        End Sub
-
-        Private Sub ProcessEyefinitySalesOrders(ByVal ORDER_SOURCE_CODE As String)
-
-            Try
-                If testMode Then RecordLogEntry("Enter ProcessEyefinitySalesOrders.")
-
-                ' Place loop here to process the sales orders
-
-                If testMode Then RecordLogEntry("Exit ProcessEyefinitySalesOrders.")
-
-                RecordLogEntry("0 Eyefinity sales orders to process")
-
-            Catch ex As Exception
-                RecordLogEntry("ProcessEyefinitySalesOrders: " & ex.Message)
-            End Try
-
-        End Sub
-
-        Private Sub ProcessExcelFormatSalesOrders(ByVal ORDER_SOURCE_CODE As String)
-
-            Try
-                If testMode Then RecordLogEntry("Enter ProcessExcelFormatSalesOrders.")
-
-                ' Place loop here to process the sales orders
-
-                If testMode Then RecordLogEntry("Exit ProcessExcelFormatSalesOrders.")
-
-                RecordLogEntry("0 Excel Format sales orders to process")
-
-            Catch ex As Exception
-                RecordLogEntry("ProcessExcelFormatSalesOrders: " & ex.Message)
-            End Try
-        End Sub
-
-        Private Sub ProcessWebServiceSalesOrders(ByVal ORDER_SOURCE As String)
+        Private Sub ProcessWebServiceSalesOrders(ByVal ORDR_SOURCE As String)
 
             Dim rowSOTORDRX As DataRow = Nothing
             Dim salesOrdersProcessed As Int16 = 0
-            Dim ORDR_LINE_SOURCE As String = String.Empty
+
             Dim ORDR_NO As String = String.Empty
             Dim ORDR_LNO As Int16 = 0
-            Dim createShipTo As Boolean = False
-            Dim locateShipToByTelephone As Boolean = False
+
+            Dim XML_ORDR_SOURCE As String = String.Empty
+            Dim ORDR_LINE_SOURCE As String = String.Empty
+            Dim CREATE_SHIP_TO As Boolean = False
+            Dim SELECT_SHIP_TO_BY_TELE As Boolean = False
+            Dim CALLER_NAME As String = String.Empty
 
             Try
                 If testMode Then RecordLogEntry("Enter ProcessWebServiceSalesOrders.")
 
                 baseClass.clsASCBASE1.Fill_Records("XSTORDR1", String.Empty, True, "SELECT * FROM XSTORDR1 WHERE NVL(PROCESS_IND, '0') = '0'")
                 If dst.Tables("XSTORDR1").Rows.Count = 0 Then
-                    RecordLogEntry("0 Eyeconic Sales Orders to process.")
+                    RecordLogEntry("0 Web Service Sales Orders to process.")
                     Exit Sub
                 End If
 
-                RecordLogEntry(dst.Tables("XSTORDR1").Rows.Count & " Eyeconic Sales Orders to process.")
+                RecordLogEntry(dst.Tables("XSTORDR1").Rows.Count & " Web Service Sales Orders to process.")
 
                 For Each rowXSTORDR1 As DataRow In dst.Tables("XSTORDR1").Select("", "XS_DOC_SEQ_NO")
                     ClearDataSetTables(False)
                     ORDR_LNO = 0
+                    XML_ORDR_SOURCE = rowXSTORDR1.Item("ORDR_SOURCE") & String.Empty
 
-                    Select Case (rowXSTORDR1.Item("ORDR_SOURCE") & String.Empty).ToString.ToUpper.Trim
-                        Case "VSP"
-                            createShipTo = True
-                            locateShipToByTelephone = False
-                        Case "ANYLENS"
-                            createShipTo = False
-                            locateShipToByTelephone = True
-                        Case Else
-                            createShipTo = False
-                    End Select
+                    ' rowXSTORDR1.Item("ORDR_SOURCE") examples: VSP, AnyLens
+                    If dst.Tables("XMTXREF1").Select("XML_ORDR_SOURCE = '" & XML_ORDR_SOURCE & "'", "").Length = 0 Then
+                        RecordLogEntry("ORDR_SOURCE not found in XMTXREF1 for XS_DOC_SEQ_NO: " & rowXSTORDR1.Item("XS_DOC_SEQ_NO"))
+                        rowXSTORDR1.Item("PROCESS_IND") = "E"
+                        Continue For
+                    End If
+
+                    With dst.Tables("XMTXREF1").Select("XML_ORDR_SOURCE = '" & XML_ORDR_SOURCE & "'", "")(0)
+                        ORDR_LINE_SOURCE = .Item("ORDR_LINE_SOURCE") & String.Empty
+                        ORDR_SOURCE = .Item("ORDR_SOURCE") & String.Empty
+                        CREATE_SHIP_TO = (.Item("CREATE_SHIP_TO") & String.Empty) = "1"
+                        SELECT_SHIP_TO_BY_TELE = (.Item("SELECT_SHIP_TO_BY_TELE") & String.Empty) = "1"
+                        CALLER_NAME = .Item("CALLER_NAME") & String.Empty
+                    End With
 
                     ' Flag entry as getting processed
                     rowXSTORDR1.Item("PROCESS_IND") = "1"
@@ -496,7 +426,7 @@ Namespace OrdersImport
                         rowSOTORDRX.Item("PATIENT_NAME") = TruncateField((rowXSTORDR2.Item("PATIENT_NAME") & String.Empty).ToString.Trim, "SOTORDR2", "PATIENT_NAME")
 
                         rowSOTORDRX.Item("EDI_CUST_REF_NO") = rowXSTORDR1.Item("ORDER_ID") & String.Empty
-                        rowSOTORDRX.Item("ORDR_SOURCE") = ORDER_SOURCE
+                        rowSOTORDRX.Item("ORDR_SOURCE") = ORDR_SOURCE
                         rowSOTORDRX.Item("ORDR_TYPE_CODE") = "REG"
 
                         ORDR_LNO += 1
@@ -516,15 +446,7 @@ Namespace OrdersImport
                                 rowSOTORDRX.Item("ORDR_LR") = "L"
                         End Select
 
-                        ' Convert Ordr_Line_Source to a code
-                        ORDR_LINE_SOURCE = rowXSTORDR2.Item("ORDR_SOURCE") & String.Empty
-                        If dst.Tables("XMTXREF1").Select("XML_ORDR_SOURCE = '" & ORDR_LINE_SOURCE & "'", "").Length > 0 Then
-                            ORDR_LINE_SOURCE = dst.Tables("XMTXREF1").Select("XML_ORDR_SOURCE = '" & ORDR_LINE_SOURCE & "'", "")(0).Item("ORDR_LINE_SOURCE") & String.Empty
-                        Else
-                            ORDR_LINE_SOURCE = String.Empty
-                        End If
-                        rowSOTORDRX.Item("ORDR_LINE_SOURCE") = TruncateField(ORDR_LINE_SOURCE, "SOTORDR2", "ORDR_LINE_SOURCE")
-
+                        rowSOTORDRX.Item("ORDR_LINE_SOURCE") = ORDR_LINE_SOURCE
                         rowSOTORDRX.Item("PRICE_CATGY_CODE") = rowXSTORDR2.Item("PRODUCT_KEY") & String.Empty
                         rowSOTORDRX.Item("ITEM_PROD_ID") = rowXSTORDR2.Item("UPC_CODE") & String.Empty
                         rowSOTORDRX.Item("ITEM_BASE_CURVE") = rowXSTORDR2.Item("ITEM_BASE_CURVE") & String.Empty
@@ -588,7 +510,7 @@ Namespace OrdersImport
                     Next
 
                     ORDR_NO = String.Empty
-                    If CreateSalesOrder(ORDR_NO, createShipTo, locateShipToByTelephone, ORDR_LINE_SOURCE) Then
+                    If CreateSalesOrder(ORDR_NO, CREATE_SHIP_TO, SELECT_SHIP_TO_BY_TELE, ORDR_LINE_SOURCE, ORDR_SOURCE, CALLER_NAME) Then
                         ' All orders are ship complete
                         dst.Tables("SOTORDR1").Rows(0).Item("ORDR_SHIP_COMPLETE") = "1"
                         rowXSTORDR1.Item("ORDR_NO") = ORDR_NO
@@ -908,7 +830,8 @@ Namespace OrdersImport
         End Function
 
         Private Function CreateSalesOrder(ByRef ORDR_NO As String, ByVal CreateShipTo As Boolean, _
-                                          ByVal LocateShipToByTelephone As Boolean, ByVal ORDR_LINE_SOURCE As String) As Boolean
+                                          ByVal LocateShipToByTelephone As Boolean, ByVal ORDR_LINE_SOURCE As String, _
+                                          ByVal ORDR_SOURCE As String, ByVal CALLER_NAME As String) As Boolean
 
             Try
 
@@ -929,8 +852,6 @@ Namespace OrdersImport
 
                 Dim ORDR_QTY As Integer = 0
                 Dim shipToPatient As Boolean = False
-                Dim ORDR_SOURCE As String = String.Empty
-
                 Dim ITEM_CODE As String = String.Empty
 
                 Dim sql As String = String.Empty
@@ -982,10 +903,14 @@ Namespace OrdersImport
                 ElseIf rowARTCUST2 IsNot Nothing AndAlso rowARTCUST1 IsNot Nothing AndAlso CreateShipTo = True AndAlso CUST_SHIP_TO_NO.Length > 0 Then
                     UpdateCustomerShipTo(CUST_CODE, CUST_SHIP_TO_NO, rowSOTORDRX, rowARTCUST2)
                 ElseIf rowARTCUST1 IsNot Nothing AndAlso LocateShipToByTelephone = True Then
-                    sql = "Select * From ARTCUST2 WHERE CUST_CODE = :PARM1 AND CUST_SHIP_TO_PHONE = :PARM2"
-                    rowARTCUST2 = ABSolution.ASCDATA1.GetDataRow(sql, "VV", New Object() {CUST_CODE, CUST_SHIP_TO_PHONE})
-                    If rowARTCUST2 Is Nothing Then
-                        CUST_SHIP_TO_NO = "xxxxxx"
+                    If rowARTCUST1.Item("CUST_PHONE") & String.Empty = CUST_SHIP_TO_PHONE Then
+                        CUST_SHIP_TO_NO = String.Empty
+                    Else
+                        sql = "SELECT * From ARTCUST2 WHERE CUST_CODE = :PARM1 AND CUST_SHIP_TO_PHONE = :PARM2"
+                        rowARTCUST2 = ABSolution.ASCDATA1.GetDataRow(sql, "VV", New Object() {CUST_CODE, CUST_SHIP_TO_PHONE})
+                        If rowARTCUST2 Is Nothing Then
+                            CUST_SHIP_TO_NO = "xxxxxx"
+                        End If
                     End If
                 End If
 
@@ -998,11 +923,6 @@ Namespace OrdersImport
                 rowSOTORDR1.Item("ORDR_LOCK_SHIP_VIA") = (rowSOTORDRX.Item("ORDR_LOCK_SHIP_VIA") & String.Empty).ToString.Trim
                 dst.Tables("SOTORDR1").Rows.Add(rowSOTORDR1)
 
-                If ORDR_LINE_SOURCE.Length > 0 Then
-                    ORDR_SOURCE = ORDR_LINE_SOURCE
-                Else
-                    ORDR_SOURCE = (rowSOTORDRX.Item("ORDR_SOURCE") & String.Empty).ToString.Trim
-                End If
                 If ORDR_SOURCE.Length = 0 Then
                     ORDR_SOURCE = "K"
                 End If
@@ -1031,7 +951,7 @@ Namespace OrdersImport
 
                 If rowSOTSVIA1 Is Nothing Then
                     Dim rowSOTSVIAF As DataRow = ABSolution.ASCDATA1.GetDataRow("SELECT * FROM SOTSVIAF WHERE ORDR_SOURCE = :PARM1 AND UPPER(SHIP_VIA_DESC) = :PARM2", _
-                                                                     "VV", New String() {ORDR_SOURCE, (rowSOTORDRX.Item("SHIP_VIA_CODE") & String.Empty).ToString.ToUpper.Trim})
+                                                                     "VV", New String() {ORDR_LINE_SOURCE, (rowSOTORDRX.Item("SHIP_VIA_CODE") & String.Empty).ToString.ToUpper.Trim})
                     If rowSOTSVIAF IsNot Nothing Then
                         If rowSOTORDR1.Item("ORDR_DPD") = "1" Then
                             rowSOTORDR1.Item("SHIP_VIA_CODE") = rowSOTSVIAF.Item("SHIP_VIA_CODE_DPD") & String.Empty
@@ -1050,10 +970,6 @@ Namespace OrdersImport
 
                 Me.AddCharNoDups(errorCodes, SOTORDR1ErrorCodes)
 
-                If (rowSOTORDR1.Item("SHIP_VIA_CODE") & String.Empty).ToString.Trim.Length = 0 Then
-                    Me.AddCharNoDups(InvalidShipVia, SOTORDR1ErrorCodes)
-                End If
-
                 ' Ship To
                 If CUST_SHIP_TO_NO.Length > 0 Then
                     If Not Me.SetShipToAttributes(rowSOTORDR1, SOTORDR1ErrorCodes) Then
@@ -1063,9 +979,13 @@ Namespace OrdersImport
 
                 ' Set DPD settings
                 If shipToPatient = True Then
-                    If Not Me.SetDPDShipViaSettings(rowSOTORDR1, SOTORDR1ErrorCodes) Then
+                    If Not Me.SetDPDShipViaSettings(rowSOTORDR1, SOTORDR1ErrorCodes, ORDR_LINE_SOURCE) Then
                         Me.AddCharNoDups(InvalidDPD, SOTORDR1ErrorCodes)
                     End If
+                End If
+
+                If (rowSOTORDR1.Item("SHIP_VIA_CODE") & String.Empty).ToString.Trim.Length = 0 Then
+                    Me.AddCharNoDups(InvalidShipVia, SOTORDR1ErrorCodes)
                 End If
 
                 ' ************ Other Order Header Fields ************
@@ -1097,23 +1017,7 @@ Namespace OrdersImport
                 rowSOTORDR1.Item("PATIENT_NO") = String.Empty
                 rowSOTORDR1.Item("ORDR_COMMENT") = String.Empty
                 rowSOTORDR1.Item("EDI_CUST_REF_NO") = rowSOTORDRX.Item("EDI_CUST_REF_NO") & String.Empty
-
-                Select Case ORDR_LINE_SOURCE
-                    Case "X" ' XML
-
-                    Case "O" ' OptiPort
-
-                    Case "V" ' Vision Web
-
-                    Case "F" ' eyeFinity
-
-                    Case "C" ' Customer Excel
-                        rowSOTORDR1.Item("ORDR_CALLER_NAME") = "Excel Order"
-                    Case "Y" ' Eyeconic
-                        rowSOTORDR1.Item("ORDR_CALLER_NAME") = "eyeconic.com"
-                    Case "A" ' AnyLens
-                        rowSOTORDR1.Item("ORDR_CALLER_NAME") = "AnyLens"
-                End Select
+                rowSOTORDR1.Item("ORDR_CALLER_NAME") = CALLER_NAME
 
                 Dim ORDR_COMMENT As String = (rowSOTORDRX.Item("ORDR_COMMENT") & String.Empty).ToString.Trim
                 If ORDR_COMMENT.Length > 0 Then
@@ -1395,7 +1299,7 @@ Namespace OrdersImport
         ''' <param name="rowSOTORDR1"></param>
         ''' <param name="errorCodes"></param>
         ''' <remarks></remarks>
-        Private Function SetDPDShipViaSettings(ByRef rowSOTORDR1 As DataRow, ByRef errorCodes As String) As Boolean
+        Private Function SetDPDShipViaSettings(ByRef rowSOTORDR1 As DataRow, ByRef errorCodes As String, ByVal ORDR_LINE_SOURCE As String) As Boolean
 
             Try
 
@@ -1421,8 +1325,8 @@ Namespace OrdersImport
 
                 ' If not Customer DPD contract then use system default
                 If SHIP_VIA_CODE_DPD.Length = 0 Then
-                    Select Case rowSOTORDR1.Item("ORDR_SOURCE") & String.Empty
-                        Case "Y"
+                    Select Case ORDR_LINE_SOURCE
+                        Case "Y" ' eyeconic
                             SHIP_VIA_CODE_DPD = originalSHIP_VIA_CODE_DPD
 
                         Case Else
@@ -1542,14 +1446,12 @@ Namespace OrdersImport
                 End If
 
                 If rowSOTORDR1.Item("ORDR_DPD") & String.Empty = "1" Then
-                    SetDPDShipViaSettings(rowSOTORDR1, errorCodes)
+                    ' do nothing at this time 
+                    'SetDPDShipViaSettings(rowSOTORDR1, errorCodes)
                 ElseIf (rowSOTORDR1.Item("ORDR_LOCK_SHIP_VIA") & String.Empty) <> "1" Then
                     If rowARTCUST2 IsNot Nothing AndAlso (rowARTCUST2.Item("CUST_SHIP_TO_SHIP_VIA_CODE") & String.Empty <> String.Empty) Then
                         rowSOTORDR1.Item("SHIP_VIA_CODE") = rowARTCUST2.Item("CUST_SHIP_TO_SHIP_VIA_CODE") & String.Empty
                         rowSOTSVIA1 = baseClass.LookUp("SOTSVIA1", rowSOTORDR1.Item("SHIP_VIA_CODE"))
-                        If rowSOTSVIA1 IsNot Nothing Then
-                            rowSOTORDR1.Item("SHIP_VIA_DESC") = rowSOTSVIA1.Item("SHIP_VIA_DESC") & String.Empty
-                        End If
                     ElseIf rowARTCUST3 IsNot Nothing AndAlso (rowSOTORDR1.Item("SHIP_VIA_CODE") & String.Empty = String.Empty) Then
                         If rowSOTORDR1.Item("ORDR_DPD") & String.Empty = "1" Then
                             rowSOTORDR1.Item("SHIP_VIA_CODE") = rowARTCUST3.Item("SHIP_VIA_CODE_DPD") & String.Empty
@@ -1559,11 +1461,7 @@ Namespace OrdersImport
                         Else
                             rowSOTORDR1.Item("SHIP_VIA_CODE") = rowARTCUST3.Item("SHIP_VIA_CODE") & String.Empty
                         End If
-
                         rowSOTSVIA1 = baseClass.LookUp("SOTSVIA1", rowSOTORDR1.Item("SHIP_VIA_CODE"))
-                        If rowSOTSVIA1 IsNot Nothing Then
-                            rowSOTORDR1.Item("SHIP_VIA_DESC") = rowSOTSVIA1.Item("SHIP_VIA_DESC") & String.Empty
-                        End If
                     End If
                 End If
 
@@ -1866,15 +1764,15 @@ Namespace OrdersImport
                 Dim CUST_SHIP_TO_URL As String = TruncateField(rowSOTORDRX.Item("OFFICE_WEBSITE") & String.Empty, "ARTCUST2", "CUST_SHIP_TO_URL").ToLower
 
                 CUST_SHIP_TO_NAME = TruncateField(CUST_SHIP_TO_NAME, "ARTCUST2", "CUST_SHIP_TO_NAME")
-                CUST_SHIP_TO_ADDR1 = TruncateField(CUST_SHIP_TO_NAME, "ARTCUST2", "CUST_SHIP_TO_ADDR1")
-                CUST_SHIP_TO_ADDR2 = TruncateField(CUST_SHIP_TO_NAME, "ARTCUST2", "CUST_SHIP_TO_ADDR2")
-                CUST_SHIP_TO_ADDR3 = TruncateField(CUST_SHIP_TO_NAME, "ARTCUST2", "CUST_SHIP_TO_ADDR3")
-                CUST_SHIP_TO_CITY = TruncateField(CUST_SHIP_TO_NAME, "ARTCUST2", "CUST_SHIP_TO_CITY")
-                CUST_SHIP_TO_STATE = TruncateField(CUST_SHIP_TO_NAME, "ARTCUST2", "CUST_SHIP_TO_STATE")
-                CUST_SHIP_TO_ZIP_CODE = TruncateField(CUST_SHIP_TO_NAME, "ARTCUST2", "CUST_SHIP_TO_ZIP_CODE")
-                CUST_SHIP_TO_COUNTRY = TruncateField(CUST_SHIP_TO_NAME, "ARTCUST2", "CUST_SHIP_TO_COUNTRY")
-                CUST_SHIP_TO_PHONE = TruncateField(CUST_SHIP_TO_NAME, "ARTCUST2", "CUST_SHIP_TO_PHONE")
-                CUST_SHIP_TO_URL = TruncateField(CUST_SHIP_TO_NAME, "ARTCUST2", "CUST_SHIP_TO_URL")
+                CUST_SHIP_TO_ADDR1 = TruncateField(CUST_SHIP_TO_ADDR1, "ARTCUST2", "CUST_SHIP_TO_ADDR1")
+                CUST_SHIP_TO_ADDR2 = TruncateField(CUST_SHIP_TO_ADDR2, "ARTCUST2", "CUST_SHIP_TO_ADDR2")
+                CUST_SHIP_TO_ADDR3 = TruncateField(CUST_SHIP_TO_ADDR3, "ARTCUST2", "CUST_SHIP_TO_ADDR3")
+                CUST_SHIP_TO_CITY = TruncateField(CUST_SHIP_TO_CITY, "ARTCUST2", "CUST_SHIP_TO_CITY")
+                CUST_SHIP_TO_STATE = TruncateField(CUST_SHIP_TO_STATE, "ARTCUST2", "CUST_SHIP_TO_STATE")
+                CUST_SHIP_TO_ZIP_CODE = TruncateField(CUST_SHIP_TO_ZIP_CODE, "ARTCUST2", "CUST_SHIP_TO_ZIP_CODE")
+                CUST_SHIP_TO_COUNTRY = TruncateField(CUST_SHIP_TO_COUNTRY, "ARTCUST2", "CUST_SHIP_TO_COUNTRY")
+                CUST_SHIP_TO_PHONE = TruncateField(CUST_SHIP_TO_PHONE, "ARTCUST2", "CUST_SHIP_TO_PHONE")
+                CUST_SHIP_TO_URL = TruncateField(CUST_SHIP_TO_URL, "ARTCUST2", "CUST_SHIP_TO_URL")
 
 
                 If rowARTCUST2.Item("CUST_SHIP_TO_PHONE") & String.Empty <> CUST_SHIP_TO_PHONE _
