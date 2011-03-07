@@ -977,8 +977,8 @@ Namespace OrdersImport
                     End If
                 End If
 
-                ' Set DPD settings
-                If shipToPatient = True Then
+                ' Set DPD settings if there is no ship Via
+                If shipToPatient = True AndAlso (rowSOTORDR1.Item("SHIP_VIA_CODE") & String.Empty) = String.Empty Then
                     If Not Me.SetDPDShipViaSettings(rowSOTORDR1, SOTORDR1ErrorCodes, ORDR_LINE_SOURCE) Then
                         Me.AddCharNoDups(InvalidDPD, SOTORDR1ErrorCodes)
                     End If
@@ -1445,14 +1445,19 @@ Namespace OrdersImport
                     Me.AddCharNoDups(InvalidSoldTo, errorCodes)
                 End If
 
-                If rowSOTORDR1.Item("ORDR_DPD") & String.Empty = "1" Then
-                    ' do nothing at this time 
-                    'SetDPDShipViaSettings(rowSOTORDR1, errorCodes)
-                ElseIf (rowSOTORDR1.Item("ORDR_LOCK_SHIP_VIA") & String.Empty) <> "1" Then
-                    If rowARTCUST2 IsNot Nothing AndAlso (rowARTCUST2.Item("CUST_SHIP_TO_SHIP_VIA_CODE") & String.Empty <> String.Empty) Then
-                        rowSOTORDR1.Item("SHIP_VIA_CODE") = rowARTCUST2.Item("CUST_SHIP_TO_SHIP_VIA_CODE") & String.Empty
-                        rowSOTSVIA1 = baseClass.LookUp("SOTSVIA1", rowSOTORDR1.Item("SHIP_VIA_CODE"))
-                    ElseIf rowARTCUST3 IsNot Nothing AndAlso (rowSOTORDR1.Item("SHIP_VIA_CODE") & String.Empty = String.Empty) Then
+                ' Always use the ship via code sent by the customer
+                If rowSOTORDR1.Item("SHIP_VIA_CODE") & String.Empty = String.Empty Then
+                    If rowARTCUST2 IsNot Nothing Then
+                        If rowSOTORDR1.Item("ORDR_DPD") & String.Empty <> "1" Then
+                            If (rowARTCUST2.Item("CUST_SHIP_TO_SHIP_VIA_CODE") & String.Empty).ToString.Length > 0 Then
+                                rowSOTORDR1.Item("SHIP_VIA_CODE") = rowARTCUST2.Item("CUST_SHIP_TO_SHIP_VIA_CODE") & String.Empty
+                            End If
+                        Else
+                            If (rowARTCUST2.Item("CUST_SHIP_TO_SHIP_VIA_CODE_DPD") & String.Empty).ToString.Length > 0 Then
+                                rowSOTORDR1.Item("SHIP_VIA_CODE") = rowARTCUST2.Item("CUST_SHIP_TO_SHIP_VIA_CODE_DPD") & String.Empty
+                            End If
+                        End If
+                    ElseIf rowARTCUST3 IsNot Nothing Then
                         If rowSOTORDR1.Item("ORDR_DPD") & String.Empty = "1" Then
                             rowSOTORDR1.Item("SHIP_VIA_CODE") = rowARTCUST3.Item("SHIP_VIA_CODE_DPD") & String.Empty
                             If rowSOTORDR1.Item("SHIP_VIA_CODE") & String.Empty = String.Empty Then
@@ -1461,9 +1466,10 @@ Namespace OrdersImport
                         Else
                             rowSOTORDR1.Item("SHIP_VIA_CODE") = rowARTCUST3.Item("SHIP_VIA_CODE") & String.Empty
                         End If
-                        rowSOTSVIA1 = baseClass.LookUp("SOTSVIA1", rowSOTORDR1.Item("SHIP_VIA_CODE"))
                     End If
                 End If
+
+                rowSOTSVIA1 = baseClass.LookUp("SOTSVIA1", rowSOTORDR1.Item("SHIP_VIA_CODE") & String.Empty)
 
                 If rowARTCUST3 IsNot Nothing Then
                     rowSOTORDR1.Item("FRT_CONT_NO") = rowARTCUST3.Item("FRT_CONT_NO") & String.Empty
@@ -1603,12 +1609,15 @@ Namespace OrdersImport
                         rowSOTORDR1.Item("STAX_CODE") = rowARTCUST2.Item("CUST_SHIP_TO_STAX_CODE") & String.Empty
                     End If
 
-                    If (rowSOTORDR1.Item("ORDR_LOCK_SHIP_VIA") & String.Empty) <> "1" Then
-                        If rowSOTORDR1.Item("ORDR_DPD") & String.Empty = "1" Then
-                            'Done Elsewhere
-                            'SetDPDShipViaSettings(rowSOTORDR1, errorCodes)
-                        ElseIf (rowARTCUST2.Item("CUST_SHIP_TO_SHIP_VIA_CODE") & String.Empty).ToString.Length > 0 Then
-                            rowSOTORDR1.Item("SHIP_VIA_CODE") = rowARTCUST2.Item("CUST_SHIP_TO_SHIP_VIA_CODE") & String.Empty
+                    If rowSOTORDR1.Item("SHIP_VIA_CODE") & String.Empty = String.Empty Then
+                        If rowSOTORDR1.Item("ORDR_DPD") & String.Empty <> "1" Then
+                            If (rowARTCUST2.Item("CUST_SHIP_TO_SHIP_VIA_CODE") & String.Empty).ToString.Length > 0 Then
+                                rowSOTORDR1.Item("SHIP_VIA_CODE") = rowARTCUST2.Item("CUST_SHIP_TO_SHIP_VIA_CODE") & String.Empty
+                            End If
+                        Else
+                            If (rowARTCUST2.Item("CUST_SHIP_TO_SHIP_VIA_CODE_DPD") & String.Empty).ToString.Length > 0 Then
+                                rowSOTORDR1.Item("SHIP_VIA_CODE") = rowARTCUST2.Item("CUST_SHIP_TO_SHIP_VIA_CODE_DPD") & String.Empty
+                            End If
                         End If
                     End If
 
