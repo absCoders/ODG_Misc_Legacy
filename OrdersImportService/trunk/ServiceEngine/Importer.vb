@@ -362,6 +362,7 @@ Namespace OrdersImport
             Dim CREATE_SHIP_TO As Boolean = False
             Dim SELECT_SHIP_TO_BY_TELE As Boolean = False
             Dim CALLER_NAME As String = String.Empty
+            Dim ORDR_SHIP_COMPLETE As String = String.Empty
 
             Try
                 If testMode Then RecordLogEntry("Enter ProcessWebServiceSalesOrders.")
@@ -392,6 +393,8 @@ Namespace OrdersImport
                         CREATE_SHIP_TO = (.Item("CREATE_SHIP_TO") & String.Empty) = "1"
                         SELECT_SHIP_TO_BY_TELE = (.Item("SELECT_SHIP_TO_BY_TELE") & String.Empty) = "1"
                         CALLER_NAME = .Item("CALLER_NAME") & String.Empty
+                        ORDR_SHIP_COMPLETE = .Item("ORDR_SHIP_COMPLETE") & String.Empty
+                        If ORDR_SHIP_COMPLETE.Length = 0 Then ORDR_SHIP_COMPLETE = "0"
                     End With
 
                     ' Flag entry as getting processed
@@ -512,7 +515,7 @@ Namespace OrdersImport
                     ORDR_NO = String.Empty
                     If CreateSalesOrder(ORDR_NO, CREATE_SHIP_TO, SELECT_SHIP_TO_BY_TELE, ORDR_LINE_SOURCE, ORDR_SOURCE, CALLER_NAME) Then
                         ' All orders are ship complete
-                        dst.Tables("SOTORDR1").Rows(0).Item("ORDR_SHIP_COMPLETE") = "1"
+                        dst.Tables("SOTORDR1").Rows(0).Item("ORDR_SHIP_COMPLETE") = ORDR_SHIP_COMPLETE
                         rowXSTORDR1.Item("ORDR_NO") = ORDR_NO
                         For Each rowXSTORDR2 As DataRow In dst.Tables("XSTORDR2").Rows
                             rowXSTORDR2.Item("ORDR_NO") = ORDR_NO
