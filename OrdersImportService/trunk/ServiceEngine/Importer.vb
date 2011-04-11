@@ -57,6 +57,8 @@ Namespace OrdersImport
         Private Const ItemAuthorizationError = "0"
         Private Const RevenueItemNoPrice = "N"
 
+        Private timerPeriod As Integer = 10
+
 #End Region
 
 #Region "Instaniate Service"
@@ -111,7 +113,7 @@ Namespace OrdersImport
 
         Public Sub LogIn()
             importTimer = New System.Threading.Timer _
-                (New System.Threading.TimerCallback(AddressOf MainProcess), Nothing, 3000, 3600000) ' every 10 mins 600000
+                (New System.Threading.TimerCallback(AddressOf MainProcess), Nothing, 3000, timerPeriod * 1000 * 60) ' every period Minutes
         End Sub
 
         Private Sub StartingProcess()
@@ -129,6 +131,10 @@ Namespace OrdersImport
                 ABSolution.ASCMAIN1.DBS_COMPANY = svcConfig.UID
                 ABSolution.ASCMAIN1.DBS_PASSWORD = svcConfig.PWD
                 ABSolution.ASCMAIN1.DBS_SERVER = svcConfig.TNS
+
+                timerPeriod = svcConfig.TimerPeriod
+                If timerPeriod < 0 Then timerPeriod = 10
+                If timerPeriod > 60 Then timerPeriod = 60
 
                 If ABSolution.ASCMAIN1.DBS_PASSWORD = "" OrElse ABSolution.ASCMAIN1.DBS_PASSWORD = "" OrElse ABSolution.ASCMAIN1.DBS_SERVER = "" Then
                     Return False

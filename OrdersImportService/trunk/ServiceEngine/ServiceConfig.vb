@@ -23,6 +23,8 @@ Public Class ServiceConfig
     Private _created As Date
     Private _backcolor As System.Drawing.Color
 
+    Private _period As Integer = 10
+
     Public Sub New()
         'Get settings from folder
 
@@ -41,7 +43,9 @@ Public Class ServiceConfig
                                 Case "DefaultFileFolder"
                                     _FileFolder = xReader.ReadElementContentAsString()
                                 Case "DefaultFolder"
-                                    _FileFolder = My.Application.Info.DirectoryPath & "\" ' & xReader.ReadElementContentAsString() & "\"
+                                    _FileFolder = My.Application.Info.DirectoryPath & "\" ' & xReader.ReadElementContentAsString() & "\
+                                Case "DefaultPeriod"
+                                    TimerPeriod = Convert.ToInt16(xReader.ReadElementContentAsString())
                             End Select
                     End Select
                 Loop
@@ -120,6 +124,20 @@ Public Class ServiceConfig
         End Get
         Set(ByVal value As System.Drawing.Color)
             Me._backcolor = value
+        End Set
+    End Property
+
+    Public Property TimerPeriod() As Integer
+        Get
+            Return Me._period
+        End Get
+        Set(ByVal value As Integer)
+            Me._period = value
+            If _period < 0 Then
+                _period = 10
+            ElseIf _period > 60 Then
+                _period = 60
+            End If
         End Set
     End Property
 
