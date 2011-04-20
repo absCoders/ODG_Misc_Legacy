@@ -79,6 +79,7 @@ Namespace OrdersImport
                 importInProcess = True
 
                 If Not OpenLogFile() Then
+                    importInProcess = False
                     Exit Sub
                 End If
 
