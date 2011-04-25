@@ -413,13 +413,13 @@ Namespace InvoiceEmail
                         Select Case rowExport.Item("EMAIL_TYPE")
                             Case "D"
                                 dpdInvoices = invoiceNumbers
-                                dpdFile = CreateDPDInvoiceFile(invoiceNumbers, CUST_CODE)
+                                dpdFile = CreateDPDInvoiceFile(invoiceNumbers, CUST_CODE & "_" & CUST_SHIP_TO_NO)
                             Case "C"
                                 crmInvoices = invoiceNumbers
-                                crmFile = CreateCrmFile(invoiceNumbers, CUST_CODE)
+                                crmFile = CreateCrmFile(invoiceNumbers, CUST_CODE & "_" & CUST_SHIP_TO_NO)
                             Case "E"
                                 ecpInvoices = invoiceNumbers
-                                ecpFile = CreateECPInvoiceFile(invoiceNumbers, CUST_CODE)
+                                ecpFile = CreateECPInvoiceFile(invoiceNumbers, CUST_CODE & "_" & CUST_SHIP_TO_NO)
                         End Select
                     Next
 
@@ -433,6 +433,7 @@ Namespace InvoiceEmail
                     attachments = attachments.Substring(1)
 
                     EmailDocument(custEmailaddress, "odg@opticaldg.com", "ODG Invoices and Credit Memos", attachments)
+                    numEmails += 1
 
                     UpdateDataSetTables(dpdInvoices, "D")
                     UpdateDataSetTables(crmInvoices, "C")
