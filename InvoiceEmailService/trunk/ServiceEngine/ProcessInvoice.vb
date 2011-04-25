@@ -237,19 +237,23 @@ Namespace InvoiceEmail
 
                 ABSolution.ASCMAIN1.ActiveForm = baseClass
 
-
                 ' Sql Statements
                 sqlDPD = "Select INV_NO FROM SOTINVH1"
                 sqlDPD &= " WHERE INV_DPD_PRINT_IND = 'D'"
                 sqlDPD &= " AND ORDR_TYPE_CODE <> 'B2C'"
                 sqlDPD &= " AND CUST_CODE = :PARM1"
+                sqlDPD &= " AND NVL(CUST_SHIP_TO_NO, '000000') = :PARM2"
 
                 sqlECP = "Select INV_NO FROM SOTINVH1"
                 sqlECP &= " WHERE INV_DPD_PRINT_IND = 'D'"
                 sqlECP &= " AND ORDR_TYPE_CODE = 'B2C'"
                 sqlECP &= " AND CUST_CODE_B2B = :PARM1"
+                sqlECP &= " AND NVL(CUST_SHIP_TO_NO, '000000') = :PARM2"
 
-                sqlCRM = "SELECT RTRN_NO INV_NO FROM SOTRTRN1 WHERE INV_PRINTED = '0' AND CUST_CODE = :PARM1"
+                sqlCRM = "SELECT RTRN_NO INV_NO FROM SOTRTRN1 "
+                sqlCRM &= " WHERE INV_PRINTED = '0'"
+                sqlCRM &= " AND CUST_CODE = :PARM1"
+                sqlCRM &= " AND NVL(CUST_SHIP_TO_NO, '000000') = :PARM2"
 
                 If testMode Then RecordLogEntry("Exit InitializeSettings.")
 
@@ -281,8 +285,6 @@ Namespace InvoiceEmail
             Dim sql As String = String.Empty
 
             Try
-
-
                 If testMode Then RecordLogEntry("Enter EmailInvoicesToCustomers.")
 
                 Dim svcConfig As New ServiceConfig
@@ -306,7 +308,7 @@ Namespace InvoiceEmail
 
                 Select Case DateTime.Compare(localTime, processTime)
                     Case Is < 0
-                        RecordLogEntry("EmailInvoicesToCustomers: To early to process invoices.")
+                        RecordLogEntry("EmailInvoicesToCustomers: Too early to process invoices.")
                         okToSendEmails = True
                         Return 0
                     Case Else
@@ -316,15 +318,15 @@ Namespace InvoiceEmail
                         End If
                 End Select
 
-                ' Do not trey tos end twice in one day
+                ' Do not try to end twice in one day
                 okToSendEmails = False
 
                 ' Process email invoices by customer
-                sql = "SELECT CUST_CODE, 'D' EMAIL_TYPE FROM ARTCUST1 WHERE DPD_COPIES = 'E'"
+                sql = "SELECT DISTINCT CUST_CODE, NVL(CUST_SHIP_TO_NO, '000000') CUST_SHIP_TO_NO, 'D' EMAIL_TYPE FROM ARTCUSTA WHERE DPD_COPIES = 'E'"
                 sql &= " Union "
-                sql &= "SELECT CUST_CODE, 'C' EMAIL_TYPE FROM ARTCUST1 WHERE CRM_COPIES = 'E'"
+                sql &= "SELECT DISTINCT CUST_CODE, NVL(CUST_SHIP_TO_NO, '000000') CUST_SHIP_TO_NO, 'C' EMAIL_TYPE FROM ARTCUSTA WHERE CRM_COPIES = 'E'"
                 sql &= " Union "
-                sql &= "SELECT CUST_CODE, 'E' EMAIL_TYPE FROM ARTCUST1 WHERE ECP_COPIES = 'E'"
+                sql &= "SELECT DISTINCT CUST_CODE, NVL(CUST_SHIP_TO_NO, '000000') CUST_SHIP_TO_NO, 'E' EMAIL_TYPE FROM ARTCUSTA WHERE ECP_COPIES = 'E'"
 
                 Dim tblCustomers As DataTable = ABSolution.ASCDATA1.GetDataTable(sql)
 
@@ -333,6 +335,7 @@ Namespace InvoiceEmail
                 End If
 
                 Dim CUST_CODE As String = String.Empty
+                Dim CUST_SHIP_TO_NO As String = String.Empty
 
                 Dim dpdFile As String = String.Empty
                 Dim crmFile As String = String.Empty
@@ -344,12 +347,16 @@ Namespace InvoiceEmail
 
                 Dim tblInvoices As DataTable = Nothing
                 Dim rowARTCUST1 As DataRow = Nothing
+                Dim rowARTCUST2 As DataRow = Nothing
                 Dim custEmailaddress As String = String.Empty
                 Dim invoiceNumbers As String = String.Empty
                 Dim attachments As String = String.Empty
 
-                For Each rowCustomer As DataRow In ABSolution.ASCDATA1.SelectDistinct(tblCustomers, New String() {"CUST_CODE"}).Rows
+                For Each rowCustomer As DataRow In ABSolution.ASCDATA1.SelectDistinct(tblCustomers, New String() {"CUST_CODE", "CUST_SHIP_TO_NO"}).Rows
                     CUST_CODE = rowCustomer.Item("CUST_CODE") & String.Empty
+                    CUST_SHIP_TO_NO = rowCustomer.Item("CUST_SHIP_TO_NO") & String.Empty
+                    If CUST_SHIP_TO_NO.Length = 0 Then CUST_SHIP_TO_NO = "000000"
+
                     dpdFile = String.Empty
                     crmFile = String.Empty
                     ecpFile = String.Empty
@@ -361,17 +368,30 @@ Namespace InvoiceEmail
                     custEmailaddress = String.Empty
 
                     rowARTCUST1 = baseClass.LookUp("ARTCUST1", CUST_CODE)
+                    rowARTCUST2 = baseClass.LookUp("ARTCUST2", New String() {CUST_CODE, CUST_SHIP_TO_NO})
+
                     If rowARTCUST1 Is Nothing Then
                         RecordLogEntry("Customer not found - " & CUST_CODE)
-                        Continue For
-                    ElseIf (rowARTCUST1.Item("CUST_EMAIL") & String.Empty).ToString.Trim.Length = 0 Then
-                        RecordLogEntry("Customer does not have an email address: " & CUST_CODE)
                         Continue For
                     End If
 
                     custEmailaddress = (rowARTCUST1.Item("CUST_EMAIL") & String.Empty).ToString.Trim
 
-                    For Each rowExport As DataRow In tblCustomers.Select("CUST_CODE = '" & CUST_CODE & "'", "EMAIL_TYPE")
+                    If rowARTCUST2 IsNot Nothing Then
+                        If (rowARTCUST2.Item("CUST_SHIP_TO_EMAIL") & String.Empty).ToString.Trim.Length = 0 Then
+                            RecordLogEntry("Customer does not have an email address: " & CUST_CODE & "/" & CUST_SHIP_TO_NO)
+                            Continue For
+                        Else
+                            custEmailaddress = (rowARTCUST2.Item("CUST_SHIP_TO_EMAIL") & String.Empty).ToString.Trim
+                        End If
+                    ElseIf (rowARTCUST1.Item("CUST_EMAIL") & String.Empty).ToString.Trim.Length = 0 Then
+                        RecordLogEntry("Customer does not have an email address: " & CUST_CODE)
+                        Continue For
+                    Else
+                        custEmailaddress = (rowARTCUST1.Item("CUST_EMAIL") & String.Empty).ToString.Trim
+                    End If
+
+                    For Each rowExport As DataRow In tblCustomers.Select("CUST_CODE = '" & CUST_CODE & "' AND CUST_SHIP_TO_NO = '" & CUST_SHIP_TO_NO & "'", "EMAIL_TYPE")
                         invoiceNumbers = String.Empty
 
                         Select Case rowExport.Item("EMAIL_TYPE")
@@ -383,7 +403,7 @@ Namespace InvoiceEmail
                                 sql = sqlECP
                         End Select
 
-                        For Each rowInvoices As DataRow In ABSolution.ASCDATA1.GetDataTable(sql, "", "V", New Object() {CUST_CODE}).Rows
+                        For Each rowInvoices As DataRow In ABSolution.ASCDATA1.GetDataTable(sql, "", "VV", New Object() {CUST_CODE, CUST_SHIP_TO_NO}).Rows
                             invoiceNumbers &= ", '" & rowInvoices.Item("INV_NO") & "'"
                         Next
 
@@ -418,14 +438,19 @@ Namespace InvoiceEmail
                     UpdateDataSetTables(crmInvoices, "C")
                     UpdateDataSetTables(ecpInvoices, "E")
 
+                    'Leave time for the file to free up so it may be deleted
+                    System.Threading.Thread.Sleep(5000)
                     For Each file As String In attachments.Split(";")
                         file = file.Trim
                         If file.Length = 0 Then Continue For
-                        If My.Computer.FileSystem.FileExists(file) Then
-                            My.Computer.FileSystem.DeleteFile(file)
-                        End If
-                    Next
+                        Try
+                            If My.Computer.FileSystem.FileExists(file) Then
+                                My.Computer.FileSystem.DeleteFile(file)
+                            End If
+                        Catch ex As Exception
 
+                        End Try
+                    Next
                 Next
 
                 If testMode Then RecordLogEntry("Exit InitializeSettings.")
@@ -454,14 +479,14 @@ Namespace InvoiceEmail
                 rptSORINVC1.Prepare_dst(False, "")
                 rptSORINVC1.Fill_Records_RPT(InvoiceNumbers)
 
-                With rptSORINVC1.clsASCBASE1
-                    .Print_Report_Begin()
-                    generatedReport = CustomerCode & "_dpd4"
-                    reportNo = .Generate_Report("SORINVC4", "DPD Patient Copy", "", False, False, "", "PDF", generatedReport, False)
-                    generatedReport = .F.REPORT_FILENAMES(reportNo)
-                    .Print_Report_End(, True)
-                End With
-                outputFilenames &= ";" & generatedReport
+                'With rptSORINVC1.clsASCBASE1
+                '    .Print_Report_Begin()
+                '    generatedReport = CustomerCode & "_dpd4"
+                '    reportNo = .Generate_Report("SORINVC4", "DPD Patient Copy", "", False, False, "", "PDF", generatedReport, False)
+                '    generatedReport = .F.REPORT_FILENAMES(reportNo)
+                '    .Print_Report_End(, True)
+                'End With
+                'outputFilenames &= ";" & generatedReport
 
                 'Me.SetupDoctorReturnAddress()
                 With rptSORINVC1.clsASCBASE1
@@ -581,66 +606,67 @@ Namespace InvoiceEmail
             Dim emailBCC As String = String.Empty
             Dim documentText As String = String.Empty
 
-            Try
+            Using mail As New Net.Mail.MailMessage()
+                Try
+                    mail.From = New Net.Mail.MailAddress(emailFrom, "")
 
-                Dim mail As New Net.Mail.MailMessage()
-                mail.From = New Net.Mail.MailAddress(emailFrom, "")
+                    For Each sendTo As String In emailTo.Split(";")
+                        If sendTo.Length > 0 Then
+                            mail.To.Add(New Net.Mail.MailAddress(sendTo, ""))
+                        End If
+                    Next
 
-                For Each sendTo As String In emailTo.Split(";")
-                    If sendTo.Length > 0 Then
-                        mail.To.Add(New Net.Mail.MailAddress(sendTo, ""))
+                    For Each cc As String In emailCC.Split(";")
+                        If cc.Length > 0 Then
+                            mail.CC.Add(New Net.Mail.MailAddress(cc, ""))
+                        End If
+                    Next
+
+                    For Each bcc As String In emailBCC.Split(";")
+                        If bcc.Length > 0 Then
+                            mail.Bcc.Add(New Net.Mail.MailAddress(bcc, ""))
+                        End If
+                    Next
+
+                    For Each file As String In attachments.Split(";")
+                        file = file.Trim
+                        If file.Length = 0 Then Continue For
+                        If My.Computer.FileSystem.FileExists(file) Then
+                            mail.Attachments.Add(New System.Net.Mail.Attachment(file))
+                        End If
+                    Next
+
+                    Dim rowTATMAIL1 As DataRow = ABSolution.ASCDATA1.GetDataRow("SELECT * FROM TATMAIL1 WHERE EMAIL_KEY = :PARM1", "V", "SO")
+
+                    mail.Subject = emailSubjectText
+                    If rowTATMAIL1 IsNot Nothing Then
+                        EMAIL_LOGO = (rowTATMAIL1.Item("EMAIL_LOGO") & String.Empty).ToString.Trim
                     End If
-                Next
 
-                For Each cc As String In emailCC.Split(";")
-                    If cc.Length > 0 Then
-                        mail.CC.Add(New Net.Mail.MailAddress(cc, ""))
+                    Dim plainView As Net.Mail.AlternateView = Net.Mail.AlternateView.CreateAlternateViewFromString(documentText)
+                    Dim htmlView As Net.Mail.AlternateView
+                    If EMAIL_LOGO <> "" AndAlso ABSolution.ASCMAIN1.Folders.ContainsKey("Images") Then
+                        htmlView = Net.Mail.AlternateView.CreateAlternateViewFromString("<img src=cid:logo>" & "<p>" & Replace(documentText & vbCrLf & vbCrLf & SEND_FROM_SIGNATURE, vbCrLf, "<br>") & "</p>", Nothing, "text/html")
+                        Dim logo As New Net.Mail.LinkedResource(ABSolution.ASCMAIN1.Folders("Images") & "ABS\" & EMAIL_LOGO)
+                        logo.ContentId = "logo"
+                        htmlView.LinkedResources.Add(logo)
+                    Else
+                        htmlView = Net.Mail.AlternateView.CreateAlternateViewFromString("<p>" & documentText & vbCrLf & vbCrLf & SEND_FROM_SIGNATURE & "</p>", Nothing, "text/html")
                     End If
-                Next
 
-                For Each bcc As String In emailBCC.Split(";")
-                    If bcc.Length > 0 Then
-                        mail.Bcc.Add(New Net.Mail.MailAddress(bcc, ""))
-                    End If
-                Next
+                    mail.AlternateViews.Add(plainView)
+                    mail.AlternateViews.Add(htmlView)
 
-                For Each file As String In attachments.Split(";")
-                    file = file.Trim
-                    If file.Length = 0 Then Continue For
-                    If My.Computer.FileSystem.FileExists(file) Then
-                        mail.Attachments.Add(New System.Net.Mail.Attachment(file))
-                    End If
-                Next
+                    Dim smtp As New Net.Mail.SmtpClient(ABSolution.ASCMAIN1.rowASTPARM1.Item("AS_PARM_EMAIL_SMTP_IP"), Val(ABSolution.ASCMAIN1.rowASTPARM1.Item("AS_PARM_EMAIL_SMTP_PORT")))
+                    smtp.Credentials = New System.Net.NetworkCredential(rowTATMAIL1.Item("EMAIL_ACCT_ID"), rowTATMAIL1.Item("EMAIL_ACCT_PWD"))
 
-                Dim rowTATMAIL1 As DataRow = ABSolution.ASCDATA1.GetDataRow("SELECT * FROM TATMAIL1 WHERE EMAIL_KEY = :PARM1", "V", "SO")
+                    smtp.Send(mail)
 
-                mail.Subject = emailSubjectText
-                If rowTATMAIL1 IsNot Nothing Then
-                    EMAIL_LOGO = (rowTATMAIL1.Item("EMAIL_LOGO") & String.Empty).ToString.Trim
-                End If
+                Catch ex As Exception
+                    RecordLogEntry("Send Email: " & ex.Message)
+                End Try
+            End Using
 
-                Dim plainView As Net.Mail.AlternateView = Net.Mail.AlternateView.CreateAlternateViewFromString(documentText)
-                Dim htmlView As Net.Mail.AlternateView
-                If EMAIL_LOGO <> "" AndAlso ABSolution.ASCMAIN1.Folders.ContainsKey("Images") Then
-                    htmlView = Net.Mail.AlternateView.CreateAlternateViewFromString("<img src=cid:logo>" & "<p>" & Replace(documentText & vbCrLf & vbCrLf & SEND_FROM_SIGNATURE, vbCrLf, "<br>") & "</p>", Nothing, "text/html")
-                    Dim logo As New Net.Mail.LinkedResource(ABSolution.ASCMAIN1.Folders("Images") & "ABS\" & EMAIL_LOGO)
-                    logo.ContentId = "logo"
-                    htmlView.LinkedResources.Add(logo)
-                Else
-                    htmlView = Net.Mail.AlternateView.CreateAlternateViewFromString("<p>" & documentText & vbCrLf & vbCrLf & SEND_FROM_SIGNATURE & "</p>", Nothing, "text/html")
-                End If
-
-                mail.AlternateViews.Add(plainView)
-                mail.AlternateViews.Add(htmlView)
-
-                Dim smtp As New Net.Mail.SmtpClient(ABSolution.ASCMAIN1.rowASTPARM1.Item("AS_PARM_EMAIL_SMTP_IP"), Val(ABSolution.ASCMAIN1.rowASTPARM1.Item("AS_PARM_EMAIL_SMTP_PORT")))
-                smtp.Credentials = New System.Net.NetworkCredential(rowTATMAIL1.Item("EMAIL_ACCT_ID"), rowTATMAIL1.Item("EMAIL_ACCT_PWD"))
-
-                smtp.Send(mail)
-
-            Catch ex As Exception
-                RecordLogEntry("Send Email: " & ex.Message)
-            End Try
         End Sub
 
 #End Region
