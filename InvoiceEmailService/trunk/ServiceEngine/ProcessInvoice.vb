@@ -480,6 +480,9 @@ Namespace InvoiceEmail
                 rptSORINVC1.Fill_Records_RPT(InvoiceNumbers)
 
                 With rptSORINVC1.clsASCBASE1
+                    ' needed to force this to get the ship to addresses when
+                    ' ARTCUST1.CUST_DPD_MAIL_TO_SHIP_TO = '1'
+                    .Fill_Records("ARTCUST2")
                     .Print_Report_Begin()
                     generatedReport = CustomerCode & "_dpd1"
                     .CR_params.Add("PRE_PRINTED_FORM", "0")
@@ -522,8 +525,10 @@ Namespace InvoiceEmail
                 End With
                 outputFilenames &= ";" & generatedReport
 
-                'Me.SetupDoctorReturnAddress()
                 With rptSORINVC1.clsASCBASE1
+                    ' needed to force this to get the ship to addresses when
+                    ' ARTCUST1.CUST_DPD_MAIL_TO_SHIP_TO = '1'
+                    .Fill_Records("ARTCUST2")
                     .Print_Report_Begin()
                     generatedReport = CustomerCode & "_ecp1"
                     .CR_params.Add("PRE_PRINTED_FORM", "0")
@@ -791,15 +796,25 @@ Namespace InvoiceEmail
         End Function
 
         Private Sub RecordLogEntry(ByVal message As String)
-            logStreamWriter.WriteLine(DateTime.Now & ": " & message)
+            Try
+                logStreamWriter.WriteLine(DateTime.Now & ": " & message)
+            Catch ex As Exception
+
+            End Try
         End Sub
 
         Public Sub CloseLog()
-            If logStreamWriter IsNot Nothing Then
-                logStreamWriter.Close()
-                logStreamWriter.Dispose()
-                logStreamWriter = Nothing
-            End If
+            Try
+                If logStreamWriter IsNot Nothing Then
+                    logStreamWriter.Close()
+                    logStreamWriter.Dispose()
+                    logStreamWriter = Nothing
+                End If
+            Catch ex As Exception
+
+            Finally
+
+            End Try
         End Sub
 
 #End Region
