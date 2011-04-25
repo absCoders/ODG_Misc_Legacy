@@ -479,16 +479,6 @@ Namespace InvoiceEmail
                 rptSORINVC1.Prepare_dst(False, "")
                 rptSORINVC1.Fill_Records_RPT(InvoiceNumbers)
 
-                'With rptSORINVC1.clsASCBASE1
-                '    .Print_Report_Begin()
-                '    generatedReport = CustomerCode & "_dpd4"
-                '    reportNo = .Generate_Report("SORINVC4", "DPD Patient Copy", "", False, False, "", "PDF", generatedReport, False)
-                '    generatedReport = .F.REPORT_FILENAMES(reportNo)
-                '    .Print_Report_End(, True)
-                'End With
-                'outputFilenames &= ";" & generatedReport
-
-                'Me.SetupDoctorReturnAddress()
                 With rptSORINVC1.clsASCBASE1
                     .Print_Report_Begin()
                     generatedReport = CustomerCode & "_dpd1"
