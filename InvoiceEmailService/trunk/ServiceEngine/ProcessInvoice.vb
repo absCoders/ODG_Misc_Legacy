@@ -294,6 +294,7 @@ Namespace InvoiceEmail
                 Dim svcConfig As New ServiceConfig
                 Dim milTime As String = svcConfig.StartEmailing
                 Dim emailDay As String = (svcConfig.EmailDay & String.Empty).ToUpper.Trim
+                Dim CCemail As String = (svcConfig.CCEmail & String.Empty).ToUpper.Trim
 
                 If emailDay.Length = 0 Then
                     emailDay = "ALL"
@@ -455,7 +456,7 @@ Namespace InvoiceEmail
 
                     attachments = attachments.Substring(1)
 
-                    EmailDocument(custEmailaddress, "odg@opticaldg.com", "ODG Invoices and Credit Memos", attachments)
+                    EmailDocument(custEmailaddress, "odg@opticaldg.com", "ODG Invoices and Credit Memos", attachments, CCemail)
                     numEmails += 1
 
                     UpdateDataSetTables(dpdInvoices, "D")
@@ -613,7 +614,7 @@ Namespace InvoiceEmail
         ''' Sends an email using the Components created frm teh last call to CreateComponents
         ''' </summary>
         ''' <remarks></remarks>
-        Private Sub EmailDocument(ByVal emailTo As String, ByVal emailFrom As String, ByVal emailSubjectText As String, ByVal attachments As String)
+        Private Sub EmailDocument(ByVal emailTo As String, ByVal emailFrom As String, ByVal emailSubjectText As String, ByVal attachments As String, ByVal BCCemail As String)
 
             If emailTo.Length = 0 OrElse emailFrom.Length = 0 Then
                 Exit Sub
@@ -622,7 +623,7 @@ Namespace InvoiceEmail
             Dim SEND_FROM_SIGNATURE As String = String.Empty
             Dim EMAIL_LOGO As String = String.Empty
             Dim emailCC As String = String.Empty
-            Dim emailBCC As String = String.Empty
+            Dim emailBCC As String = BCCemail
             Dim emailBody As String = String.Empty
 
             If rowASTUSER1_EMAIL_FROM IsNot Nothing Then

@@ -17,6 +17,7 @@ Public Class ServiceConfig
     Private _FileFolder As String = String.Empty
     Private _StartEmail As String = "2200"
     Private _EmailDay As String = "ALL"
+    Private _CCEmail As String = String.Empty
 
 
     Public Sub New()
@@ -41,6 +42,8 @@ Public Class ServiceConfig
                                     _StartEmail = xReader.ReadElementContentAsString()
                                 Case "EmailDay"
                                     _EmailDay = xReader.ReadElementContentAsString()
+                                Case "CCEmail"
+                                    _CCEmail = xReader.ReadElementContentAsString()
                             End Select
                     End Select
                 Loop
@@ -125,6 +128,15 @@ Public Class ServiceConfig
         End Get
         Set(ByVal value As String)
             _EmailDay = (value & String.Empty).ToString.ToUpper.Trim
+        End Set
+    End Property
+
+    Public Property CCEmail() As String
+        Get
+            Return _CCEmail
+        End Get
+        Set(ByVal value As String)
+            _CCEmail = value
         End Set
     End Property
 End Class
