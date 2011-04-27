@@ -24,6 +24,10 @@ Namespace InvoiceEmail
         Private sqlECP As String = String.Empty
         Private okToSendEmails As Boolean = False
 
+        Private rowTATMAIL1 As DataRow = Nothing
+        Private rowSOTPARM1 As DataRow = Nothing
+        Private rowASTUSER1_EMAIL_FROM As DataRow = Nothing
+
 #End Region
 
 #Region "Instaniate Service"
@@ -289,6 +293,20 @@ Namespace InvoiceEmail
 
                 Dim svcConfig As New ServiceConfig
                 Dim milTime As String = svcConfig.StartEmailing
+                Dim emailDay As String = (svcConfig.EmailDay & String.Empty).ToUpper.Trim
+
+                If emailDay.Length = 0 Then
+                    emailDay = "ALL"
+                ElseIf emailDay.Length > 3 Then
+                    emailDay = emailDay.Substring(0, 3)
+                End If
+
+                If emailDay <> "ALL" Then
+                    If DateTime.Now.ToString("ddd").ToUpper <> emailDay Then
+                        Return numEmails
+                    End If
+                End If
+
                 If (milTime = "0000") Then
                     RecordLogEntry("EmailInvoicesToCustomers: Start time set 0000, indicates do not set invoices")
                     Return numEmails
@@ -310,13 +328,18 @@ Namespace InvoiceEmail
                     Case Is < 0
                         RecordLogEntry("EmailInvoicesToCustomers: Too early to process invoices.")
                         okToSendEmails = True
-                        Return 0
+                        Return numEmails
                     Case Else
                         If Not okToSendEmails Then
                             RecordLogEntry("EmailInvoicesToCustomers: Invoices already emailed.")
-                            Return 0
+                            Return numEmails
                         End If
                 End Select
+
+                ' Get lastest database updates
+                rowSOTPARM1 = ABSolution.ASCDATA1.GetDataRow("SELECT * FROM SOTPARM1 WHERE SO_PARM_KEY = :PARM1", "V", "Z")
+                rowASTUSER1_EMAIL_FROM = baseClass.LookUp("ASTUSER1", rowSOTPARM1.Item("SO_PARM_EMAIL_FROM") & "", True)
+                rowTATMAIL1 = ABSolution.ASCDATA1.GetDataRow("SELECT * FROM TATMAIL1 WHERE EMAIL_KEY = :PARM1", "V", "SO")
 
                 ' Do not try to end twice in one day
                 okToSendEmails = False
@@ -600,7 +623,17 @@ Namespace InvoiceEmail
             Dim EMAIL_LOGO As String = String.Empty
             Dim emailCC As String = String.Empty
             Dim emailBCC As String = String.Empty
-            Dim documentText As String = String.Empty
+            Dim emailBody As String = String.Empty
+
+            If rowASTUSER1_EMAIL_FROM IsNot Nothing Then
+                SEND_FROM_SIGNATURE = _
+                  rowASTUSER1_EMAIL_FROM.Item("USER_NAME") & vbCrLf _
+                & IIf(rowASTUSER1_EMAIL_FROM.Item("USER_TITLE") & "" <> "", rowASTUSER1_EMAIL_FROM.Item("USER_TITLE") & vbCrLf, "") _
+                & IIf(rowASTUSER1_EMAIL_FROM.Item("USER_COMPANY") & "" <> "", rowASTUSER1_EMAIL_FROM.Item("USER_COMPANY") & vbCrLf, "") _
+                & "Tel: " & ABSolution.ASCMAIN1.FormatTel(rowASTUSER1_EMAIL_FROM.Item("USER_TELEPHONE") & "", rowASTUSER1_EMAIL_FROM.Item("USER_EXT") & "") & vbCrLf _
+                & IIf(rowASTUSER1_EMAIL_FROM.Item("USER_FAX") & "" <> "", "Fax: " & ABSolution.ASCMAIN1.FormatTel(rowASTUSER1_EMAIL_FROM.Item("USER_FAX") & "") & vbCrLf, "") _
+                & rowASTUSER1_EMAIL_FROM.Item("USER_EMAIL") & vbCrLf
+            End If
 
             Using mail As New Net.Mail.MailMessage()
                 Try
@@ -632,22 +665,24 @@ Namespace InvoiceEmail
                         End If
                     Next
 
-                    Dim rowTATMAIL1 As DataRow = ABSolution.ASCDATA1.GetDataRow("SELECT * FROM TATMAIL1 WHERE EMAIL_KEY = :PARM1", "V", "SO")
 
                     mail.Subject = emailSubjectText
                     If rowTATMAIL1 IsNot Nothing Then
                         EMAIL_LOGO = (rowTATMAIL1.Item("EMAIL_LOGO") & String.Empty).ToString.Trim
+                        emailBody = (rowTATMAIL1.Item("EMAIL_BODY") & String.Empty).ToString.Trim
                     End If
 
-                    Dim plainView As Net.Mail.AlternateView = Net.Mail.AlternateView.CreateAlternateViewFromString(documentText)
+                    mail.Body = String.Empty
+
+                    Dim plainView As Net.Mail.AlternateView = Net.Mail.AlternateView.CreateAlternateViewFromString(emailBody)
                     Dim htmlView As Net.Mail.AlternateView
                     If EMAIL_LOGO <> "" AndAlso ABSolution.ASCMAIN1.Folders.ContainsKey("Images") Then
-                        htmlView = Net.Mail.AlternateView.CreateAlternateViewFromString("<img src=cid:logo>" & "<p>" & Replace(documentText & vbCrLf & vbCrLf & SEND_FROM_SIGNATURE, vbCrLf, "<br>") & "</p>", Nothing, "text/html")
+                        htmlView = Net.Mail.AlternateView.CreateAlternateViewFromString("<img src=cid:logo>" & "<p>" & Replace(emailBody & vbCrLf & vbCrLf & SEND_FROM_SIGNATURE, vbCrLf, "<br>") & "</p>", Nothing, "text/html")
                         Dim logo As New Net.Mail.LinkedResource(ABSolution.ASCMAIN1.Folders("Images") & "ABS\" & EMAIL_LOGO)
                         logo.ContentId = "logo"
                         htmlView.LinkedResources.Add(logo)
                     Else
-                        htmlView = Net.Mail.AlternateView.CreateAlternateViewFromString("<p>" & documentText & vbCrLf & vbCrLf & SEND_FROM_SIGNATURE & "</p>", Nothing, "text/html")
+                        htmlView = Net.Mail.AlternateView.CreateAlternateViewFromString("<p>" & emailBody & vbCrLf & vbCrLf & SEND_FROM_SIGNATURE & "</p>", Nothing, "text/html")
                     End If
 
                     mail.AlternateViews.Add(plainView)

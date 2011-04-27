@@ -16,6 +16,7 @@ Public Class ServiceConfig
 
     Private _FileFolder As String = String.Empty
     Private _StartEmail As String = "2200"
+    Private _EmailDay As String = "ALL"
 
 
     Public Sub New()
@@ -38,6 +39,8 @@ Public Class ServiceConfig
                                     _PWD = xReader.ReadElementContentAsString()
                                 Case "StartEmail"
                                     _StartEmail = xReader.ReadElementContentAsString()
+                                Case "EmailDay"
+                                    _EmailDay = xReader.ReadElementContentAsString()
                             End Select
                     End Select
                 Loop
@@ -109,6 +112,19 @@ Public Class ServiceConfig
         End Get
         Set(ByVal value As String)
             Me._FileFolder = value
+        End Set
+    End Property
+
+    <DefaultValue("ALL")> _
+    <Category("EmailInvoice")> _
+    <Description("This is the Day to email invoices")> _
+    <DisplayName("Day to email invoices to customers. ALL for everyday, else first three chars of day")> _
+    Public Property EmailDay() As String
+        Get
+            Return _EmailDay
+        End Get
+        Set(ByVal value As String)
+            _EmailDay = (value & String.Empty).ToString.ToUpper.Trim
         End Set
     End Property
 End Class
