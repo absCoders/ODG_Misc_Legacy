@@ -61,7 +61,10 @@ Namespace InvoiceEmail
                     System.Threading.Thread.Sleep(2000)
                     If InitializeSettings() Then
                         System.Threading.Thread.Sleep(2000)
-                        EmailInvoicesToCustomers()
+                        If PrepareDatasetEntries() Then
+                            System.Threading.Thread.Sleep(2000)
+                            EmailInvoicesToCustomers()
+                        End If
                     End If
                 End If
 
@@ -79,7 +82,7 @@ Namespace InvoiceEmail
 
         Public Sub LogIn()
             importTimer = New System.Threading.Timer _
-                (New System.Threading.TimerCallback(AddressOf MainProcess), Nothing, 3000, 10800000) ' every 3 hours
+                (New System.Threading.TimerCallback(AddressOf MainProcess), Nothing, 3000, 3600000) ' every 1 hour
         End Sub
 
         Private Sub StartingProcess()
@@ -283,6 +286,43 @@ Namespace InvoiceEmail
             End Try
         End Function
 
+        Private Function RecordEvent(ByVal CUST_CODE As String, ByVal CUST_SHIP_TO_NO As String, ByVal EventDescription As String) As Boolean
+
+            Try
+                Dim CONV_NO As String = ABSolution.ASCMAIN1.Next_Control_No("ARTCUSTT.CONV_NO")
+
+                dst.Tables("ARTCUSTT").Clear()
+
+                Dim rowARTCUSTT As DataRow = dst.Tables("ARTCUSTT").NewRow
+                rowARTCUSTT.Item("CONV_NO") = CONV_NO
+                rowARTCUSTT.Item("CUST_CODE") = CUST_CODE
+                rowARTCUSTT.Item("CUST_SHIP_TO_NO") = CUST_SHIP_TO_NO
+                rowARTCUSTT.Item("DATE_CONV") = DateTime.Now.ToString("MM/dd/yyyy")
+                'rowARTCUSTT.Item("SPOKE_WITH") = ""
+                rowARTCUSTT.Item("CONV_LOG") = EventDescription
+                rowARTCUSTT.Item("INIT_OPER") = ABSolution.ASCMAIN1.USER_ID
+                rowARTCUSTT.Item("INIT_DATE") = DateTime.Now
+                'rowARTCUSTT.Item("SEND_NO") = ""
+                dst.Tables("ARTCUSTT").Rows.Add(rowARTCUSTT)
+
+                With baseClass
+                    Try
+                        .BeginTrans()
+                        .clsASCBASE1.Update_Record_TDA("ARTCUSTT")
+                        .CommitTrans()
+                    Catch ex As Exception
+                        .Rollback()
+                        RecordLogEntry("RecordEvent : " & ex.Message)
+                    End Try
+                End With
+
+            Catch ex As Exception
+                ' Nothing at this time 
+            Finally
+                dst.Tables("ARTCUSTT").Clear()
+            End Try
+        End Function
+
         Private Function EmailInvoicesToCustomers() As Int16
 
             Dim numEmails As Int16 = 0
@@ -457,6 +497,7 @@ Namespace InvoiceEmail
                     attachments = attachments.Substring(1)
 
                     EmailDocument(custEmailaddress, "odg@opticaldg.com", "ODG Invoices and Credit Memos", attachments, CCemail)
+                    RecordEvent(CUST_CODE, CUST_SHIP_TO_NO, "Emailed Invoices and Credit Memos to: " & custEmailaddress)
                     numEmails += 1
 
                     UpdateDataSetTables(dpdInvoices, "D")
@@ -502,12 +543,9 @@ Namespace InvoiceEmail
                 Dim rptSORINVC1 As ABSolution.ASFSRPTM
                 rptSORINVC1 = baseClass.Load_rptClass("SORINVC1")
                 rptSORINVC1.Prepare_dst(False, "")
-                rptSORINVC1.Fill_Records_RPT(InvoiceNumbers)
+                rptSORINVC1.Fill_Records_RPT(New String() {InvoiceNumbers, "", "", "", "", "Y"})
 
                 With rptSORINVC1.clsASCBASE1
-                    ' needed to force this to get the ship to addresses when
-                    ' ARTCUST1.CUST_DPD_MAIL_TO_SHIP_TO = '1'
-                    .Fill_Records("ARTCUST2")
                     .Print_Report_Begin()
                     generatedReport = CustomerCode & "_dpd1"
                     .CR_params.Add("PRE_PRINTED_FORM", "0")
@@ -710,6 +748,7 @@ Namespace InvoiceEmail
             Try
 
                 If testMode Then RecordLogEntry("Enter ClearDataSetTables.")
+                dst.Tables("ARTCUSTT").Clear()
 
                 If testMode Then RecordLogEntry("Exit ClearDataSetTables.")
                 Return True
@@ -733,10 +772,11 @@ Namespace InvoiceEmail
 
                 With dst
 
-                    baseClass.Get_PARM("SOTPARM1")
-                    baseClass.Create_Lookup("ASTUSER1")
-                    baseClass.Create_Lookup("ARTCUST1")
-                    baseClass.Create_Lookup("ARTCUST2")
+                    'baseClass.Get_PARM("SOTPARM1")
+                    'baseClass.Create_Lookup("ASTUSER1")
+                    'baseClass.Create_Lookup("ARTCUST1")
+                    'baseClass.Create_Lookup("ARTCUST2")
+                    baseClass.Create_TDA(.Tables.Add, "ARTCUSTT", "*")
 
                 End With
 
