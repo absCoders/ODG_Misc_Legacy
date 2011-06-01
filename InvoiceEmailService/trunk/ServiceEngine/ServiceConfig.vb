@@ -10,21 +10,21 @@ Public Class ServiceConfig
 
     Private Const DefaultTNS As String = "TST"
 
-    Private _TNS As String = DefaultTNS
-    Private _UID As String = DefaultTNS
-    Private _PWD As String = DefaultTNS
+    Private sTNS As String = DefaultTNS
+    Private sUID As String = DefaultTNS
+    Private sPWD As String = DefaultTNS
 
-    Private _FileFolder As String = String.Empty
-    Private _StartEmail As String = "2200"
-    Private _EmailDay As String = "ALL"
-    Private _CCEmail As String = String.Empty
-
+    Private sFileFolder As String = String.Empty
+    Private sStartEmail As String = "1100"
+    Private sEmailDay As String = "MON"
+    Private sCCEmail As String = String.Empty
+    Private sLastTimeExecuted As String = String.Empty
 
     Public Sub New()
         'Get settings from folder
 
-        _FileFolder = My.Application.Info.DirectoryPath
-        If _FileFolder.EndsWith("\") Then _FileFolder &= "\"
+        sFileFolder = My.Application.Info.DirectoryPath
+        If sFileFolder.EndsWith("\") Then sFileFolder &= "\"
 
         If My.Computer.FileSystem.FileExists(My.Application.Info.DirectoryPath & "\SvcConfig.xml") Then
             Using xReader As Xml.XmlTextReader = New XmlTextReader(My.Application.Info.DirectoryPath & "\SvcConfig.xml")
@@ -33,22 +33,28 @@ Public Class ServiceConfig
                         Case XmlNodeType.Element
                             Select Case xReader.Name
                                 Case "DefaultTNS"
-                                    _TNS = xReader.ReadElementContentAsString()
+                                    sTNS = xReader.ReadElementContentAsString()
                                 Case "DefaultUID"
-                                    _UID = xReader.ReadElementContentAsString()
+                                    sUID = xReader.ReadElementContentAsString()
                                 Case "DefaultPWD"
-                                    _PWD = xReader.ReadElementContentAsString()
+                                    sPWD = xReader.ReadElementContentAsString()
                                 Case "StartEmail"
-                                    _StartEmail = xReader.ReadElementContentAsString()
+                                    sStartEmail = xReader.ReadElementContentAsString()
                                 Case "EmailDay"
-                                    _EmailDay = xReader.ReadElementContentAsString()
+                                    sEmailDay = xReader.ReadElementContentAsString()
                                 Case "CCEmail"
-                                    _CCEmail = xReader.ReadElementContentAsString()
+                                    sCCEmail = xReader.ReadElementContentAsString()
+                                Case "LastTimeExecuted"
+                                    sLastTimeExecuted = xReader.ReadElementContentAsString()
                             End Select
                     End Select
                 Loop
                 xReader.Close()
             End Using
+        End If
+
+        If sLastTimeExecuted.Length = 0 Then
+            sLastTimeExecuted = DateAdd(DateInterval.Year, -1, DateTime.Now).ToString
         End If
 
     End Sub
@@ -59,10 +65,10 @@ Public Class ServiceConfig
     <DisplayName("TNS Name of Oracle Schema to Log Results to")> _
     Public Property TNS() As String
         Get
-            Return Me._TNS
+            Return Me.sTNS
         End Get
         Set(ByVal value As String)
-            Me._TNS = value
+            Me.sTNS = value
         End Set
     End Property
 
@@ -72,10 +78,10 @@ Public Class ServiceConfig
     <DisplayName("UID of Oracle Schema to Log Results to")> _
     Public Property UID() As String
         Get
-            Return Me._UID
+            Return Me.sUID
         End Get
         Set(ByVal value As String)
-            Me._UID = value
+            Me.sUID = value
         End Set
     End Property
 
@@ -85,10 +91,10 @@ Public Class ServiceConfig
     <DisplayName("PWD of Oracle Schema UID")> _
     Public Property PWD() As String
         Get
-            Return Me._PWD
+            Return Me.sPWD
         End Get
         Set(ByVal value As String)
-            Me._PWD = value
+            Me.sPWD = value
         End Set
     End Property
 
@@ -98,10 +104,10 @@ Public Class ServiceConfig
     <DisplayName("Time to start emailing invoices to customers")> _
     Public Property StartEmailing() As String
         Get
-            Return Me._StartEmail
+            Return Me.sStartEmail
         End Get
         Set(ByVal value As String)
-            Me._StartEmail = value
+            Me.sStartEmail = value
         End Set
     End Property
 
@@ -111,10 +117,10 @@ Public Class ServiceConfig
     <DisplayName("Name of the FileFolder where Logs will be stored")> _
     Public Property FileFolder() As String
         Get
-            Return Me._FileFolder
+            Return Me.sFileFolder
         End Get
         Set(ByVal value As String)
-            Me._FileFolder = value
+            Me.sFileFolder = value
         End Set
     End Property
 
@@ -124,19 +130,56 @@ Public Class ServiceConfig
     <DisplayName("Day to email invoices to customers. ALL for everyday, else first three chars of day")> _
     Public Property EmailDay() As String
         Get
-            Return _EmailDay
+            Return sEmailDay
         End Get
         Set(ByVal value As String)
-            _EmailDay = (value & String.Empty).ToString.ToUpper.Trim
+            sEmailDay = (value & String.Empty).ToString.ToUpper.Trim
         End Set
     End Property
 
     Public Property CCEmail() As String
         Get
-            Return _CCEmail
+            Return sCCEmail
         End Get
         Set(ByVal value As String)
-            _CCEmail = value
+            sCCEmail = value
         End Set
     End Property
+
+    Public Property LastTimeExecuted() As String
+        Get
+            Return (sLastTimeExecuted)
+        End Get
+        Set(ByVal value As String)
+            sLastTimeExecuted = value
+        End Set
+    End Property
+
+    Public Function UpdateConfigNode(ByVal NodeName As String, ByVal NodeValue As String) As Boolean
+
+        Try
+            If My.Computer.FileSystem.FileExists(My.Application.Info.DirectoryPath & "\SvcConfig.xml") Then
+                Dim MyXML As New XmlDocument()
+                MyXML.Load(My.Application.Info.DirectoryPath & "\SvcConfig.xml")
+                Dim MyXMLNode As XmlNode = MyXML.SelectSingleNode("/SvcConfig/" & NodeName)
+                If MyXMLNode IsNot Nothing Then
+                    MyXMLNode.ChildNodes(0).InnerText = NodeValue
+                Else
+                    MyXMLNode = MyXML.SelectSingleNode("/SvcConfig")
+                    Dim elem As XmlNode = MyXML.CreateNode(XmlNodeType.Element, NodeName, Nothing)
+                    elem.InnerText = NodeValue
+                    MyXMLNode.AppendChild(elem)
+                End If
+                MyXML.Save(My.Application.Info.DirectoryPath & "\SvcConfig.xml")
+                Return True
+            End If
+
+        Catch ex As Exception
+            Return False
+        End Try
+
+        Return False
+
+    End Function
+
 End Class

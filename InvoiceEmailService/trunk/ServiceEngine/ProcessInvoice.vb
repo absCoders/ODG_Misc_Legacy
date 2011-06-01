@@ -22,7 +22,6 @@ Namespace InvoiceEmail
         Private sqlDPD As String = String.Empty
         Private sqlCRM As String = String.Empty
         Private sqlECP As String = String.Empty
-        Private okToSendEmails As Boolean = False
 
         Private rowTATMAIL1 As DataRow = Nothing
         Private rowSOTPARM1 As DataRow = Nothing
@@ -59,7 +58,8 @@ Namespace InvoiceEmail
                 Dim svcConfig As New ServiceConfig
                 Dim milTime As String = svcConfig.StartEmailing
                 Dim emailDay As String = (svcConfig.EmailDay & String.Empty).ToUpper.Trim
-                Dim CCemail As String = (svcConfig.CCEmail & String.Empty).ToUpper.Trim
+                Dim sLastTimeExecuted As String = (svcConfig.LastTimeExecuted & String.Empty).ToUpper.Trim
+
                 Dim processEmails As Boolean = True
 
                 If emailDay.Length = 0 Then
@@ -71,8 +71,6 @@ Namespace InvoiceEmail
                 If emailDay <> "ALL" Then
                     If DateTime.Now.ToString("ddd").ToUpper <> emailDay Then
                         RecordLogEntry("MainProcess: Invalid day to process emails")
-                        ' Since a new day we can can set this to ok to send 
-                        okToSendEmails = True
                         processEmails = False
                     End If
                 End If
@@ -91,20 +89,30 @@ Namespace InvoiceEmail
                     End If
                 End If
 
-                Dim localTime As Date = DateTime.Now.ToLocalTime
-                Dim processTime As Date = CDate(DateTime.Now.ToString("MM/dd/yyyy") & " " & milTime)
+                If DateTime.Now.Hour < CDate(milTime).Hour _
+                    OrElse DateTime.Now.Minute < CDate(milTime).Minute Then
+                    RecordLogEntry("MainProcess: To early to start emailing invoices")
+                    processEmails = False
+                End If
 
-                Select Case DateTime.Compare(localTime, processTime)
-                    Case Is < 0
-                        RecordLogEntry("MainProcess: Too early to process invoices.")
-                        okToSendEmails = True
-                        processEmails = False
-                    Case Else
-                        If Not okToSendEmails Then
-                            RecordLogEntry("MainProcess: Invoices already emailed.")
+
+                If IsDate(sLastTimeExecuted) AndAlso processEmails Then
+                    Select Case DateDiff(DateInterval.Day, CDate(DateTime.Now.ToString("MM/dd/yyyy")), CDate(CDate(sLastTimeExecuted).ToString("MM/dd/yyyy")))
+                        Case 0
+                            ' Same day
+                            RecordLogEntry("Main Process: Emails already sent today.")
                             processEmails = False
-                        End If
-                End Select
+
+                        Case Is > 0
+                            ' Future date
+                            RecordLogEntry("Main Process: Date issue in Config XML file.")
+                            processEmails = False
+
+                        Case Is < 0
+                            RecordLogEntry("Main Process: Ok to email invoices.")
+                            svcConfig.UpdateConfigNode("LastTimeExecuted", DateTime.Now)
+                    End Select
+                End If
 
                 If processEmails Then
                     System.Threading.Thread.Sleep(2000)
@@ -121,11 +129,12 @@ Namespace InvoiceEmail
                 End If
 
                 If testMode Then RecordLogEntry("Exit MainProcess.")
-                RecordLogEntry("Closing Log file.")
 
             Catch ex As Exception
                 RecordLogEntry("MainProcess: " & ex.Message)
+
             Finally
+                RecordLogEntry("Closing Log file.")
                 CloseLog()
                 emailInProcess = False
             End Try
@@ -383,8 +392,8 @@ Namespace InvoiceEmail
             Try
                 If testMode Then RecordLogEntry("Enter EmailInvoicesToCustomers.")
 
-                ' Do not Send twice in one day
-                okToSendEmails = False
+                Dim svcConfig As New ServiceConfig
+                Dim CCemail As String = (svcConfig.CCEmail & String.Empty).ToUpper.Trim
 
                 ' Get lastest database updates
                 rowSOTPARM1 = ABSolution.ASCDATA1.GetDataRow("SELECT * FROM SOTPARM1 WHERE SO_PARM_KEY = :PARM1", "V", "Z")
