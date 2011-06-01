@@ -51,30 +51,82 @@ Namespace InvoiceEmail
                     Exit Sub
                 End If
 
-                ' Place a blank line in file to better see
-                ' where each call starts.
+                ' Place a blank line in file to better see where each call starts.
                 RecordLogEntry(String.Empty)
                 RecordLogEntry("Enter MainProcess.")
 
-                System.Threading.Thread.Sleep(2000)
-                If LogIntoDatabase() Then
+                ' See if it is time to process teh emails
+                Dim svcConfig As New ServiceConfig
+                Dim milTime As String = svcConfig.StartEmailing
+                Dim emailDay As String = (svcConfig.EmailDay & String.Empty).ToUpper.Trim
+                Dim CCemail As String = (svcConfig.CCEmail & String.Empty).ToUpper.Trim
+                Dim processEmails As Boolean = True
+
+                If emailDay.Length = 0 Then
+                    emailDay = "ALL"
+                ElseIf emailDay.Length > 3 Then
+                    emailDay = emailDay.Substring(0, 3)
+                End If
+
+                If emailDay <> "ALL" Then
+                    If DateTime.Now.ToString("ddd").ToUpper <> emailDay Then
+                        RecordLogEntry("MainProcess: Invalid day to process emails")
+                        ' Since a new day we can can set this to ok to send 
+                        okToSendEmails = True
+                        processEmails = False
+                    End If
+                End If
+
+                If (milTime = "0000") Then
+                    RecordLogEntry("MainProcess: Start time set 0000, indicates do not send invoices")
+                    processEmails = False
+                ElseIf (milTime.Length <> 4) Then
+                    RecordLogEntry("MainProcess: Invalid Military time to start emailing invoices")
+                    processEmails = False
+                Else
+                    If (CInt(milTime.Substring(0, 2)) < 12) Then
+                        milTime = milTime.Substring(0, 2) + ":" + milTime.Substring(2, 2) + "AM"
+                    Else
+                        milTime = CStr(CInt(milTime.Substring(0, 2)) - 12) + ":" + milTime.Substring(2, 2) + "PM"
+                    End If
+                End If
+
+                Dim localTime As Date = DateTime.Now.ToLocalTime
+                Dim processTime As Date = CDate(DateTime.Now.ToString("MM/dd/yyyy") & " " & milTime)
+
+                Select Case DateTime.Compare(localTime, processTime)
+                    Case Is < 0
+                        RecordLogEntry("MainProcess: Too early to process invoices.")
+                        okToSendEmails = True
+                        processEmails = False
+                    Case Else
+                        If Not okToSendEmails Then
+                            RecordLogEntry("MainProcess: Invoices already emailed.")
+                            processEmails = False
+                        End If
+                End Select
+
+                If processEmails Then
                     System.Threading.Thread.Sleep(2000)
-                    If InitializeSettings() Then
+                    If LogIntoDatabase() Then
                         System.Threading.Thread.Sleep(2000)
-                        If PrepareDatasetEntries() Then
+                        If InitializeSettings() Then
                             System.Threading.Thread.Sleep(2000)
-                            EmailInvoicesToCustomers()
+                            If PrepareDatasetEntries() Then
+                                System.Threading.Thread.Sleep(2000)
+                                EmailInvoicesToCustomers()
+                            End If
                         End If
                     End If
                 End If
 
                 If testMode Then RecordLogEntry("Exit MainProcess.")
                 RecordLogEntry("Closing Log file.")
-                CloseLog()
 
             Catch ex As Exception
                 RecordLogEntry("MainProcess: " & ex.Message)
             Finally
+                CloseLog()
                 emailInProcess = False
             End Try
 
@@ -331,59 +383,13 @@ Namespace InvoiceEmail
             Try
                 If testMode Then RecordLogEntry("Enter EmailInvoicesToCustomers.")
 
-                Dim svcConfig As New ServiceConfig
-                Dim milTime As String = svcConfig.StartEmailing
-                Dim emailDay As String = (svcConfig.EmailDay & String.Empty).ToUpper.Trim
-                Dim CCemail As String = (svcConfig.CCEmail & String.Empty).ToUpper.Trim
-
-                If emailDay.Length = 0 Then
-                    emailDay = "ALL"
-                ElseIf emailDay.Length > 3 Then
-                    emailDay = emailDay.Substring(0, 3)
-                End If
-
-                If emailDay <> "ALL" Then
-                    If DateTime.Now.ToString("ddd").ToUpper <> emailDay Then
-                        Return numEmails
-                    End If
-                End If
-
-                If (milTime = "0000") Then
-                    RecordLogEntry("EmailInvoicesToCustomers: Start time set 0000, indicates do not set invoices")
-                    Return numEmails
-                ElseIf (milTime.Length <> 4) Then
-                    RecordLogEntry("EmailInvoicesToCustomers: Invalid Military time to start emailing invoices")
-                    Return numEmails
-                Else
-                    If (CInt(milTime.Substring(0, 2)) < 12) Then
-                        milTime = milTime.Substring(0, 2) + ":" + milTime.Substring(2, 2) + "AM"
-                    Else
-                        milTime = CStr(CInt(milTime.Substring(0, 2)) - 12) + ":" + milTime.Substring(2, 2) + "PM"
-                    End If
-                End If
-
-                Dim localTime As Date = DateTime.Now.ToLocalTime
-                Dim processTime As Date = CDate(DateTime.Now.ToString("MM/dd/yyyy") & " " & milTime)
-
-                Select Case DateTime.Compare(localTime, processTime)
-                    Case Is < 0
-                        RecordLogEntry("EmailInvoicesToCustomers: Too early to process invoices.")
-                        okToSendEmails = True
-                        Return numEmails
-                    Case Else
-                        If Not okToSendEmails Then
-                            RecordLogEntry("EmailInvoicesToCustomers: Invoices already emailed.")
-                            Return numEmails
-                        End If
-                End Select
+                ' Do not Send twice in one day
+                okToSendEmails = False
 
                 ' Get lastest database updates
                 rowSOTPARM1 = ABSolution.ASCDATA1.GetDataRow("SELECT * FROM SOTPARM1 WHERE SO_PARM_KEY = :PARM1", "V", "Z")
                 rowASTUSER1_EMAIL_FROM = baseClass.LookUp("ASTUSER1", rowSOTPARM1.Item("SO_PARM_EMAIL_FROM") & "", True)
                 rowTATMAIL1 = ABSolution.ASCDATA1.GetDataRow("SELECT * FROM TATMAIL1 WHERE EMAIL_KEY = :PARM1", "V", "SO")
-
-                ' Do not try to send twice in one day
-                okToSendEmails = False
 
                 ' Process email invoices by customer
                 sql = "SELECT DISTINCT CUST_CODE, NVL(CUST_SHIP_TO_NO, '000000') CUST_SHIP_TO_NO, 'D' EMAIL_TYPE FROM ARTCUSTA WHERE DPD_COPIES = 'E'"
