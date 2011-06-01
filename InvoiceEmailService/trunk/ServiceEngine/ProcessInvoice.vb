@@ -382,7 +382,7 @@ Namespace InvoiceEmail
                 rowASTUSER1_EMAIL_FROM = baseClass.LookUp("ASTUSER1", rowSOTPARM1.Item("SO_PARM_EMAIL_FROM") & "", True)
                 rowTATMAIL1 = ABSolution.ASCDATA1.GetDataRow("SELECT * FROM TATMAIL1 WHERE EMAIL_KEY = :PARM1", "V", "SO")
 
-                ' Do not try to end twice in one day
+                ' Do not try to send twice in one day
                 okToSendEmails = False
 
                 ' Process email invoices by customer
