@@ -489,6 +489,8 @@ Namespace InvoiceEmail
                         If invoiceNumbers.Length = 0 Then Continue For
                         invoiceNumbers = invoiceNumbers.Substring(1).Trim
 
+                        RecordLogEntry(CUST_CODE & ", " & CUST_SHIP_TO_NO & " - " & invoiceNumbers)
+
                         Select Case rowExport.Item("EMAIL_TYPE")
                             Case "D"
                                 dpdInvoices = invoiceNumbers
