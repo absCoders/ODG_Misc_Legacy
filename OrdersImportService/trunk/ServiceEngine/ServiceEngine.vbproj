@@ -60,6 +60,10 @@
       <HintPath>..\DLLS\ABS.exe</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="nsoftware.IPWorks, Version=8.0.2938.0, Culture=neutral, PublicKeyToken=cdc168f89cffe9cf, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\Program Files (x86)\nsoftware\IPWorks V8 .NET Edition\lib\nsoftware.IPWorks.dll</HintPath>
+    </Reference>
     <Reference Include="Oracle.DataAccess, Version=2.112.1.0, Culture=neutral, PublicKeyToken=89b483f429c47342" />
     <Reference Include="System" />
     <Reference Include="System.Core">
