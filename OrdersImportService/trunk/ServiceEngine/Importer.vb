@@ -466,7 +466,6 @@ Namespace OrdersImport
             Dim ORDR_LNO As Int16 = 0
 
             Dim XML_ORDR_SOURCE As String = String.Empty
-            Dim SALES_ORDR_SOURCE As String = String.Empty
             Dim ORDR_LINE_SOURCE As String = String.Empty
             Dim CREATE_SHIP_TO As Boolean = False
             Dim SELECT_SHIP_TO_BY_TELE As Boolean = False
@@ -512,19 +511,13 @@ Namespace OrdersImport
 
                     With dst.Tables("XMTXREF1").Select("XML_ORDR_SOURCE = '" & XML_ORDR_SOURCE & "'", "")(0)
                         ORDR_LINE_SOURCE = .Item("ORDR_LINE_SOURCE") & String.Empty
-                        SALES_ORDR_SOURCE = .Item("ORDR_SOURCE") & String.Empty
+                        ORDR_SOURCE = .Item("ORDR_SOURCE") & String.Empty
                         CREATE_SHIP_TO = (.Item("CREATE_SHIP_TO") & String.Empty) = "1"
                         SELECT_SHIP_TO_BY_TELE = (.Item("SELECT_SHIP_TO_BY_TELE") & String.Empty) = "1"
                         CALLER_NAME = .Item("CALLER_NAME") & String.Empty
                         ORDR_SHIP_COMPLETE = .Item("ORDR_SHIP_COMPLETE") & String.Empty
                         If ORDR_SHIP_COMPLETE.Length = 0 Then ORDR_SHIP_COMPLETE = "0"
                     End With
-
-                    ' All XML ORDR Sources are set to 'X'; however, there are different values passed to this
-                    ' routine to handle special processing at a customer level.
-                    If SALES_ORDR_SOURCE.Length = 0 Then
-                        SALES_ORDR_SOURCE = ORDR_SOURCE
-                    End If
 
                     ' Flag entry as getting processed
                     rowXSTORDR1.Item("PROCESS_IND") = "1"
@@ -642,9 +635,6 @@ Namespace OrdersImport
                         ' Reset Ship Complete flag since it may be changed by customer setup
                         dst.Tables("SOTORDR1").Rows(0).Item("ORDR_SHIP_COMPLETE") = ORDR_SHIP_COMPLETE
                         rowXSTORDR1.Item("ORDR_NO") = ORDR_NO
-
-                        ' Stamp record with overriding ORDR SOURCE value.
-                        rowXSTORDR1.Item("ORDR_SOURCE") = SALES_ORDR_SOURCE
 
                         For Each rowXSTORDR2 As DataRow In dst.Tables("XSTORDR2").Rows
                             rowXSTORDR2.Item("ORDR_NO") = ORDR_NO
