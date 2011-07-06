@@ -194,6 +194,7 @@ Namespace OrdersImport
                 If ABSolution.ASCMAIN1.oraCon.State = ConnectionState.Open Then
                     ABSolution.ASCMAIN1.oraCon.Close()
                 End If
+                DisposeOPD()
             End Try
 
         End Sub
@@ -1346,6 +1347,51 @@ Namespace OrdersImport
 
         End Sub
 
+        Private Sub DisposeOPD()
+            Try
+                With baseClass.clsASCBASE1
+
+                    If .CMDs IsNot Nothing AndAlso .CMDs.Count <> 0 Then
+                        For Each CMD_key As String In .CMDs.Keys
+                            Dim cmd As Oracle.DataAccess.Client.OracleCommand = .CMDs(CMD_key)
+                            For Each param As Oracle.DataAccess.Client.OracleParameter In cmd.Parameters
+                                param.Dispose()
+                            Next
+                            cmd.Dispose()
+                        Next
+                    End If
+                    .CMDs = Nothing
+
+                    If .BA_CMDs IsNot Nothing AndAlso .BA_CMDs.Count <> 0 Then
+                        For Each CMD_key As String In .BA_CMDs.Keys
+                            Dim cmds() As Oracle.DataAccess.Client.OracleCommand = .BA_CMDs(CMD_key)
+                            For Each cmd As Oracle.DataAccess.Client.OracleCommand In cmds
+                                For Each param As Oracle.DataAccess.Client.OracleParameter In cmd.Parameters
+                                    param.Dispose()
+                                Next
+                                cmd.Dispose()
+                            Next
+                            cmds = Nothing
+                        Next
+                    End If
+                    .BA_CMDs = Nothing
+
+                    If .TDAs IsNot Nothing Then
+                        For Each tda As Oracle.DataAccess.Client.OracleDataAdapter In .TDAs.Values
+                            tda.Dispose()
+                        Next
+                    End If
+                    .TDAs = Nothing
+
+                    .Dispose()
+                End With
+
+                baseClass.Dispose()
+
+            Catch ex As Exception
+
+            End Try
+        End Sub
 
 #End Region
 
