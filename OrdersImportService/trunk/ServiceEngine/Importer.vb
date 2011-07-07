@@ -506,6 +506,7 @@ Namespace OrdersImport
                     If dst.Tables("XMTXREF1").Select("XML_ORDR_SOURCE = '" & XML_ORDR_SOURCE & "'", "").Length = 0 Then
                         RecordLogEntry("ORDR_SOURCE not found in XMTXREF1 for XS_DOC_SEQ_NO: " & rowXSTORDR1.Item("XS_DOC_SEQ_NO"))
                         rowXSTORDR1.Item("PROCESS_IND") = "E"
+                        emailErrors("X", 1, "Order Source not found in XMTXREF1 for order " & rowXSTORDR1.Item("XS_DOC_SEQ_NO"))
                         Continue For
                     End If
 
@@ -645,6 +646,7 @@ Namespace OrdersImport
                     Else
                         rowXSTORDR1.Item("PROCESS_IND") = "E"
                         RecordLogEntry("Web Service Doc Seq No: " & (rowXSTORDR1.Item("XS_DOC_SEQ_NO") & String.Empty).ToString & " not imported")
+                        emailErrors("X", 1, "Web Service Doc Seq No: " & (rowXSTORDR1.Item("XS_DOC_SEQ_NO") & String.Empty).ToString & " not imported")
 
                         With baseClass
                             Try
@@ -3281,11 +3283,13 @@ Namespace OrdersImport
             End If
         End Sub
 
-        Private Sub emailErrors(ByRef ORDR_SOURCE As String, ByVal numErrors As Int16)
+        Private Sub emailErrors(ByRef ORDR_SOURCE As String, ByVal numErrors As Int16, Optional ByVal note As String = "")
             Try
 
                 Dim clsASTNOTE1 As New TAC.ASCNOTE1("IMPERROR_" & ORDR_SOURCE, dst, "")
-                Dim note As String = "There were " & numErrors & " import error(s) on " & DateTime.Now.ToLongDateString & " " & DateTime.Now.ToLongTimeString
+                If note.Length = 0 Then
+                    note = "There were " & numErrors & " import error(s) on " & DateTime.Now.ToLongDateString & " " & DateTime.Now.ToLongTimeString
+                End If
                 clsASTNOTE1.Note = note
                 clsASTNOTE1.CreateComponents()
                 clsASTNOTE1.EmailDocument()
