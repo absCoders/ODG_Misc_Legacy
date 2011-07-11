@@ -284,7 +284,6 @@ Namespace InvoiceEmail
                     folder_prefix = "\..\"
                     ABSolution.ASCMAIN1.CLIENT_CODE = UCase(Split(My.Application.Info.DirectoryPath, "\")(3))
                 End If
-                'MsgBox("2b")
 
                 ABSolution.ASCMAIN1.Folders.Add("Images", ABSolution.ASCMAIN1.GetPath(My.Application.Info.DirectoryPath & folder_prefix & "Images\"))
                 ABSolution.ASCMAIN1.Folders.Add("Reports", ABSolution.ASCMAIN1.GetPath(My.Application.Info.DirectoryPath & folder_prefix & "Reports\"))
