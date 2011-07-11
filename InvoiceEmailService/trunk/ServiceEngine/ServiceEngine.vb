@@ -89,12 +89,12 @@ Public Class ServiceEngine
     Private Sub Start_Service()
 
         With My.Computer.FileSystem
-            If Not .DirectoryExists(Me._config.FileFolder & "LOGS\") Then
-                .CreateDirectory(Me._config.FileFolder & "LOGS\")
+            If Not .DirectoryExists(Me._config.FileFolder & "\LOGS\") Then
+                .CreateDirectory(Me._config.FileFolder & "\LOGS\")
             End If
 
-            If Not .DirectoryExists(Me._config.FileFolder & "ARCHIVE\") Then
-                .CreateDirectory(Me._config.FileFolder & "ARCHIVE\")
+            If Not .DirectoryExists(Me._config.FileFolder & "\ARCHIVE\") Then
+                .CreateDirectory(Me._config.FileFolder & "\ARCHIVE\")
             End If
         End With
 
