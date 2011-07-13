@@ -278,12 +278,15 @@ Namespace InvoiceEmail
                 If UCase(My.Application.Info.DirectoryPath) Like "C:\VS\*" Then
                     ABSolution.ASCMAIN1.Running_in_VS = True
                     folder_prefix = "\..\..\..\..\"
-                    ABSolution.ASCMAIN1.CLIENT_CODE = UCase(Mid(My.Application.Info.DirectoryPath, 7, 3))
+                    'ABSolution.ASCMAIN1.CLIENT_CODE = UCase(Mid(My.Application.Info.DirectoryPath, 7, 3))
                 Else
                     ABSolution.ASCMAIN1.Running_in_VS = False
                     folder_prefix = "\..\"
-                    ABSolution.ASCMAIN1.CLIENT_CODE = UCase(Split(My.Application.Info.DirectoryPath, "\")(3))
+                    'ABSolution.ASCMAIN1.CLIENT_CODE = UCase(Split(My.Application.Info.DirectoryPath, "\")(3))
                 End If
+
+                ' Force
+                ABSolution.ASCMAIN1.CLIENT_CODE = "ODG"
 
                 ABSolution.ASCMAIN1.Folders.Add("Images", ABSolution.ASCMAIN1.GetPath(My.Application.Info.DirectoryPath & folder_prefix & "Images\"))
                 ABSolution.ASCMAIN1.Folders.Add("Reports", ABSolution.ASCMAIN1.GetPath(My.Application.Info.DirectoryPath & folder_prefix & "Reports\"))
@@ -295,13 +298,7 @@ Namespace InvoiceEmail
                 ABSolution.ASCMAIN1.Folders.Add("Archive", ABSolution.ASCMAIN1.GetPath(My.Application.Info.DirectoryPath & folder_prefix & "Archive\"))
                 ABSolution.ASCMAIN1.Folders.Add("Attach", ABSolution.ASCMAIN1.GetPath(My.Application.Info.DirectoryPath & folder_prefix & "Attach\"))
                 ABSolution.ASCMAIN1.Folders.Add("root", ABSolution.ASCMAIN1.GetPath(My.Application.Info.DirectoryPath & folder_prefix))
-
-                If My.Computer.Name = "WJZLAP" Then
-                    ABSolution.ASCMAIN1.Folders.Add("Oracle", "C:\oracle\product\10.2.0\db_1\")
-                Else
-                    ABSolution.ASCMAIN1.Folders.Add("Oracle", "C:\oracle\product\10.2.0\Client_1\")
-                End If
-
+                ABSolution.ASCMAIN1.Folders.Add("Oracle", "C:\oracle\product\10.2.0\Client_1\")
                 ABSolution.ASCMAIN1.ActiveForm = baseClass
 
                 ' Sql Statements
@@ -556,12 +553,14 @@ Namespace InvoiceEmail
                 Dim outputFilenames As String = String.Empty
                 Dim generatedReport As String = String.Empty
 
-                Dim rptSORINVC1 As ABSolution.ASFSRPTM
-                rptSORINVC1 = baseClass.Load_rptClass("SORINVC1")
-                rptSORINVC1.Prepare_dst(False, "")
-                rptSORINVC1.Fill_Records_RPT(New String() {InvoiceNumbers, "", "", "", "", "Y"})
+                If Not baseClass.REPORTS.ContainsKey("SORINVC1") Then
+                    baseClass.REPORTS.Add("SORINVC1", baseClass.Load_rptClass("SORINVC1"))
+                    baseClass.REPORTS("SORINVC1").Prepare_dst(False, "")
+                End If
 
-                With rptSORINVC1.clsASCBASE1
+                baseClass.REPORTS("SORINVC1").Fill_Records_RPT(New String() {InvoiceNumbers, "", "", "", "", "Y"})
+
+                With baseClass.REPORTS("SORINVC1").clsASCBASE1
                     .Print_Report_Begin()
                     generatedReport = CustomerCode & "_dpd1"
                     .CR_params.Add("PRE_PRINTED_FORM", "0")
@@ -570,9 +569,6 @@ Namespace InvoiceEmail
                     .Print_Report_End(, True)
                 End With
                 outputFilenames &= ";" & generatedReport
-
-                rptSORINVC1.Dispose()
-                rptSORINVC1 = Nothing
 
                 Return outputFilenames
 
@@ -590,12 +586,13 @@ Namespace InvoiceEmail
                 Dim reportNo As String = String.Empty
                 Dim generatedReport As String = String.Empty
 
-                Dim rptSORINVC1 As ABSolution.ASFSRPTM
-                rptSORINVC1 = baseClass.Load_rptClass("SORINVC1")
-                rptSORINVC1.Prepare_dst(False, "")
-                rptSORINVC1.Fill_Records_RPT(InvoiceNumbers)
+                If Not baseClass.REPORTS.ContainsKey("SORINVC1") Then
+                    baseClass.REPORTS.Add("SORINVC1", baseClass.Load_rptClass("SORINVC1"))
+                    baseClass.REPORTS("SORINVC1").Prepare_dst(False, "")
+                End If
+                baseClass.REPORTS("SORINVC1").Fill_Records_RPT(InvoiceNumbers)
 
-                With rptSORINVC1.clsASCBASE1
+                With baseClass.REPORTS("SORINVC1").clsASCBASE1
                     .Print_Report_Begin()
                     generatedReport = CustomerCode & "_ecp3"
                     reportNo = .Generate_Report("SORINVC3", "B2C Patient Copy", "", False, False, "", "PDF", generatedReport, False)
@@ -604,7 +601,7 @@ Namespace InvoiceEmail
                 End With
                 outputFilenames &= ";" & generatedReport
 
-                With rptSORINVC1.clsASCBASE1
+                With baseClass.REPORTS("SORINVC1").clsASCBASE1
                     ' needed to force this to get the ship to addresses when
                     ' ARTCUST1.CUST_DPD_MAIL_TO_SHIP_TO = '1'
                     .Fill_Records("ARTCUST2")
@@ -616,10 +613,6 @@ Namespace InvoiceEmail
                     .Print_Report_End(, True)
                 End With
                 outputFilenames &= ";" & generatedReport
-
-                rptSORINVC1 = New ABSolution.ASFSRPTM
-                rptSORINVC1.Dispose()
-                rptSORINVC1 = Nothing
 
                 Return outputFilenames
 
@@ -636,12 +629,18 @@ Namespace InvoiceEmail
                 Dim reportNo As String = String.Empty
                 Dim generatedReport As String = String.Empty
 
-                Dim rptSORRTRN1 As ABSolution.ASFSRPTM
-                rptSORRTRN1 = baseClass.Load_rptClass("SORRTRN1")
-                rptSORRTRN1.Prepare_dst(False, " RTRN_NO IN (" & InvoiceNumbers & ")")
-                rptSORRTRN1.Fill_Records_RPT()
+                If baseClass.REPORTS.ContainsKey("SORRTRN1") Then
+                    baseClass.REPORTS.Remove("SORRTRN1")
+                End If
 
-                With rptSORRTRN1.clsASCBASE1
+                If Not baseClass.REPORTS.ContainsKey("SORRTRN1") Then
+                    baseClass.REPORTS.Add("SORRTRN1", baseClass.Load_rptClass("SORRTRN1"))
+                    baseClass.REPORTS("SORRTRN1").Prepare_dst(False, " RTRN_NO IN (" & InvoiceNumbers & ")")
+                End If
+
+                baseClass.REPORTS("SORRTRN1").Fill_Records_RPT()
+
+                With baseClass.REPORTS("SORRTRN1").clsASCBASE1
                     .Print_Report_Begin()
                     generatedReport = CustomerCode & "_rtrn1"
                     .CR_params.Add("PRE_PRINTED_FORM", "0")
@@ -650,10 +649,6 @@ Namespace InvoiceEmail
                     .Print_Report_End(, True)
                 End With
                 outputFilenames &= ";" & generatedReport
-
-                rptSORRTRN1 = New ABSolution.ASFSRPTM
-                rptSORRTRN1.Dispose()
-                rptSORRTRN1 = Nothing
 
                 Return outputFilenames
 
