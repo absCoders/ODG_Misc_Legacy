@@ -27,6 +27,9 @@ Namespace InvoiceEmail
         Private rowSOTPARM1 As DataRow = Nothing
         Private rowASTUSER1_EMAIL_FROM As DataRow = Nothing
 
+        Private ReportsFolder As String = String.Empty
+        Private TempFolder As String = String.Empty
+
 #End Region
 
 #Region "Instaniate Service"
@@ -217,9 +220,20 @@ Namespace InvoiceEmail
                 filefolder = String.Empty
 
                 dst = New DataSet
+                ReportsFolder = My.Application.Info.DirectoryPath
+                If Not ReportsFolder.EndsWith("\") Then
+                    ReportsFolder &= "\"
+                End If
+                ReportsFolder &= "Reports\"
+
+                TempFolder = My.Application.Info.DirectoryPath
+                If Not TempFolder.EndsWith("\") Then
+                    TempFolder &= "\"
+                End If
+                TempFolder &= "Temp\"
+
 
                 ABSolution.ASCMAIN1.USER_ID = "service"
-
                 ABSolution.ASCMAIN1.Set_DBS_Dependent_Strings()
 
                 ABSolution.ASCMAIN1.SESSION_NO = ABSolution.ASCMAIN1.Next_Control_No("ASTLOGS1.SESSION_NO")
@@ -274,31 +288,62 @@ Namespace InvoiceEmail
                 ABSolution.ASCMAIN1.WTS_SESSION_ID = GetSessionId()
 
                 Dim folder_prefix As String
-                'MsgBox("2a")
+
                 If UCase(My.Application.Info.DirectoryPath) Like "C:\VS\*" Then
                     ABSolution.ASCMAIN1.Running_in_VS = True
                     folder_prefix = "\..\..\..\..\"
-                    'ABSolution.ASCMAIN1.CLIENT_CODE = UCase(Mid(My.Application.Info.DirectoryPath, 7, 3))
                 Else
                     ABSolution.ASCMAIN1.Running_in_VS = False
                     folder_prefix = "\..\"
-                    'ABSolution.ASCMAIN1.CLIENT_CODE = UCase(Split(My.Application.Info.DirectoryPath, "\")(3))
                 End If
 
                 ' Force
                 ABSolution.ASCMAIN1.CLIENT_CODE = "ODG"
 
-                ABSolution.ASCMAIN1.Folders.Add("Images", ABSolution.ASCMAIN1.GetPath(My.Application.Info.DirectoryPath & folder_prefix & "Images\"))
-                ABSolution.ASCMAIN1.Folders.Add("Reports", ABSolution.ASCMAIN1.GetPath(My.Application.Info.DirectoryPath & folder_prefix & "Reports\"))
-                ABSolution.ASCMAIN1.Folders.Add("DataSets", ABSolution.ASCMAIN1.GetPath(My.Application.Info.DirectoryPath & folder_prefix & "DataSets\"))
-                ABSolution.ASCMAIN1.Folders.Add("Temp", ABSolution.ASCMAIN1.GetPath(My.Application.Info.DirectoryPath & folder_prefix & "Temp\"))
-                ABSolution.ASCMAIN1.Folders.Add("Work", ABSolution.ASCMAIN1.GetPath(My.Application.Info.DirectoryPath & folder_prefix & "Work\"))
-                ABSolution.ASCMAIN1.Folders.Add("bin", ABSolution.ASCMAIN1.GetPath(My.Application.Info.DirectoryPath & folder_prefix & "bin\"))
-                ABSolution.ASCMAIN1.Folders.Add("Help", ABSolution.ASCMAIN1.GetPath(My.Application.Info.DirectoryPath & folder_prefix & "Help\"))
-                ABSolution.ASCMAIN1.Folders.Add("Archive", ABSolution.ASCMAIN1.GetPath(My.Application.Info.DirectoryPath & folder_prefix & "Archive\"))
-                ABSolution.ASCMAIN1.Folders.Add("Attach", ABSolution.ASCMAIN1.GetPath(My.Application.Info.DirectoryPath & folder_prefix & "Attach\"))
-                ABSolution.ASCMAIN1.Folders.Add("root", ABSolution.ASCMAIN1.GetPath(My.Application.Info.DirectoryPath & folder_prefix))
-                ABSolution.ASCMAIN1.Folders.Add("Oracle", "C:\oracle\product\10.2.0\Client_1\")
+                If Not ABSolution.ASCMAIN1.Folders.ContainsKey("Images") Then
+                    ABSolution.ASCMAIN1.Folders.Add("Images", ABSolution.ASCMAIN1.GetPath(My.Application.Info.DirectoryPath & folder_prefix & "Images\"))
+                End If
+
+                If Not ABSolution.ASCMAIN1.Folders.ContainsKey("Reports") Then
+                    ABSolution.ASCMAIN1.Folders.Add("Reports", ABSolution.ASCMAIN1.GetPath(My.Application.Info.DirectoryPath & folder_prefix & "Reports\"))
+                End If
+
+                If Not ABSolution.ASCMAIN1.Folders.ContainsKey("DataSets") Then
+                    ABSolution.ASCMAIN1.Folders.Add("DataSets", ABSolution.ASCMAIN1.GetPath(My.Application.Info.DirectoryPath & folder_prefix & "DataSets\"))
+                End If
+
+                If Not ABSolution.ASCMAIN1.Folders.ContainsKey("Temp") Then
+                    ABSolution.ASCMAIN1.Folders.Add("Temp", ABSolution.ASCMAIN1.GetPath(My.Application.Info.DirectoryPath & folder_prefix & "Temp\"))
+                End If
+
+                If Not ABSolution.ASCMAIN1.Folders.ContainsKey("Work") Then
+                    ABSolution.ASCMAIN1.Folders.Add("Work", ABSolution.ASCMAIN1.GetPath(My.Application.Info.DirectoryPath & folder_prefix & "Work\"))
+                End If
+
+                If Not ABSolution.ASCMAIN1.Folders.ContainsKey("bin") Then
+                    ABSolution.ASCMAIN1.Folders.Add("bin", ABSolution.ASCMAIN1.GetPath(My.Application.Info.DirectoryPath & folder_prefix & "bin\"))
+                End If
+
+                If Not ABSolution.ASCMAIN1.Folders.ContainsKey("Help") Then
+                    ABSolution.ASCMAIN1.Folders.Add("Help", ABSolution.ASCMAIN1.GetPath(My.Application.Info.DirectoryPath & folder_prefix & "Help\"))
+                End If
+
+                If Not ABSolution.ASCMAIN1.Folders.ContainsKey("Archive") Then
+                    ABSolution.ASCMAIN1.Folders.Add("Archive", ABSolution.ASCMAIN1.GetPath(My.Application.Info.DirectoryPath & folder_prefix & "Archive\"))
+                End If
+
+                If Not ABSolution.ASCMAIN1.Folders.ContainsKey("Attach") Then
+                    ABSolution.ASCMAIN1.Folders.Add("Attach", ABSolution.ASCMAIN1.GetPath(My.Application.Info.DirectoryPath & folder_prefix & "Attach\"))
+                End If
+
+                If Not ABSolution.ASCMAIN1.Folders.ContainsKey("root") Then
+                    ABSolution.ASCMAIN1.Folders.Add("root", ABSolution.ASCMAIN1.GetPath(My.Application.Info.DirectoryPath & folder_prefix))
+                End If
+
+                If Not ABSolution.ASCMAIN1.Folders.ContainsKey("Oracle") Then
+                    ABSolution.ASCMAIN1.Folders.Add("Oracle", "C:\oracle\product\10.2.0\Client_1\")
+                End If
+
                 ABSolution.ASCMAIN1.ActiveForm = baseClass
 
                 ' Sql Statements
@@ -469,7 +514,7 @@ Namespace InvoiceEmail
                     For Each rowExport As DataRow In tblCustomers.Select("CUST_CODE = '" & CUST_CODE & "' AND CUST_SHIP_TO_NO = '" & CUST_SHIP_TO_NO & "'", "EMAIL_TYPE")
                         invoiceNumbers = String.Empty
 
-                        Select Case rowExport.Item("EMAIL_TYPE")
+                        Select Case rowExport.Item("EMAIL_TYPE") & String.Empty
                             Case "D"
                                 sql = sqlDPD
                             Case "C"
@@ -549,28 +594,32 @@ Namespace InvoiceEmail
 
             Try
 
-                Dim reportNo As String = String.Empty
-                Dim outputFilenames As String = String.Empty
+                Dim rptSORINVC1 As ABSolution.ASFSRPTM
+                rptSORINVC1 = baseClass.Load_rptClass("SORINVC1")
+                rptSORINVC1.Prepare_dst(False, "")
+                rptSORINVC1.Fill_Records_RPT(New String() {InvoiceNumbers, "", "", "", "", "Y"})
+
                 Dim generatedReport As String = String.Empty
 
-                If Not baseClass.REPORTS.ContainsKey("SORINVC1") Then
-                    baseClass.REPORTS.Add("SORINVC1", baseClass.Load_rptClass("SORINVC1"))
-                    baseClass.REPORTS("SORINVC1").Prepare_dst(False, "")
+                Dim CR_RPT As New CrystalDecisions.CrystalReports.Engine.ReportDocument
+                If My.Computer.FileSystem.FileExists(ReportsFolder & "SORINVC1.rpt") Then
+                    CR_RPT.Load(ReportsFolder & "SORINVC1.rpt")
+                    CR_RPT.SetDataSource(rptSORINVC1.dst)
+
+                    SetStandardReportParameters(CR_RPT, "SORINVC1")
+                    SetParameterValue(CR_RPT, "PRE_PRINTED_FORM", "0")
+
+                    generatedReport = TempFolder & CustomerCode & "_dpd1.pdf"
+                    CR_RPT.ExportToDisk(CrystalDecisions.Shared.ExportFormatType.PortableDocFormat, generatedReport)
+                    CR_RPT.Close()
+                    CR_RPT.Dispose()
+
+                    rptSORINVC1.Close()
+                    rptSORINVC1.Dispose()
+
                 End If
 
-                baseClass.REPORTS("SORINVC1").Fill_Records_RPT(New String() {InvoiceNumbers, "", "", "", "", "Y"})
-
-                With baseClass.REPORTS("SORINVC1").clsASCBASE1
-                    .Print_Report_Begin()
-                    generatedReport = CustomerCode & "_dpd1"
-                    .CR_params.Add("PRE_PRINTED_FORM", "0")
-                    reportNo = .Generate_Report("SORINVC1", "Dr. Copy", "", False, False, "", "PDF", generatedReport, False)
-                    generatedReport = .F.REPORT_FILENAMES(reportNo)
-                    .Print_Report_End(, True)
-                End With
-                outputFilenames &= ";" & generatedReport
-
-                Return outputFilenames
+                Return generatedReport
 
             Catch ex As Exception
                 RecordLogEntry("CreateDPDInvoiceFile: " & ex.Message)
@@ -582,37 +631,50 @@ Namespace InvoiceEmail
         Private Function CreateECPInvoiceFile(ByVal InvoiceNumbers As String, ByVal CustomerCode As String) As String
 
             Try
-                Dim outputFilenames As String = String.Empty
-                Dim reportNo As String = String.Empty
+
                 Dim generatedReport As String = String.Empty
+                Dim outputFilenames As String = String.Empty
 
-                If Not baseClass.REPORTS.ContainsKey("SORINVC1") Then
-                    baseClass.REPORTS.Add("SORINVC1", baseClass.Load_rptClass("SORINVC1"))
-                    baseClass.REPORTS("SORINVC1").Prepare_dst(False, "")
+
+                Dim rptSORINVC1 As ABSolution.ASFSRPTM
+                rptSORINVC1 = baseClass.Load_rptClass("SORINVC1")
+                rptSORINVC1.Prepare_dst(False, "")
+                rptSORINVC1.Fill_Records_RPT(InvoiceNumbers)
+
+                Dim CR_RPT As New CrystalDecisions.CrystalReports.Engine.ReportDocument
+                If My.Computer.FileSystem.FileExists(ReportsFolder & "SORINVC3.rpt") Then
+                    CR_RPT.Load(ReportsFolder & "SORINVC3.rpt")
+                    CR_RPT.SetDataSource(rptSORINVC1.dst)
+
+                    SetStandardReportParameters(CR_RPT, "SORINVC3")
+                    SetParameterValue(CR_RPT, "PRE_PRINTED_FORM", "0")
+
+                    generatedReport = TempFolder & CustomerCode & "_ecp3.pdf"
+                    CR_RPT.ExportToDisk(CrystalDecisions.Shared.ExportFormatType.PortableDocFormat, generatedReport)
+                    CR_RPT.Close()
+                    CR_RPT.Dispose()
+                    outputFilenames &= generatedReport
                 End If
-                baseClass.REPORTS("SORINVC1").Fill_Records_RPT(InvoiceNumbers)
 
-                With baseClass.REPORTS("SORINVC1").clsASCBASE1
-                    .Print_Report_Begin()
-                    generatedReport = CustomerCode & "_ecp3"
-                    reportNo = .Generate_Report("SORINVC3", "B2C Patient Copy", "", False, False, "", "PDF", generatedReport, False)
-                    generatedReport = .F.REPORT_FILENAMES(reportNo)
-                    .Print_Report_End(, True)
-                End With
-                outputFilenames &= ";" & generatedReport
 
-                With baseClass.REPORTS("SORINVC1").clsASCBASE1
-                    ' needed to force this to get the ship to addresses when
-                    ' ARTCUST1.CUST_DPD_MAIL_TO_SHIP_TO = '1'
-                    .Fill_Records("ARTCUST2")
-                    .Print_Report_Begin()
-                    generatedReport = CustomerCode & "_ecp1"
-                    .CR_params.Add("PRE_PRINTED_FORM", "0")
-                    reportNo = .Generate_Report("SORINVC1", "Dr. Copy", "", False, False, "", "PDF", generatedReport, False)
-                    generatedReport = .F.REPORT_FILENAMES(reportNo)
-                    .Print_Report_End(, True)
-                End With
-                outputFilenames &= ";" & generatedReport
+                CR_RPT = New CrystalDecisions.CrystalReports.Engine.ReportDocument
+                If My.Computer.FileSystem.FileExists(ReportsFolder & "SORINVC1.rpt") Then
+                    CR_RPT.Load(ReportsFolder & "SORINVC1.rpt")
+                    CR_RPT.SetDataSource(baseClass.dst)
+
+                    SetStandardReportParameters(CR_RPT, "SORINVC1")
+                    SetParameterValue(CR_RPT, "PRE_PRINTED_FORM", "0")
+
+                    generatedReport = TempFolder & CustomerCode & "_ecp1.pdf"
+                    CR_RPT.ExportToDisk(CrystalDecisions.Shared.ExportFormatType.PortableDocFormat, generatedReport)
+                    CR_RPT.Close()
+                    CR_RPT.Dispose()
+
+                    outputFilenames &= generatedReport
+                End If
+
+                rptSORINVC1.Close()
+                rptSORINVC1.Dispose()
 
                 Return outputFilenames
 
@@ -625,32 +687,32 @@ Namespace InvoiceEmail
         Private Function CreateCrmFile(ByVal InvoiceNumbers As String, ByVal CustomerCode As String) As String
 
             Try
-                Dim outputFilenames As String = String.Empty
-                Dim reportNo As String = String.Empty
+
                 Dim generatedReport As String = String.Empty
 
-                If baseClass.REPORTS.ContainsKey("SORRTRN1") Then
-                    baseClass.REPORTS.Remove("SORRTRN1")
+                Dim rptSORRTRN1 As ABSolution.ASFSRPTM
+                rptSORRTRN1 = baseClass.Load_rptClass("SORRTRN1")
+                rptSORRTRN1.Prepare_dst(False, " RTRN_NO IN (" & InvoiceNumbers & ")")
+                rptSORRTRN1.Fill_Records_RPT()
+
+                Dim CR_RPT As New CrystalDecisions.CrystalReports.Engine.ReportDocument
+                If My.Computer.FileSystem.FileExists(ReportsFolder & "SORRTRN1.rpt") Then
+                    CR_RPT.Load(ReportsFolder & "SORRTRN1.rpt")
+                    CR_RPT.SetDataSource(rptSORRTRN1.dst)
+
+                    SetStandardReportParameters(CR_RPT, "SORRTRN1")
+                    SetParameterValue(CR_RPT, "PRE_PRINTED_FORM", "0")
+
+                    generatedReport = TempFolder & CustomerCode & "_rtrn1.pdf"
+                    CR_RPT.ExportToDisk(CrystalDecisions.Shared.ExportFormatType.PortableDocFormat, generatedReport)
+                    CR_RPT.Close()
+                    CR_RPT.Dispose()
                 End If
 
-                If Not baseClass.REPORTS.ContainsKey("SORRTRN1") Then
-                    baseClass.REPORTS.Add("SORRTRN1", baseClass.Load_rptClass("SORRTRN1"))
-                    baseClass.REPORTS("SORRTRN1").Prepare_dst(False, " RTRN_NO IN (" & InvoiceNumbers & ")")
-                End If
+                rptSORRTRN1.Close()
+                rptSORRTRN1.Dispose()
 
-                baseClass.REPORTS("SORRTRN1").Fill_Records_RPT()
-
-                With baseClass.REPORTS("SORRTRN1").clsASCBASE1
-                    .Print_Report_Begin()
-                    generatedReport = CustomerCode & "_rtrn1"
-                    .CR_params.Add("PRE_PRINTED_FORM", "0")
-                    reportNo = .Generate_Report("SORRTRN1", "Credits", "", False, False, "", "PDF", generatedReport, False)
-                    generatedReport = .F.REPORT_FILENAMES(reportNo)
-                    .Print_Report_End(, True)
-                End With
-                outputFilenames &= ";" & generatedReport
-
-                Return outputFilenames
+                Return generatedReport
 
             Catch ex As Exception
                 RecordLogEntry("CreateCrmFile: " & ex.Message)
@@ -658,6 +720,45 @@ Namespace InvoiceEmail
             End Try
 
         End Function
+
+        Private Sub SetStandardReportParameters(ByRef CR_RPT As CrystalDecisions.CrystalReports.Engine.ReportDocument, ByVal ReportName As String)
+            SetParameterValue(CR_RPT, "USERID", ABSolution.ASCMAIN1.USER_ID)
+            SetParameterValue(CR_RPT, "UID", ABSolution.ASCMAIN1.DBS_COMPANY)
+            SetParameterValue(CR_RPT, "YPD", ABSolution.ASCMAIN1.Get_Legend(ABSolution.ASCMAIN1.CYP))
+            SetParameterValue(CR_RPT, "INSTNAME", ABSolution.ASCMAIN1.rowASTPARM1.Item("AS_PARM_INST_NAME"))
+            SetParameterValue(CR_RPT, "SESSIONID", "99")
+            SetParameterValue(CR_RPT, "RPT", ReportName)
+            SetParameterValue(CR_RPT, "XNO", "99")
+            SetParameterValue(CR_RPT, "VERSIONNO", ABSolution.ASCMAIN1.VERSION_NO & "")
+            SetParameterValue(CR_RPT, "RPT_TITLE", CR_RPT.SummaryInfo.ReportTitle & "")
+            SetParameterValue(CR_RPT, "SUBT", "")
+
+        End Sub
+
+        Sub SetParameterValue(ByRef CR_RPT As CrystalDecisions.CrystalReports.Engine.ReportDocument, _
+            ByVal pfName As String, _
+            ByVal pfValue As String, _
+            Optional ByVal Sub_Report As Boolean = False)
+
+            Dim Par As CrystalDecisions.Shared.ParameterValues = Nothing
+            Dim ParD As New CrystalDecisions.Shared.ParameterDiscreteValue()
+
+            Try
+                Par = CR_RPT.DataDefinition.ParameterFields.Item(pfName).CurrentValues
+            Catch ex As Exception
+                MsgBox("Error Adding Parameter " & pfName & " to Report " & CR_RPT.Name)
+            End Try
+
+            ParD.Value = pfValue
+            Par.Add(ParD)
+
+            Try
+
+                CR_RPT.DataDefinition.ParameterFields.Item(pfName).ApplyCurrentValues(Par)
+            Catch ex As Exception
+                MsgBox("Error Adding Parameter " & pfName & " to Report " & CR_RPT.Name)
+            End Try
+        End Sub
 
         ''' <summary>
         ''' Sends an email using the Components created frm teh last call to CreateComponents
