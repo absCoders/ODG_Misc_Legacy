@@ -67,6 +67,11 @@ Namespace OrdersImport
 
         Private WithEvents Ftp1 As New nsoftware.IPWorks.Ftp
 
+        ' nSoftware License Keys
+        Private nSoftwareZipkey As String = "315A4E384141315355425241533154453345383933333331580000000000000000000000000000003532323931555536000042424D454B375544463730460000"
+        Private nSoftwareftpkey As String = "31504E384141315355425241533154453345383933333331580000000000000000000000000000003532323931555536000046384445474A3131583750500000"
+        Private nSoftwareipportkey As String = "31504E38414131535542524153315445334538393333333158000000000000000000000000000000423252383654315A0000343854353048333650384B370000"
+        Private nSoftwarepopkey As String = "31504E38414131535542524153315445334538393333333158000000000000000000000000000000394A37383437343200004E55523837363650504A42350000"
 
         Private Class Connection
 
@@ -416,7 +421,7 @@ Namespace OrdersImport
                     Select Case ORDR_SOURCE
                         Case "X", "Y" ' Web Service - (X) 800 Anylens, (Y) Eyeconic
                             ProcessWebServiceSalesOrders(ORDR_SOURCE)
-                        Case "A", "F" ' (A) AcuityLogic, (F) eyeFinity - Replaces SOFORDRF
+                        Case "U", "F" ' (U) AcuityLogic, (F) eyeFinity - Replaces SOFORDRF
                             ProcessEyeFinitySalesOrders(ORDR_SOURCE)
                         Case "E" 'EDI - (S) Spectera
                             ProcessEDISalesOrders(ORDR_SOURCE)
@@ -691,6 +696,7 @@ Namespace OrdersImport
 
             Dim CUST_CODE As String = String.Empty
             Dim CUST_SHIP_TO_NO As String = String.Empty
+            Dim ORDR_LR As String = String.Empty
             Dim custShip As String = String.Empty
             Dim salesOrdersProcessed As Integer = 0
 
@@ -704,7 +710,7 @@ Namespace OrdersImport
             If ABSolution.ASCMAIN1.DBS_COMPANY = "ODG" Then
 
                 Try
-                    Ftp1.RuntimeLicense = ABSolution.ASCMAIN1.nSoftwareKeys("nSoftwareftpkey")
+                    Ftp1.RuntimeLicense = nSoftwareftpkey
                     Ftp1.User = EyeConnection.UserId
                     Ftp1.Password = EyeConnection.Password
                     Ftp1.RemoteHost = EyeConnection.RemoteHost
@@ -814,7 +820,9 @@ Namespace OrdersImport
                             rowSOTORDRX.Item("ORDR_QTY") = Val(orderElements(17) & String.Empty)
                             rowSOTORDRX.Item("ITEM_CODE") = TruncateField(orderElements(21), "SOTORDR2", "ITEM_CODE")
 
-                            Select Case (orderElements(46) & String.Empty).Trim.ToUpper
+                            ORDR_LR = (orderElements(46) & String.Empty).Trim.ToUpper
+                            If ORDR_LR.Length > 2 Then ORDR_LR = ORDR_LR.Substring(0, 2)
+                            Select Case ORDR_LR
                                 Case "OD"
                                     rowSOTORDRX.Item("ORDR_LR") = "R"
                                 Case "OS"
@@ -934,7 +942,7 @@ Namespace OrdersImport
                 End If
 
                 ' If DPD then set the LR
-                Dim ORDR_LR As String = String.Empty
+                ORDR_LR = String.Empty
                 Dim ORDR_NO As String = String.Empty
                 Dim ORDR_CALLER_NAME As String = String.Empty
                 Dim ORDR_SHIP_COMPLETE As String = String.Empty
@@ -1866,7 +1874,7 @@ Namespace OrdersImport
                     rowSOTORDRX.Item("SHIP_VIA_CODE") = String.Empty
                 End If
 
-                rowSOTSVIA1 = baseClass.LookUp("SOTSVIA1", (rowSOTORDRX.Item("SHIP_VIA_CODE") & String.Empty).ToString.Trim)
+                rowSOTSVIA1 = baseClass.LookUp("SOTSVIA1", (rowSOTORDRX.Item("SHIP_VIA_CODE") & String.Empty))
 
                 If rowSOTSVIA1 Is Nothing Then
                     Dim rowSOTSVIAF As DataRow = ABSolution.ASCDATA1.GetDataRow("SELECT * FROM SOTSVIAF WHERE ORDR_SOURCE = :PARM1 AND UPPER(SHIP_VIA_DESC) = :PARM2", _
@@ -1884,7 +1892,7 @@ Namespace OrdersImport
 
                 ' Grab the customer settings
                 If Not Me.SetBillToAttributes(CUST_CODE, CUST_SHIP_TO_NO, rowSOTORDR1, errorCodes) Then
-                    errorCodes &= "K"
+                    Me.AddCharNoDups(InvalidSoldTo, errorCodes)
                 End If
 
                 Me.AddCharNoDups(errorCodes, SOTORDR1ErrorCodes)
@@ -3030,6 +3038,8 @@ Namespace OrdersImport
 
                     sql = "TERM_CODE = :PARM1"
                     baseClass.Create_Lookup("TATTERM1", "*", sql, "V", False)
+
+                    baseClass.Create_Lookup("SOTSVIA1")
 
                     STAX_CODE_states = New List(Of String)
                     sql = "Select Distinct STATE from ARTSTAX2"
