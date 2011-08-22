@@ -35,7 +35,7 @@ Namespace OrdersImport
 
         Private dst As DataSet
 
-        Private Const testMode As Boolean = True
+        Private Const testMode As Boolean = False
         Private ImportErrorNotification As Hashtable
 
         ' Header Errors
@@ -66,6 +66,10 @@ Namespace OrdersImport
         Private ftpFileList As List(Of String) = New List(Of String)
 
         Private WithEvents Ftp1 As New nsoftware.IPWorks.Ftp
+
+        Private SO_PARM_SHIP_ND As String = String.Empty
+        Private SO_PARM_SHIP_ND_DPD As String = String.Empty
+        Private SO_PARM_SHIP_ND_COD As String = String.Empty
 
         ' nSoftware License Keys
         Private nSoftwareZipkey As String = "315A4E384141315355425241533154453345383933333331580000000000000000000000000000003532323931555536000042424D454B375544463730460000"
@@ -98,9 +102,9 @@ Namespace OrdersImport
                 If rowSOTPARMP IsNot Nothing Then
 
                     LocalInDir = rowSOTPARMP.Item("SO_PARM_LOCAL_IN") & String.Empty
-                    If LocalInDir.Length > 0 AndAlso Not My.Computer.FileSystem.DirectoryExists(LocalInDir) Then
-                        LocalInDir = String.Empty
-                    End If
+                    'If LocalInDir.Length > 0 AndAlso Not My.Computer.FileSystem.DirectoryExists(LocalInDir) Then
+                    '    LocalInDir = String.Empty
+                    'End If
                     If LocalInDir.Length > 0 AndAlso Not LocalInDir.EndsWith("\") Then
                         LocalInDir &= "\"
                     End If
@@ -425,6 +429,8 @@ Namespace OrdersImport
                             ProcessEyeFinitySalesOrders(ORDR_SOURCE)
                         Case "E" 'EDI - (S) Spectera
                             ProcessEDISalesOrders(ORDR_SOURCE)
+                        Case "B" ' US Vision Care Scan
+                            ProcessBLScan(ORDR_SOURCE)
                     End Select
 
                     ABSolution.ASCMAIN1.MultiTask_Release(, , 1)
@@ -685,7 +691,7 @@ Namespace OrdersImport
         ''' <remarks></remarks>
         Private Sub ProcessEyeFinitySalesOrders(ByVal ORDR_SOURCE As String)
 
-            Dim EyeConnection As New Connection(ORDR_SOURCE)
+            Dim ftpConnection As New Connection(ORDR_SOURCE)
             Dim orderFileName As String = String.Empty
             Dim orderData As String = String.Empty
             Dim orderElementsX() As String
@@ -700,56 +706,54 @@ Namespace OrdersImport
             Dim custShip As String = String.Empty
             Dim salesOrdersProcessed As Integer = 0
 
-            Dim rowARTCUST1 As DataRow = Nothing
-            Dim rowARTCUST2 As DataRow = Nothing
-
             ' Perform FTP Here
             ftpFileList.Clear()
             ImportedFiles.Clear()
 
-            If ABSolution.ASCMAIN1.DBS_COMPANY = "ODG" Then
+            Try
+                Ftp1.RuntimeLicense = nSoftwareftpkey
+                Ftp1.User = ftpConnection.UserId
+                Ftp1.Password = ftpConnection.Password
+                Ftp1.RemoteHost = ftpConnection.RemoteHost
+                Ftp1.Logon()
 
-                Try
-                    Ftp1.RuntimeLicense = nSoftwareftpkey
-                    Ftp1.User = EyeConnection.UserId
-                    Ftp1.Password = EyeConnection.Password
-                    Ftp1.RemoteHost = EyeConnection.RemoteHost
-                    Ftp1.Logon()
-
-                    Ftp1.RemotePath = "/" & EyeConnection.RemoteInDirectory
-
-                    ftpFileList = New List(Of String)
+                ftpFileList = New List(Of String)
+                If Ftp1.Connected Then
+                    If ftpConnection.RemoteInDirectory.Length > 0 Then
+                        Ftp1.RemotePath = "/" & ftpConnection.RemoteInDirectory
+                    End If
                     Ftp1.ListDirectory()
+                End If
 
-                    For Each fileFtp As String In ftpFileList
+                For Each fileFtp As String In ftpFileList
 
-                        If fileFtp.Length = 0 Then Continue For
-                        If Not fileFtp.EndsWith(".snt") Then Continue For
+                    If fileFtp.Length = 0 Then Continue For
+                    If Not fileFtp.EndsWith(".snt") Then Continue For
+                    If Not fileFtp.StartsWith(ftpConnection.Filename) Then Continue For
 
-                        Dim filePrefix As String = DateTime.Now.ToString("yyyyMMddhhmmss") & "_"
+                    Dim filePrefix As String = DateTime.Now.ToString("yyyyMMddhhmmss") & "_"
 
-                        Ftp1.RemoteFile = fileFtp
-                        Ftp1.LocalFile = EyeConnection.LocalInDir & filePrefix & fileFtp
-                        Ftp1.Download()
-                        Ftp1.DeleteFile(fileFtp)
+                    Ftp1.RemoteFile = fileFtp
+                    Ftp1.LocalFile = ftpConnection.LocalInDir & filePrefix & fileFtp
+                    Ftp1.Download()
+                    Ftp1.DeleteFile(fileFtp)
 
-                        fileFtp = fileFtp.Replace(".snt", ".csv")
-                        Ftp1.RemoteFile = fileFtp
-                        Ftp1.LocalFile = EyeConnection.LocalInDir & filePrefix & fileFtp
-                        Ftp1.Download()
-                        Ftp1.DeleteFile(fileFtp)
-                    Next
+                    fileFtp = fileFtp.Replace(".snt", ".csv")
+                    Ftp1.RemoteFile = fileFtp
+                    Ftp1.LocalFile = ftpConnection.LocalInDir & filePrefix & fileFtp
+                    Ftp1.Download()
+                    Ftp1.DeleteFile(fileFtp)
+                Next
 
-                Catch ex As Exception
-                    RecordLogEntry("ProcessEyeFinitySalesOrders: " & ex.Message)
-                Finally
-                    Ftp1.Logoff()
-                    Ftp1.Dispose()
-                End Try
-            End If
+            Catch ex As Exception
+                RecordLogEntry("ProcessEyeFinitySalesOrders ftp: " & ex.Message)
+            Finally
+                Ftp1.Logoff()
+                Ftp1.Dispose()
+            End Try
 
             Try
-                For Each orderFile As String In My.Computer.FileSystem.GetFiles(EyeConnection.LocalInDir, FileIO.SearchOption.SearchTopLevelOnly, "*" & EyeConnection.Filename & "*.csv")
+                For Each orderFile As String In My.Computer.FileSystem.GetFiles(ftpConnection.LocalInDir, FileIO.SearchOption.SearchTopLevelOnly, "*" & ftpConnection.Filename & "*.csv")
 
                     orderFileName = My.Computer.FileSystem.GetName(orderFile)
                     RecordLogEntry("Importing file: " & orderFileName)
@@ -823,11 +827,11 @@ Namespace OrdersImport
                             ORDR_LR = (orderElements(46) & String.Empty).Trim.ToUpper
                             If ORDR_LR.Length > 2 Then ORDR_LR = ORDR_LR.Substring(0, 2)
                             Select Case ORDR_LR
-                                Case "OD"
+                                Case "OD", "RI"
                                     rowSOTORDRX.Item("ORDR_LR") = "R"
-                                Case "OS"
+                                Case "OS", "LE"
                                     rowSOTORDRX.Item("ORDR_LR") = "L"
-                                Case "OU"
+                                Case "OU", "BO"
                                     rowSOTORDRX.Item("ORDR_LR") = "B"
                             End Select
                             rowSOTORDRX.Item("ITEM_DESC") = TruncateField(orderElements(19), "SOTORDR2", "ITEM_DESC")
@@ -925,10 +929,10 @@ Namespace OrdersImport
 
                             ' Move CSN and any SNT file extensions to the archive directory
                             For Each orderFile As String In ImportedFiles
-                                My.Computer.FileSystem.MoveFile(orderFile, EyeConnection.LocalInDirArchive & My.Computer.FileSystem.GetName(orderFile))
+                                My.Computer.FileSystem.MoveFile(orderFile, ftpConnection.LocalInDirArchive & My.Computer.FileSystem.GetName(orderFile))
                                 orderFile = orderFile.Replace(".csv", ".snt")
                                 If My.Computer.FileSystem.FileExists(orderFile) Then
-                                    My.Computer.FileSystem.MoveFile(orderFile, EyeConnection.LocalInDirArchive & My.Computer.FileSystem.GetName(orderFile))
+                                    My.Computer.FileSystem.MoveFile(orderFile, ftpConnection.LocalInDirArchive & My.Computer.FileSystem.GetName(orderFile))
                                 End If
                             Next
 
@@ -956,7 +960,7 @@ Namespace OrdersImport
                     baseClass.Fill_Records("SOTORDRX", New Object() {ORDR_SOURCE, ORDR_NO})
 
                     If dst.Tables("SOTORDRX").Rows.Count = 0 Then
-                        RecordLogEntry("ProcessEyeFinitySalesOrders: Invalid Order Number (" & ORDR_NO & ") for " & EyeConnection.ConnectionDescription)
+                        RecordLogEntry("ProcessEyeFinitySalesOrders: Invalid Order Number (" & ORDR_NO & ") for " & ftpConnection.ConnectionDescription)
                         Continue For
                     End If
 
@@ -991,10 +995,10 @@ Namespace OrdersImport
                     End If
                 Next
             Catch ex As Exception
-                RecordLogEntry("ProcessEyeFinitySalesOrders: " & ex.Message)
+                RecordLogEntry("ProcessEyeFinitySalesOrders Loop Directory: " & ex.Message)
             Finally
                 If salesOrdersProcessed > 0 Then
-                    RecordLogEntry(salesOrdersProcessed & " " & EyeConnection.ConnectionDescription & " Orders imported.")
+                    RecordLogEntry(salesOrdersProcessed & " " & ftpConnection.ConnectionDescription & " Orders imported.")
                 End If
             End Try
 
@@ -1029,10 +1033,6 @@ Namespace OrdersImport
             Sql = "Select Distinct EDI_ISA_NO From EDT850I1 Where EDI_BATCH_NO IS NULL"
             baseClass.Fill_Records("EDT850I1D", String.Empty, False, sql)
 
-            'If dst.Tables("EDT850I1D").Rows.Count = 0 Then
-            '    RecordLogEntry("No EDI sales orders to process")
-            '    Exit Sub
-            'End If
 
             Try
                 For Each rowEDT850I1D As DataRow In dst.Tables("EDT850I1D").Select("", "EDI_ISA_NO")
@@ -1346,6 +1346,280 @@ Namespace OrdersImport
 
 
         End Sub
+
+        Private Sub ProcessBLScan(ByVal ORDR_SOURCE As String)
+
+            Dim ftpConnection As New Connection(ORDR_SOURCE)
+            Dim orderFileName As String = String.Empty
+            Dim orderData As String = String.Empty
+            Dim orderElements() As String
+            Dim tempStr As String = String.Empty
+            Dim rowSOTORDRX As DataRow = Nothing
+
+            Dim CUST_CODE As String = String.Empty
+            Dim CUST_SHIP_TO_NO As String = String.Empty
+            Dim ORDR_LR As String = String.Empty
+            Dim custShip As String = String.Empty
+            Dim salesOrdersProcessed As Integer = 0
+            Dim ORDR_LNO As Integer = 0
+            Dim ORDR_NO As String = String.Empty
+
+            ' Tweak the order source
+            ORDR_SOURCE = "E"
+
+            ' Perform FTP Here
+            ftpFileList.Clear()
+            ImportedFiles.Clear()
+
+            Try
+                Ftp1.RuntimeLicense = nSoftwareftpkey
+                Ftp1.User = ftpConnection.UserId
+                Ftp1.Password = ftpConnection.Password
+                Ftp1.RemoteHost = ftpConnection.RemoteHost
+                Ftp1.Logon()
+
+                ftpFileList = New List(Of String)
+                If Ftp1.Connected Then
+                    If ftpConnection.RemoteInDirectory.Length > 0 Then
+                        Ftp1.RemotePath = "/" & ftpConnection.RemoteInDirectory
+                    End If
+                    Ftp1.ListDirectory()
+                End If
+
+                For Each fileFtp As String In ftpFileList
+
+                    If fileFtp.Length = 0 Then Continue For
+                    If Not fileFtp.EndsWith(".CSV") Then Continue For
+
+                    Ftp1.RemoteFile = fileFtp
+                    Ftp1.LocalFile = ftpConnection.LocalInDir & fileFtp
+                    Ftp1.Download()
+                    Ftp1.DeleteFile(fileFtp)
+
+                Next
+
+            Catch ex As Exception
+                RecordLogEntry("ProcessBLScan: " & ex.Message)
+            Finally
+                Ftp1.Logoff()
+                Ftp1.Dispose()
+            End Try
+
+            Try
+                For Each orderFile As String In My.Computer.FileSystem.GetFiles(ftpConnection.LocalInDir, FileIO.SearchOption.SearchTopLevelOnly, "*.csv")
+
+                    orderFileName = My.Computer.FileSystem.GetName(orderFile)
+                    RecordLogEntry("Importing file: " & orderFileName)
+
+                    Using orderReader As New StreamReader(orderFile)
+                        System.Threading.Thread.Sleep(1000)
+                        ORDR_NO = "BL" & DateTime.Now.ToString("hhmmss")
+                        ORDR_LNO = 0
+
+                        ' The first record will be column descriptions and can be ignored
+                        If orderReader.Peek <> -1 Then
+                            orderData = orderReader.ReadLine()
+                        End If
+
+                        While orderReader.Peek <> -1
+
+                            orderData = orderReader.ReadLine()
+                            orderElements = orderData.Split(",")
+
+                            If orderElements.Length <> 33 AndAlso orderElements.Length <> 34 Then
+                                RecordLogEntry("ProcessBLScan: Order file invalid (" & orderFileName & ")")
+                                Continue While
+                            End If
+
+                            rowSOTORDRX = dst.Tables("SOTORDRX").NewRow
+                            rowSOTORDRX.Item("ORDR_NO") = ORDR_NO
+                            ORDR_LNO += 1
+                            rowSOTORDRX.Item("ORDR_LNO") = ORDR_LNO
+                            rowSOTORDRX.Item("ORDR_SOURCE") = ORDR_SOURCE
+
+                            custShip = (orderElements(7) & String.Empty).ToString.Trim
+                            CUST_CODE = String.Empty
+                            CUST_SHIP_TO_NO = String.Empty
+
+                            Select Case custShip.Length
+                                Case Is <= 6
+                                    CUST_CODE = custShip
+                                Case Else
+                                    CUST_CODE = custShip.Substring(0, 6).Trim
+                                    CUST_SHIP_TO_NO = custShip.Substring(6).Trim
+                            End Select
+
+                            If CUST_SHIP_TO_NO.Length > 6 Then
+                                CUST_SHIP_TO_NO = CUST_SHIP_TO_NO.Substring(0, 6).Trim
+                            End If
+
+                            CUST_CODE = ABSolution.ASCMAIN1.Format_Field(CUST_CODE, "CUST_CODE")
+                            If CUST_SHIP_TO_NO.Length > 0 Then
+                                CUST_SHIP_TO_NO = ABSolution.ASCMAIN1.Format_Field(CUST_SHIP_TO_NO, "CUST_SHIP_TO_NO")
+                            End If
+
+                            If CUST_SHIP_TO_NO = "000000" Then
+                                CUST_SHIP_TO_NO = String.Empty
+                            End If
+
+                            rowSOTORDRX.Item("CUST_CODE") = CUST_CODE
+                            rowSOTORDRX.Item("CUST_SHIP_TO_NO") = CUST_SHIP_TO_NO
+
+                            rowSOTORDRX.Item("ORDR_TYPE_CODE") = "REG"
+                            rowSOTORDRX.Item("ORDR_DPD") = "0"
+                            rowSOTORDRX.Item("ORDR_QTY") = Val(orderElements(17) & String.Empty)
+                            rowSOTORDRX.Item("ITEM_CODE") = TruncateField(orderElements(11), "SOTORDR2", "ITEM_CODE")
+                            If (rowSOTORDRX.Item("ITEM_CODE") & String.Empty).ToString.Length > 12 Then
+                                rowSOTORDRX.Item("ITEM_CODE") = rowSOTORDRX.Item("ITEM_CODE").ToString.Substring(0, 12).Trim
+                            End If
+
+                            ' Validate UOM
+                            If (rowSOTORDRX.Item("ITEM_CODE") & String.Empty).ToString.Length > 0 Then
+                                rowSOTORDRX.Item("ITEM_CODE") = ABSolution.ASCMAIN1.Format_Field(rowSOTORDRX.Item("ITEM_CODE"), "ITEM_UPC_CODE")
+                                rowICTITEM1 = ABSolution.ASCDATA1.GetDataRow("SELECT * FROM ICTITEM1 WHERE ITEM_UPC_CODE = :PARM1", "V", New Object() {rowSOTORDRX.Item("ITEM_CODE")})
+                            Else
+                                rowICTITEM1 = Nothing
+                            End If
+
+                            If rowICTITEM1 IsNot Nothing Then
+                                If (rowICTITEM1.Item("ITEM_UOM") & String.Empty).ToString.Trim.ToUpper <> _
+                                    orderElements(18).Trim.ToUpper Then
+                                    rowSOTORDRX.Item("ITEM_UOM") = "1"
+                                End If
+                            End If
+
+                            rowARTCUST1 = baseClass.LookUp("ARTCUST1", CUST_CODE)
+                            rowARTCUST2 = baseClass.LookUp("ARTCUST2", New String() {CUST_CODE, CUST_SHIP_TO_NO})
+                            rowARTCUST3 = baseClass.LookUp("ARTCUST3", CUST_CODE)
+
+                            ORDR_LR = String.Empty
+                            If ORDR_LR.Length > 2 Then ORDR_LR = ORDR_LR.Substring(0, 2)
+                            Select Case ORDR_LR
+                                Case "OD"
+                                    rowSOTORDRX.Item("ORDR_LR") = "R"
+                                Case "OS"
+                                    rowSOTORDRX.Item("ORDR_LR") = "L"
+                                Case "OU"
+                                    rowSOTORDRX.Item("ORDR_LR") = "B"
+                            End Select
+                            rowSOTORDRX.Item("ITEM_DESC") = TruncateField(orderElements(28), "SOTORDR2", "ITEM_DESC")
+
+                            If IsDate(orderElements(2).Trim) Then
+                                rowSOTORDRX.Item("ORDR_DATE") = CDate(orderElements(2).Trim).ToString("dd-MMM-yyyy")
+                            Else
+                                rowSOTORDRX.Item("ORDR_DATE") = DateTime.Now.ToString("dd-MMM-yyyy")
+                            End If
+
+                            If rowARTCUST3 IsNot Nothing Then
+                                rowSOTORDRX.Item("SHIP_VIA_CODE") = rowARTCUST3.Item("SHIP_VIA_CODE")
+                            End If
+
+                            ' Overnight delivery
+                            If orderElements(5).Trim.ToUpper = "ON" Then
+                                rowSOTSVIA1 = baseClass.LookUp("SOTSVIA1", rowSOTORDRX.Item("SHIP_VIA_CODE") & String.Empty)
+                                If rowSOTSVIA1 IsNot Nothing AndAlso (rowSOTSVIA1.Item("SHIP_VIA_COD_IND") & String.Empty).ToString.Trim = "1" Then
+                                    rowSOTORDRX.Item("SHIP_VIA_CODE") = SO_PARM_SHIP_ND_COD
+                                ElseIf Me.SO_PARM_SHIP_ND.Length > 0 Then
+                                    rowSOTORDRX.Item("SHIP_VIA_CODE") = SO_PARM_SHIP_ND
+                                End If
+                            End If
+                            rowSOTORDRX.Item("ORDR_LOCK_SHIP_VIA") = "0"
+
+                            If rowARTCUST1 IsNot Nothing Then
+                                rowSOTORDRX.Item("ORDR_SHIP_COMPLETE") = Val(rowARTCUST1.Item("CUST_SHIP_COMPLETE") & String.Empty)
+                            End If
+
+                            rowSOTORDRX.Item("PATIENT_NAME") = orderElements(26)
+                            rowSOTORDRX.Item("PATIENT_NAME") = TruncateField(rowSOTORDRX.Item("PATIENT_NAME") & String.Empty, "SOTORDR2", "PATIENT_NAME")
+                            rowSOTORDRX.Item("PATIENT_NAME") = StrConv(rowSOTORDRX.Item("PATIENT_NAME") & String.Empty, VbStrConv.ProperCase)
+
+                            orderElements(1) = orderElements(1).Replace("'", "")
+                            rowSOTORDRX.Item("ORDR_CUST_PO") = TruncateField(orderElements(1), "SOTORDR1", "ORDR_CUST_PO")
+                            If (rowSOTORDRX.Item("ORDR_CUST_PO") & String.Empty).ToString.Length = 0 Then
+                                rowSOTORDRX.Item("ORDR_CUST_PO") = TruncateField("BLSCAN ORDER", "SOTORDR1", "ORDR_CUST_PO")
+                            End If
+
+                            dst.Tables("SOTORDRX").Rows.Add(rowSOTORDRX)
+                        End While
+                    End Using
+
+                    ImportedFiles.Add(orderFile)
+                Next
+
+                If dst.Tables("SOTORDRX").Rows.Count > 0 Then
+                    ' Commit the data from the Excel file and then archive the file
+                    Dim UpdateInProcess As Boolean = False
+                    With baseClass
+                        Try
+                            .BeginTrans()
+                            UpdateInProcess = True
+                            .clsASCBASE1.Update_Record_TDA("SOTORDRX")
+                            .CommitTrans()
+                            UpdateInProcess = False
+
+                            ' Move CSN and any SNT file extensions to the archive directory
+                            For Each orderFile As String In ImportedFiles
+                                My.Computer.FileSystem.MoveFile(orderFile, ftpConnection.LocalInDirArchive & My.Computer.FileSystem.GetName(orderFile))
+                            Next
+
+                        Catch ex As Exception
+                            If UpdateInProcess Then .Rollback()
+                            RecordLogEntry("ProcessEyeFinitySalesOrders: " & ex.Message)
+                        End Try
+
+                    End With
+
+                End If
+
+                ' If DPD then set the LR
+                ORDR_LR = String.Empty
+                ORDR_NO = String.Empty
+                Dim ORDR_CALLER_NAME As String = String.Empty
+                Dim ORDR_SHIP_COMPLETE As String = String.Empty
+                dst.Tables("SOTORDRX").Rows.Clear()
+
+                ' Need to process each order individually for pricing reasons; therefore
+                ' need to move the datat to a temp data table and process each order individually
+                For Each headers As DataRow In ABSolution.ASCDATA1.GetDataTable("SELECT DISTINCT ORDR_NO FROM SOTORDRX WHERE PROCESS_IND IS NULL AND ORDR_SOURCE = :PARM1", String.Empty, "V", New Object() {ORDR_SOURCE}).Rows
+                    ClearDataSetTables(True)
+                    ORDR_NO = headers.Item("ORDR_NO") & String.Empty
+                    baseClass.Fill_Records("SOTORDRX", New Object() {ORDR_SOURCE, ORDR_NO})
+
+                    If dst.Tables("SOTORDRX").Rows.Count = 0 Then
+                        RecordLogEntry("ProcessBLScan: Invalid Order Number (" & ORDR_NO & ") for " & ftpConnection.ConnectionDescription)
+                        Continue For
+                    End If
+
+                    'ORDR_NO = String.Empty
+                    ORDR_CALLER_NAME = dst.Tables("SOTORDRX").Rows(0).Item("ORDR_CALLER_NAME") & String.Empty
+                    ORDR_SHIP_COMPLETE = dst.Tables("SOTORDRX").Rows(0).Item("ORDR_SHIP_COMPLETE") & String.Empty
+                    If CreateSalesOrder(ORDR_NO, False, False, ORDR_SOURCE, ORDR_SOURCE, ORDR_CALLER_NAME, False) Then
+                        dst.Tables("SOTORDR1").Rows(0).Item("ORDR_SHIP_COMPLETE") = ORDR_SHIP_COMPLETE
+                        UpdateDataSetTables()
+                        salesOrdersProcessed += 1
+                        Try
+                            ABSolution.ASCDATA1.ExecuteSQL("DELETE FROM SOTORDRX WHERE ORDR_SOURCE = :PARM1 AND ORDR_NO = :PARM2", _
+                                                           "VV", _
+                                                        New Object() {ORDR_SOURCE, dst.Tables("SOTORDRX").Rows(0).Item("ORDR_NO") & String.Empty})
+
+                        Catch ex As Exception
+
+                        End Try
+                    Else
+                        RecordLogEntry("ProcessBLScan: " & "Could not create sales order for " & dst.Tables("SOTORDRX").Rows(0).Item("ORDR_NO"))
+                    End If
+                Next
+            Catch ex As Exception
+                RecordLogEntry("ProcessEyeFinitySalesOrders: " & ex.Message)
+            Finally
+                If salesOrdersProcessed > 0 Then
+                    RecordLogEntry(salesOrdersProcessed & " " & ftpConnection.ConnectionDescription & " Orders imported.")
+                End If
+            End Try
+
+        End Sub
+
+
 
         Private Sub DisposeOPD()
             Try
@@ -1939,8 +2213,6 @@ Namespace OrdersImport
                 rowSOTORDR1.Item("MISC_CHG_CODE") = String.Empty
                 rowSOTORDR1.Item("ORDR_NO_WEB") = String.Empty
                 rowSOTORDR1.Item("ORDR_MISC_CHG_AMT") = 0
-
-                rowSOTORDR1.Item("FRT_CONT_NO") = 0
                 rowSOTORDR1.Item("PATIENT_NO") = String.Empty
                 rowSOTORDR1.Item("ORDR_COMMENT") = String.Empty
                 rowSOTORDR1.Item("EDI_CUST_REF_NO") = rowSOTORDRX.Item("EDI_CUST_REF_NO") & String.Empty
@@ -1990,6 +2262,9 @@ Namespace OrdersImport
                     dst.Tables("SOTORDR2").Rows.Add(rowSOTORDR2)
 
                     errorCodes = String.Empty
+                    If rowSOTORDRX.Item("ITEM_UOM") & String.Empty = "1" Then
+                        AddCharNoDups(InvalidUOM, SOTORDR2ErrorCodes)
+                    End If
                     SetItemInfo(rowSOTORDR2, errorCodes)
                     AddCharNoDups(errorCodes, SOTORDR2ErrorCodes)
 
@@ -2008,7 +2283,7 @@ Namespace OrdersImport
                     rowSOTORDR2.Item("ORDR_LINE_STATUS") = "O"
                     rowSOTORDR2.Item("CUST_LINE_REF") = rowImportDetails.Item("CUST_LINE_REF") & String.Empty
                     rowSOTORDR2.Item("ORDR_LINE_SOURCE") = rowImportDetails.Item("ORDR_LINE_SOURCE") & String.Empty
-                    rowSOTORDR2.Item("ORDR_LR") = rowImportDetails.Item("ORDR_LR")
+                    rowSOTORDR2.Item("ORDR_LR") = rowImportDetails.Item("ORDR_LR") & String.Empty
 
                     If ORDR_QTY <= 0 Then
                         Me.AddCharNoDups(QtyOrdered, SOTORDR1ErrorCodes)
@@ -2863,6 +3138,13 @@ Namespace OrdersImport
                     End If
                 End With
 
+                rowARTCUST1 = Nothing
+                rowARTCUST2 = Nothing
+                rowARTCUST3 = Nothing
+                rowICTITEM1 = Nothing
+                rowSOTSVIA1 = Nothing
+                rowTATTERM1 = Nothing
+
                 If testMode Then RecordLogEntry("Exit ClearDataSetTables.")
                 Return True
 
@@ -3008,6 +3290,14 @@ Namespace OrdersImport
                     'baseClass.Get_PARM("SOTPARM1")
                     baseClass.Create_TDA(.Tables.Add, "SOTPARM1", "*")
                     baseClass.Fill_Records("SOTPARM1", "Z")
+
+                    baseClass.Create_TDA(.Tables.Add, "SOTPARMB", "*")
+                    baseClass.Fill_Records("SOTPARMB", "Z")
+
+                    SO_PARM_SHIP_ND = (dst.Tables("SOTPARMB").Rows(0).Item("SO_PARM_SHIP_ND") & String.Empty).ToString.Trim
+                    SO_PARM_SHIP_ND_DPD = (dst.Tables("SOTPARMB").Rows(0).Item("SO_PARM_SHIP_ND_DPD") & String.Empty).ToString.Trim
+                    SO_PARM_SHIP_ND_COD = (dst.Tables("SOTPARMB").Rows(0).Item("SO_PARM_SHIP_ND_COD") & String.Empty).ToString.Trim
+
                     baseClass.Create_TDA(.Tables.Add, "SOTPARMC", "*", "1", False)
 
                     If dst.Tables("SOTPARM1") IsNot Nothing AndAlso dst.Tables("SOTPARM1").Rows.Count > 0 Then
