@@ -102,9 +102,9 @@ Namespace OrdersImport
                 If rowSOTPARMP IsNot Nothing Then
 
                     LocalInDir = rowSOTPARMP.Item("SO_PARM_LOCAL_IN") & String.Empty
-                    'If LocalInDir.Length > 0 AndAlso Not My.Computer.FileSystem.DirectoryExists(LocalInDir) Then
-                    '    LocalInDir = String.Empty
-                    'End If
+                    If LocalInDir.Length > 0 AndAlso Not My.Computer.FileSystem.DirectoryExists(LocalInDir) Then
+                        LocalInDir = String.Empty
+                    End If
                     If LocalInDir.Length > 0 AndAlso Not LocalInDir.EndsWith("\") Then
                         LocalInDir &= "\"
                     End If
