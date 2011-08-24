@@ -705,6 +705,7 @@ Namespace OrdersImport
             Dim ORDR_LR As String = String.Empty
             Dim custShip As String = String.Empty
             Dim salesOrdersProcessed As Integer = 0
+            Dim ITEM_DESC2 As String = String.Empty
 
             ' Perform FTP Here
             ftpFileList.Clear()
@@ -834,7 +835,19 @@ Namespace OrdersImport
                                 Case "OU", "BO"
                                     rowSOTORDRX.Item("ORDR_LR") = "B"
                             End Select
+
                             rowSOTORDRX.Item("ITEM_DESC") = TruncateField(orderElements(19), "SOTORDR2", "ITEM_DESC")
+
+                            ' Item Desc 2 contains attributes to assist selection of product if invalid item code
+                            ITEM_DESC2 = "/" & orderElements(22) '  Base Curve
+                            ITEM_DESC2 &= "/" & orderElements(24) ' Sphere
+                            ITEM_DESC2 &= "/" & orderElements(26) ' Cylinder
+                            ITEM_DESC2 &= "/" & orderElements(27) ' Axis
+                            ITEM_DESC2 &= "/" & orderElements(23) ' Diameter
+                            ITEM_DESC2 &= "/" & orderElements(25) ' Add Power
+                            ITEM_DESC2 &= "/" & orderElements(28) ' Color
+                            rowSOTORDRX.Item("ITEM_DESC2") = TruncateField(ITEM_DESC2, "SOTORDR2", "ITEM_DESC2")
+
                             rowSOTORDRX.Item("ORDR_DATE") = DateTime.Now.ToString("dd-MMM-yyyy")
                             rowSOTORDRX.Item("ORDR_CALLER_NAME") = StrConv(TruncateField(orderElements(7), "SOTORDR1", "ORDR_CALLER_NAME"), VbStrConv.ProperCase)
 
@@ -850,7 +863,11 @@ Namespace OrdersImport
                             ElseIf orderElements(32).Trim.ToUpper = "STANDARD" Then
                                 Dim rowARTCUST3 As DataRow = baseClass.LookUp("ARTCUST3", CUST_CODE)
                                 If rowARTCUST3 IsNot Nothing Then
-                                    rowSOTORDRX.Item("SHIP_VIA_CODE") = rowARTCUST3.Item("SHIP_VIA_CODE")
+                                    If rowSOTORDRX.Item("ORDR_DPD") = "1" Then
+                                        rowSOTORDRX.Item("SHIP_VIA_CODE") = rowARTCUST3.Item("SHIP_VIA_CODE_DPD")
+                                    Else
+                                        rowSOTORDRX.Item("SHIP_VIA_CODE") = rowARTCUST3.Item("SHIP_VIA_CODE")
+                                    End If
                                 End If
                             End If
                             rowSOTORDRX.Item("ORDR_LOCK_SHIP_VIA") = "1"
@@ -2144,7 +2161,7 @@ Namespace OrdersImport
                 errorCodes = String.Empty
 
                 ' Validate the Ship Via Code
-                If (rowSOTORDRX.Item("SHIP_VIA_CODE") & String.Empty).ToString.Trim.ToUpper = "STANDARD" Then
+                If (rowSOTORDRX.Item("SHIP_VIA_CODE") & String.Empty).ToString.Trim.ToUpper = "STANDARD"  Then
                     rowSOTORDRX.Item("SHIP_VIA_CODE") = String.Empty
                 End If
 
@@ -2668,7 +2685,7 @@ Namespace OrdersImport
 
                 If (rowSOTORDR1.Item("SHIP_VIA_CODE") & String.Empty) <> String.Empty Then Return True
                 If (rowSOTORDR1.Item("ORDR_DPD") & String.Empty) <> "1" Then Return True
-                If (rowSOTORDR1.Item("ORDR_LOCK_SHIP_VIA") & String.Empty) = "1" Then Return True
+                'If (rowSOTORDR1.Item("ORDR_LOCK_SHIP_VIA") & String.Empty) = "1" Then Return True
 
                 Dim SHIP_VIA_CODE_DPD As String = String.Empty
                 Dim originalSHIP_VIA_CODE_DPD As String = rowSOTORDR1.Item("SHIP_VIA_CODE") & String.Empty
