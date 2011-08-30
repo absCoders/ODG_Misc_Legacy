@@ -99,9 +99,19 @@ Namespace OrdersImport
             Public Sub New(ByVal OrderSource As String)
                 Dim rowSOTPARMP As DataRow = ABSolution.ASCDATA1.GetDataRow("Select * From SOTPARMP WHERE SO_PARM_KEY = :PARM1", "V", New Object() {OrderSource})
 
+                Dim svcConfig As New ServiceConfig
+                Dim DriveLetter As String = svcConfig.DriveLetter.ToString.ToUpper
+                Dim DriveLetterIP As String = svcConfig.DriveLetterIP.ToString.ToUpper
+                Dim convert As Boolean = DriveLetter.Length > 0 AndAlso DriveLetterIP.Length > 0
+
                 If rowSOTPARMP IsNot Nothing Then
 
                     LocalInDir = rowSOTPARMP.Item("SO_PARM_LOCAL_IN") & String.Empty
+                    LocalInDir = LocalInDir.ToUpper
+                    If convert And LocalInDir.StartsWith(DriveLetter) Then
+                        LocalInDir = LocalInDir.replace(DriveLetter, DriveLetterIP)
+                    End If
+
                     If LocalInDir.Length > 0 AndAlso Not My.Computer.FileSystem.DirectoryExists(LocalInDir) Then
                         LocalInDir = String.Empty
                     End If
@@ -110,6 +120,11 @@ Namespace OrdersImport
                     End If
 
                     LocalInDirArchive = rowSOTPARMP.Item("SO_PARM_LOCAL_IN_ARCHIVE") & String.Empty
+                    LocalInDirArchive = LocalInDirArchive.ToUpper
+                    If convert And LocalInDirArchive.StartsWith(DriveLetter) Then
+                        LocalInDirArchive = LocalInDirArchive.Replace(DriveLetter, DriveLetterIP)
+                    End If
+
                     If LocalInDirArchive.Length > 0 AndAlso Not My.Computer.FileSystem.DirectoryExists(LocalInDirArchive) Then
                         LocalInDirArchive = String.Empty
                     End If
@@ -118,6 +133,11 @@ Namespace OrdersImport
                     End If
 
                     LocalOutDir = rowSOTPARMP.Item("SO_PARM_LOCAL_OUT") & String.Empty
+                    LocalOutDir = LocalOutDir.ToUpper
+                    If convert And LocalOutDir.StartsWith(DriveLetter) Then
+                        LocalOutDir = LocalOutDir.Replace(DriveLetter, DriveLetterIP)
+                    End If
+
                     If LocalOutDir.Length > 0 AndAlso Not My.Computer.FileSystem.DirectoryExists(LocalOutDir) Then
                         LocalOutDir = String.Empty
                     End If
@@ -126,6 +146,11 @@ Namespace OrdersImport
                     End If
 
                     LocalOutDirArchive = rowSOTPARMP.Item("SO_PARM_LOCAL_OUT_ARCHIVE") & String.Empty
+                    LocalOutDirArchive = LocalOutDirArchive.ToUpper
+                    If convert And LocalOutDirArchive.StartsWith(DriveLetter) Then
+                        LocalOutDirArchive = LocalOutDirArchive.Replace(DriveLetter, DriveLetterIP)
+                    End If
+
                     If LocalOutDirArchive.Length > 0 AndAlso Not My.Computer.FileSystem.DirectoryExists(LocalOutDirArchive) Then
                         LocalOutDirArchive = String.Empty
                     End If
@@ -422,6 +447,9 @@ Namespace OrdersImport
 
                     ImportErrorNotification = New Hashtable
 
+                    ' *****************************************************************************
+                    ' Make sure there is an Entry in ASTNOTE1 for each Ordr Source
+                    ' *****************************************************************************
                     Select Case ORDR_SOURCE
                         Case "X", "Y" ' Web Service - (X) 800 Anylens, (Y) Eyeconic
                             ProcessWebServiceSalesOrders(ORDR_SOURCE)
@@ -431,6 +459,7 @@ Namespace OrdersImport
                             ProcessEDISalesOrders(ORDR_SOURCE)
                         Case "B" ' US Vision Care Scan
                             ProcessBLScan(ORDR_SOURCE)
+                            ORDR_SOURCE = "E" ' tweak for Import Error Notifications
                     End Select
 
                     ABSolution.ASCMAIN1.MultiTask_Release(, , 1)
@@ -823,7 +852,12 @@ Namespace OrdersImport
                             rowSOTORDRX.Item("ORDR_DPD") = IIf(orderElements(4) = "1", "1", "0")
                             rowSOTORDRX.Item("CUST_LINE_REF") = TruncateField(orderElements(16), "SOTORDR1", "CUST_LINE_REF")
                             rowSOTORDRX.Item("ORDR_QTY") = Val(orderElements(17) & String.Empty)
-                            rowSOTORDRX.Item("ITEM_CODE") = TruncateField(orderElements(21), "SOTORDR2", "ITEM_CODE")
+                            If orderElements(21).Trim.Length > 0 Then
+                                rowSOTORDRX.Item("ITEM_CODE") = TruncateField(orderElements(21), "SOTORDR2", "ITEM_CODE")
+                            Else
+                                rowSOTORDRX.Item("ITEM_CODE") = TruncateField(orderElements(20), "SOTORDR2", "ITEM_CODE")
+                            End If
+
 
                             ORDR_LR = (orderElements(46) & String.Empty).Trim.ToUpper
                             If ORDR_LR.Length > 2 Then ORDR_LR = ORDR_LR.Substring(0, 2)
@@ -944,15 +978,6 @@ Namespace OrdersImport
                             .CommitTrans()
                             UpdateInProcess = False
 
-                            ' Move CSN and any SNT file extensions to the archive directory
-                            For Each orderFile As String In ImportedFiles
-                                My.Computer.FileSystem.MoveFile(orderFile, ftpConnection.LocalInDirArchive & My.Computer.FileSystem.GetName(orderFile))
-                                orderFile = orderFile.Replace(".csv", ".snt")
-                                If My.Computer.FileSystem.FileExists(orderFile) Then
-                                    My.Computer.FileSystem.MoveFile(orderFile, ftpConnection.LocalInDirArchive & My.Computer.FileSystem.GetName(orderFile))
-                                End If
-                            Next
-
                         Catch ex As Exception
                             If UpdateInProcess Then .Rollback()
                             RecordLogEntry("ProcessEyeFinitySalesOrders: " & ex.Message)
@@ -961,6 +986,20 @@ Namespace OrdersImport
                     End With
 
                 End If
+
+                Try
+                    ' Move CSN and any SNT file extensions to the archive directory
+                    For Each orderFile As String In ImportedFiles
+                        My.Computer.FileSystem.MoveFile(orderFile, ftpConnection.LocalInDirArchive & My.Computer.FileSystem.GetName(orderFile))
+                        orderFile = orderFile.Replace(".csv", ".snt")
+                        If My.Computer.FileSystem.FileExists(orderFile) Then
+                            My.Computer.FileSystem.MoveFile(orderFile, ftpConnection.LocalInDirArchive & My.Computer.FileSystem.GetName(orderFile))
+                        End If
+                    Next
+
+                Catch ex As Exception
+                    RecordLogEntry("ProcessEyeFinitySalesOrders: Move files to Archive" & ex.Message)
+                End Try
 
                 ' If DPD then set the LR
                 ORDR_LR = String.Empty
@@ -1049,7 +1088,6 @@ Namespace OrdersImport
 
             Sql = "Select Distinct EDI_ISA_NO From EDT850I1 Where EDI_BATCH_NO IS NULL"
             baseClass.Fill_Records("EDT850I1D", String.Empty, False, sql)
-
 
             Try
                 For Each rowEDT850I1D As DataRow In dst.Tables("EDT850I1D").Select("", "EDI_ISA_NO")

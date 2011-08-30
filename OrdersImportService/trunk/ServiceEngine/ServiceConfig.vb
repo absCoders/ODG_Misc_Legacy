@@ -24,6 +24,9 @@ Public Class ServiceConfig
     Private _backcolor As System.Drawing.Color
 
     Private _period As Integer = 10
+    Private _driveLetter As String = String.Empty
+    Private _driveLetterIP As String = String.Empty
+
 
     Public Sub New()
         'Get settings from folder
@@ -46,6 +49,10 @@ Public Class ServiceConfig
                                     _FileFolder = My.Application.Info.DirectoryPath & "\" ' & xReader.ReadElementContentAsString() & "\
                                 Case "DefaultPeriod"
                                     TimerPeriod = Convert.ToInt16(xReader.ReadElementContentAsString())
+                                Case "DriveLetter"
+                                    _driveLetter = xReader.ReadElementContentAsString()
+                                Case "DriveLetterIP"
+                                    _driveLetterIP = xReader.ReadElementContentAsString()
                             End Select
                     End Select
                 Loop
@@ -138,6 +145,24 @@ Public Class ServiceConfig
             ElseIf _period > 60 Then
                 _period = 60
             End If
+        End Set
+    End Property
+
+    Public Property DriveLetter()
+        Get
+            Return _driveLetter
+        End Get
+        Set(ByVal value)
+            _driveLetter = value
+        End Set
+    End Property
+
+    Public Property DriveLetterIP()
+        Get
+            Return _driveLetterIP
+        End Get
+        Set(ByVal value)
+            _driveLetterIP = value
         End Set
     End Property
 
