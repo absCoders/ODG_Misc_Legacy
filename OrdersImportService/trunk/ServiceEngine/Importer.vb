@@ -35,7 +35,7 @@ Namespace OrdersImport
 
         Private dst As DataSet
 
-        Private Const testMode As Boolean = False
+        Private Const testMode As Boolean = True
         Private ImportErrorNotification As Hashtable
 
         ' Header Errors
@@ -736,12 +736,26 @@ Namespace OrdersImport
             Dim salesOrdersProcessed As Integer = 0
             Dim ITEM_DESC2 As String = String.Empty
 
+            If testMode Then
+                RecordLogEntry("ProcessEyeFinitySalesOrders LocalInDir: " & ftpConnection.LocalInDir)
+                RecordLogEntry("ProcessEyeFinitySalesOrders LocalInDirArchive: " & ftpConnection.LocalInDirArchive)
+                RecordLogEntry("ProcessEyeFinitySalesOrders LocalOutDir: " & ftpConnection.LocalOutDir)
+                RecordLogEntry("ProcessEyeFinitySalesOrders LocalOutDirArchive: " & ftpConnection.LocalOutDirArchive)
+                RecordLogEntry("ProcessEyeFinitySalesOrders RemoteInDirectory: " & ftpConnection.RemoteInDirectory)
+                RecordLogEntry("ProcessEyeFinitySalesOrders RemoteInDirectoryArchive: " & ftpConnection.RemoteInDirectoryArchive)
+                RecordLogEntry("ProcessEyeFinitySalesOrders RemoteOutDirectory: " & ftpConnection.RemoteOutDirectory)
+                RecordLogEntry("ProcessEyeFinitySalesOrders RemoteOutDirectoryArchive: " & ftpConnection.RemoteOutDirectoryArchive)
+            End If
+
             ' Perform FTP Here
             ftpFileList.Clear()
             ImportedFiles.Clear()
 
             Try
+                Ftp1 = New nsoftware.IPWorks.Ftp
+                System.Threading.Thread.Sleep(1000)
                 Ftp1.RuntimeLicense = nSoftwareftpkey
+
                 Ftp1.User = ftpConnection.UserId
                 Ftp1.Password = ftpConnection.Password
                 Ftp1.RemoteHost = ftpConnection.RemoteHost
@@ -758,20 +772,25 @@ Namespace OrdersImport
                 For Each fileFtp As String In ftpFileList
 
                     If fileFtp.Length = 0 Then Continue For
+                    If testMode Then RecordLogEntry("ProcessEyeFinitySalesOrders ftp: " & fileFtp)
+
                     If Not fileFtp.EndsWith(".snt") Then Continue For
                     If Not fileFtp.StartsWith(ftpConnection.Filename) Then Continue For
 
                     Dim filePrefix As String = DateTime.Now.ToString("yyyyMMddhhmmss") & "_"
 
+                    If testMode Then RecordLogEntry("ProcessEyeFinitySalesOrders ftp Download: " & fileFtp)
                     Ftp1.RemoteFile = fileFtp
                     Ftp1.LocalFile = ftpConnection.LocalInDir & filePrefix & fileFtp
                     Ftp1.Download()
+                    RecordLogEntry("ProcessEyeFinitySalesOrders ftp Delete: " & fileFtp)
                     Ftp1.DeleteFile(fileFtp)
 
                     fileFtp = fileFtp.Replace(".snt", ".csv")
                     Ftp1.RemoteFile = fileFtp
                     Ftp1.LocalFile = ftpConnection.LocalInDir & filePrefix & fileFtp
                     Ftp1.Download()
+                    If testMode Then RecordLogEntry("ProcessEyeFinitySalesOrders ftp Delete: " & fileFtp)
                     Ftp1.DeleteFile(fileFtp)
                 Next
 
@@ -990,9 +1009,11 @@ Namespace OrdersImport
                 Try
                     ' Move CSN and any SNT file extensions to the archive directory
                     For Each orderFile As String In ImportedFiles
+                        If testMode Then RecordLogEntry("ProcessEyeFinitySalesOrders ftp Move file: " & orderFile)
                         My.Computer.FileSystem.MoveFile(orderFile, ftpConnection.LocalInDirArchive & My.Computer.FileSystem.GetName(orderFile))
                         orderFile = orderFile.Replace(".csv", ".snt")
                         If My.Computer.FileSystem.FileExists(orderFile) Then
+                            If testMode Then RecordLogEntry("ProcessEyeFinitySalesOrders ftp Move file: " & orderFile)
                             My.Computer.FileSystem.MoveFile(orderFile, ftpConnection.LocalInDirArchive & My.Computer.FileSystem.GetName(orderFile))
                         End If
                     Next
