@@ -432,6 +432,10 @@ Namespace OrdersImport
                     ORDR_SOURCE = rowSOTPARMP.Item("ORDR_SOURCE") & String.Empty
 
                     ' House Keeping, common things to do
+                    Ftp1 = New nsoftware.IPWorks.Ftp
+                    System.Threading.Thread.Sleep(1000)
+                    Ftp1.RuntimeLicense = nSoftwareftpkey
+
                     ftpFileList.Clear()
                     ImportedFiles.Clear()
                     baseClass.Fill_Records("SOTSVIAF", ORDR_SOURCE)
@@ -459,10 +463,15 @@ Namespace OrdersImport
                             ProcessEDISalesOrders(ORDR_SOURCE)
                         Case "B" ' US Vision Care Scan
                             ProcessBLScan(ORDR_SOURCE)
-                            ORDR_SOURCE = "E" ' tweak for Import Error Notifications
+                            ' The sales order has an E as the order source
+                            If ImportErrorNotification.Count > 0 Then
+                                ImportErrorNotification.Add("B", ImportErrorNotification.Item("E"))
+                                ImportErrorNotification.Remove("E")
+                            End If
                     End Select
 
                     ABSolution.ASCMAIN1.MultiTask_Release(, , 1)
+                    Ftp1.Dispose()
 
                     If ImportErrorNotification.Keys.Count > 0 Then
                         For Each Item As DictionaryEntry In ImportErrorNotification
@@ -669,7 +678,7 @@ Namespace OrdersImport
                     Next
 
                     ORDR_NO = String.Empty
-                    If CreateSalesOrder(ORDR_NO, CREATE_SHIP_TO, SELECT_SHIP_TO_BY_TELE, ORDR_LINE_SOURCE, ORDR_SOURCE, CALLER_NAME, False) Then
+                    If CreateSalesOrder(ORDR_NO, CREATE_SHIP_TO, SELECT_SHIP_TO_BY_TELE, ORDR_LINE_SOURCE, ORDR_SOURCE, CALLER_NAME, False, ORDR_SOURCE) Then
                         ' See if the Order gets free samples
                         AddSampleItemsToOrders(dst.Tables("SOTORDR1").Rows(0), dst.Tables("SOTORDR2"))
 
@@ -752,10 +761,6 @@ Namespace OrdersImport
             ImportedFiles.Clear()
 
             Try
-                Ftp1 = New nsoftware.IPWorks.Ftp
-                System.Threading.Thread.Sleep(1000)
-                Ftp1.RuntimeLicense = nSoftwareftpkey
-
                 Ftp1.User = ftpConnection.UserId
                 Ftp1.Password = ftpConnection.Password
                 Ftp1.RemoteHost = ftpConnection.RemoteHost
@@ -1055,7 +1060,7 @@ Namespace OrdersImport
                     ORDR_NO = String.Empty
                     ORDR_CALLER_NAME = dst.Tables("SOTORDRX").Rows(0).Item("ORDR_CALLER_NAME") & String.Empty
                     ORDR_SHIP_COMPLETE = dst.Tables("SOTORDRX").Rows(0).Item("ORDR_SHIP_COMPLETE") & String.Empty
-                    If CreateSalesOrder(ORDR_NO, False, False, ORDR_SOURCE, ORDR_SOURCE, ORDR_CALLER_NAME, True) Then
+                    If CreateSalesOrder(ORDR_NO, False, False, ORDR_SOURCE, ORDR_SOURCE, ORDR_CALLER_NAME, True, ORDR_SOURCE) Then
                         dst.Tables("SOTORDR1").Rows(0).Item("ORDR_SHIP_COMPLETE") = ORDR_SHIP_COMPLETE
                         UpdateDataSetTables()
                         salesOrdersProcessed += 1
@@ -1396,7 +1401,7 @@ Namespace OrdersImport
                     ORDR_NO = String.Empty
                     ORDR_CALLER_NAME = dst.Tables("SOTORDRX").Rows(0).Item("ORDR_CALLER_NAME") & String.Empty
                     ORDR_SHIP_COMPLETE = dst.Tables("SOTORDRX").Rows(0).Item("ORDR_SHIP_COMPLETE") & String.Empty
-                    If CreateSalesOrder(ORDR_NO, createShipTo, locateShipTobyTelephoneNo, ORDR_SOURCE, ORDR_SOURCE, ORDR_CALLER_NAME, alwaysUseImportedShipToAddress) Then
+                    If CreateSalesOrder(ORDR_NO, createShipTo, locateShipTobyTelephoneNo, ORDR_SOURCE, ORDR_SOURCE, ORDR_CALLER_NAME, alwaysUseImportedShipToAddress, ORDR_SOURCE) Then
                         dst.Tables("SOTORDR1").Rows(0).Item("ORDR_SHIP_COMPLETE") = ORDR_SHIP_COMPLETE
                         UpdateDataSetTables()
                         salesOrdersProcessed += 1
@@ -1439,6 +1444,7 @@ Namespace OrdersImport
             Dim salesOrdersProcessed As Integer = 0
             Dim ORDR_LNO As Integer = 0
             Dim ORDR_NO As String = String.Empty
+            Dim recCount As Integer = 1
 
             ' Tweak the order source
             ORDR_SOURCE = "E"
@@ -1489,7 +1495,8 @@ Namespace OrdersImport
 
                     Using orderReader As New StreamReader(orderFile)
                         System.Threading.Thread.Sleep(1000)
-                        ORDR_NO = "BL" & DateTime.Now.ToString("hhmmss")
+                        recCount += 1
+                        ORDR_NO = "BL" & recCount.ToString.Trim & DateTime.Now.ToString("hhmmss")
                         ORDR_LNO = 0
 
                         ' The first record will be column descriptions and can be ignored
@@ -1540,6 +1547,7 @@ Namespace OrdersImport
 
                             rowSOTORDRX.Item("CUST_CODE") = CUST_CODE
                             rowSOTORDRX.Item("CUST_SHIP_TO_NO") = CUST_SHIP_TO_NO
+                            rowSOTORDRX.Item("CUST_NAME") = orderElements(22) & String.Empty
 
                             rowSOTORDRX.Item("ORDR_TYPE_CODE") = "REG"
                             rowSOTORDRX.Item("ORDR_DPD") = "0"
@@ -1669,7 +1677,7 @@ Namespace OrdersImport
                     'ORDR_NO = String.Empty
                     ORDR_CALLER_NAME = dst.Tables("SOTORDRX").Rows(0).Item("ORDR_CALLER_NAME") & String.Empty
                     ORDR_SHIP_COMPLETE = dst.Tables("SOTORDRX").Rows(0).Item("ORDR_SHIP_COMPLETE") & String.Empty
-                    If CreateSalesOrder(ORDR_NO, False, False, ORDR_SOURCE, ORDR_SOURCE, ORDR_CALLER_NAME, False) Then
+                    If CreateSalesOrder(ORDR_NO, False, False, ORDR_SOURCE, ORDR_SOURCE, ORDR_CALLER_NAME, False, "B") Then
                         dst.Tables("SOTORDR1").Rows(0).Item("ORDR_SHIP_COMPLETE") = ORDR_SHIP_COMPLETE
                         UpdateDataSetTables()
                         salesOrdersProcessed += 1
@@ -2108,7 +2116,8 @@ Namespace OrdersImport
         Private Function CreateSalesOrder(ByRef ORDR_NO As String, ByVal CreateShipTo As Boolean, _
                                           ByVal LocateShipToByTelephone As Boolean, ByVal ORDR_LINE_SOURCE As String, _
                                           ByVal ORDR_SOURCE As String, ByVal CALLER_NAME As String, _
-                                          ByVal AlwaysUseImportedShipToAddress As Boolean) As Boolean
+                                          ByVal AlwaysUseImportedShipToAddress As Boolean, _
+                                          ByVal ORDR_STATUS_WEB As String) As Boolean
 
             Try
 
@@ -2220,7 +2229,7 @@ Namespace OrdersImport
                 errorCodes = String.Empty
 
                 ' Validate the Ship Via Code
-                If (rowSOTORDRX.Item("SHIP_VIA_CODE") & String.Empty).ToString.Trim.ToUpper = "STANDARD"  Then
+                If (rowSOTORDRX.Item("SHIP_VIA_CODE") & String.Empty).ToString.Trim.ToUpper = "STANDARD" Then
                     rowSOTORDRX.Item("SHIP_VIA_CODE") = String.Empty
                 End If
 
@@ -2241,6 +2250,7 @@ Namespace OrdersImport
                 End If
 
                 ' Grab the customer settings
+                rowSOTORDR1.Item("CUST_NAME") = (rowSOTORDRX.Item("CUST_NAME") & String.Empty).ToString.Trim
                 If Not Me.SetBillToAttributes(CUST_CODE, CUST_SHIP_TO_NO, rowSOTORDR1, errorCodes) Then
                     Me.AddCharNoDups(InvalidSoldTo, errorCodes)
                 End If
@@ -2424,7 +2434,7 @@ Namespace OrdersImport
                 End If
 
                 If (rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") & String.Empty).ToString.Trim.Length > 0 Then
-                    rowSOTORDR1.Item("ORDR_STATUS_WEB") = rowSOTORDR1.Item("ORDR_SOURCE") & String.Empty
+                    rowSOTORDR1.Item("ORDR_STATUS_WEB") = ORDR_STATUS_WEB
                     If ImportErrorNotification.ContainsKey(rowSOTORDR1.Item("ORDR_SOURCE")) Then
                         ImportErrorNotification.Item(rowSOTORDR1.Item("ORDR_SOURCE")) += 1
                     Else
@@ -2649,8 +2659,9 @@ Namespace OrdersImport
                 Dim ORDR_NO As String = rowSOTORDR1.Item("ORDR_NO") & String.Empty
                 If errorCodes Is Nothing Then errorCodes = String.Empty
 
-                rowSOTORDR1.Item("CUST_NAME") = String.Empty
-                rowSOTORDR1.Item("CUST_BILL_TO_CUST") = String.Empty
+                ' Keep data from the imported data to help assist with any invalid codes
+                'rowSOTORDR1.Item("CUST_NAME") = String.Empty
+                'rowSOTORDR1.Item("CUST_BILL_TO_CUST") = String.Empty
 
                 If (rowSOTORDR1.Item("ORDR_LOCK_SHIP_VIA") & String.Empty) <> "1" Then
                     'rowSOTORDR1.Item("SHIP_VIA_CODE") = String.Empty
@@ -2685,7 +2696,9 @@ Namespace OrdersImport
                     rowSOTORDR1.Item("ORDR_NO_SAMPLE_SURCHARGE") = rowARTCUST1.Item("NO_SAMPLE_SURCHARGE") & String.Empty
                     rowSOTORDR1.Item("ORDR_NO_SAMPLE_HANDLING_FEE") = rowARTCUST1.Item("NO_SAMPLE_HANDLING_FEE") & String.Empty
                 Else
-                    rowSOTORDR1.Item("CUST_NAME") = "Unknown Customer"
+                    If (rowSOTORDR1.Item("CUST_NAME") & String.Empty).ToString.Trim.Length = 0 Then
+                        rowSOTORDR1.Item("CUST_NAME") = "Unknown Customer"
+                    End If
                     rowSOTORDR1.Item("CUST_BILL_TO_CUST") = String.Empty
                     Me.AddCharNoDups(InvalidSoldTo, errorCodes)
                 End If
