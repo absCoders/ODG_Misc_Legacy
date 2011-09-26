@@ -1471,7 +1471,7 @@ Namespace OrdersImport
                 For Each fileFtp As String In ftpFileList
 
                     If fileFtp.Length = 0 Then Continue For
-                    If Not fileFtp.EndsWith(".CSV") Then Continue For
+                    If Not fileFtp.ToUpper.Trim.EndsWith(".CSV") Then Continue For
 
                     Ftp1.RemoteFile = fileFtp
                     Ftp1.LocalFile = ftpConnection.LocalInDir & fileFtp
@@ -1481,11 +1481,15 @@ Namespace OrdersImport
                 Next
 
             Catch ex As Exception
-                RecordLogEntry("ProcessBLScan: " & ex.Message)
+                RecordLogEntry("ProcessBLScan: (ftp) " & ex.Message)
             Finally
                 Ftp1.Logoff()
                 Ftp1.Dispose()
             End Try
+
+            If testMode Then
+                RecordLogEntry("ProcessBLScan: ftpConnection.LocalInDir = " & ftpConnection.LocalInDir)
+            End If
 
             Try
                 For Each orderFile As String In My.Computer.FileSystem.GetFiles(ftpConnection.LocalInDir, FileIO.SearchOption.SearchTopLevelOnly, "*.csv")
@@ -1643,7 +1647,7 @@ Namespace OrdersImport
 
                         Catch ex As Exception
                             If UpdateInProcess Then .Rollback()
-                            RecordLogEntry("ProcessEyeFinitySalesOrders: " & ex.Message)
+                            RecordLogEntry("ProcessBLScan: " & ex.Message)
                         End Try
 
                     End With
@@ -1689,7 +1693,7 @@ Namespace OrdersImport
                     End If
                 Next
             Catch ex As Exception
-                RecordLogEntry("ProcessEyeFinitySalesOrders: " & ex.Message)
+                RecordLogEntry("ProcessBLScan: " & ex.Message)
             Finally
                 If salesOrdersProcessed > 0 Then
                     RecordLogEntry(salesOrdersProcessed & " " & ftpConnection.ConnectionDescription & " Orders imported.")
