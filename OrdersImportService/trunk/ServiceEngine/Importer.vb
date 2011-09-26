@@ -1641,11 +1641,6 @@ Namespace OrdersImport
                             .CommitTrans()
                             UpdateInProcess = False
 
-                            ' Move CSN and any SNT file extensions to the archive directory
-                            For Each orderFile As String In ImportedFiles
-                                My.Computer.FileSystem.MoveFile(orderFile, ftpConnection.LocalInDirArchive & My.Computer.FileSystem.GetName(orderFile))
-                            Next
-
                         Catch ex As Exception
                             If UpdateInProcess Then .Rollback()
                             RecordLogEntry("ProcessEyeFinitySalesOrders: " & ex.Message)
@@ -1699,11 +1694,15 @@ Namespace OrdersImport
                 If salesOrdersProcessed > 0 Then
                     RecordLogEntry(salesOrdersProcessed & " " & ftpConnection.ConnectionDescription & " Orders imported.")
                 End If
+
+                ' Move CSN and any SNT file extensions to the archive directory
+                For Each orderFile As String In ImportedFiles
+                    My.Computer.FileSystem.MoveFile(orderFile, ftpConnection.LocalInDirArchive & My.Computer.FileSystem.GetName(orderFile), True)
+                Next
+
             End Try
 
         End Sub
-
-
 
         Private Sub DisposeOPD()
             Try
