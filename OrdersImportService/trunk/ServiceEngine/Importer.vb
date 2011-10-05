@@ -107,7 +107,7 @@ Namespace OrdersImport
                 If rowSOTPARMP IsNot Nothing Then
 
                     LocalInDir = rowSOTPARMP.Item("SO_PARM_LOCAL_IN") & String.Empty
-                    LocalInDir = LocalInDir.ToUpper
+                    LocalInDir = LocalInDir.ToUpper.Trim
                     If convert And LocalInDir.StartsWith(DriveLetter) Then
                         LocalInDir = LocalInDir.replace(DriveLetter, DriveLetterIP)
                     End If
@@ -120,7 +120,7 @@ Namespace OrdersImport
                     End If
 
                     LocalInDirArchive = rowSOTPARMP.Item("SO_PARM_LOCAL_IN_ARCHIVE") & String.Empty
-                    LocalInDirArchive = LocalInDirArchive.ToUpper
+                    LocalInDirArchive = LocalInDirArchive.ToUpper.Trim
                     If convert And LocalInDirArchive.StartsWith(DriveLetter) Then
                         LocalInDirArchive = LocalInDirArchive.Replace(DriveLetter, DriveLetterIP)
                     End If
@@ -133,7 +133,7 @@ Namespace OrdersImport
                     End If
 
                     LocalOutDir = rowSOTPARMP.Item("SO_PARM_LOCAL_OUT") & String.Empty
-                    LocalOutDir = LocalOutDir.ToUpper
+                    LocalOutDir = LocalOutDir.ToUpper.Trim
                     If convert And LocalOutDir.StartsWith(DriveLetter) Then
                         LocalOutDir = LocalOutDir.Replace(DriveLetter, DriveLetterIP)
                     End If
@@ -146,7 +146,7 @@ Namespace OrdersImport
                     End If
 
                     LocalOutDirArchive = rowSOTPARMP.Item("SO_PARM_LOCAL_OUT_ARCHIVE") & String.Empty
-                    LocalOutDirArchive = LocalOutDirArchive.ToUpper
+                    LocalOutDirArchive = LocalOutDirArchive.ToUpper.Trim
                     If convert And LocalOutDirArchive.StartsWith(DriveLetter) Then
                         LocalOutDirArchive = LocalOutDirArchive.Replace(DriveLetter, DriveLetterIP)
                     End If
@@ -908,6 +908,7 @@ Namespace OrdersImport
 
                             rowSOTORDRX.Item("ORDR_DATE") = DateTime.Now.ToString("dd-MMM-yyyy")
                             rowSOTORDRX.Item("ORDR_CALLER_NAME") = StrConv(TruncateField(orderElements(7), "SOTORDR1", "ORDR_CALLER_NAME"), VbStrConv.ProperCase)
+                            rowSOTORDRX.Item("ORDR_LOCK_SHIP_VIA") = "0"
 
                             ' See if we are to use a specified shipping method
                             If dst.Tables("SOTSVIAF").Select("SHIP_VIA_DESC = '" & orderElements(32) & "'", "").Length > 0 Then
@@ -918,6 +919,12 @@ Namespace OrdersImport
                                 Else
                                     rowSOTORDRX.Item("SHIP_VIA_CODE") = rowSOTSVIAF.Item("SHIP_VIA_CODE") & String.Empty
                                 End If
+
+                                ' As per Maria, Lock Ship Via if they send use a Specific Ship Via. 20110926
+                                If rowSOTORDRX.Item("SHIP_VIA_CODE") & String.Empty <> String.Empty Then
+                                    rowSOTORDRX.Item("ORDR_LOCK_SHIP_VIA") = "1"
+                                End If
+
                             ElseIf orderElements(32).Trim.ToUpper = "STANDARD" Then
                                 Dim rowARTCUST3 As DataRow = baseClass.LookUp("ARTCUST3", CUST_CODE)
                                 If rowARTCUST3 IsNot Nothing Then
@@ -928,7 +935,6 @@ Namespace OrdersImport
                                     End If
                                 End If
                             End If
-                            rowSOTORDRX.Item("ORDR_LOCK_SHIP_VIA") = "1"
 
                             If rowSOTORDRX.Item("SHIP_VIA_CODE") & String.Empty = String.Empty Then
                                 rowSOTORDRX.Item("SHIP_VIA_CODE") = "SD"
@@ -947,6 +953,7 @@ Namespace OrdersImport
                             rowSOTORDRX.Item("ORDR_CUST_PO") = TruncateField(orderElements(45), "SOTORDR1", "ORDR_CUST_PO")
                             rowSOTORDRX.Item("CUST_PHONE") = TruncateField(orderElements(13), "SOTORDR5", "CUST_PHONE")
 
+                            ' This is the Bill To
                             rowSOTORDRX.Item("CUST_SHIP_TO_NAME") = TruncateField(orderElements(34), "SOTORDR5", "CUST_NAME")
                             rowSOTORDRX.Item("CUST_SHIP_TO_ADDR1") = TruncateField(orderElements(35), "SOTORDR5", "CUST_ADDR1")
                             rowSOTORDRX.Item("CUST_SHIP_TO_ADDR2") = TruncateField(orderElements(36), "SOTORDR5", "CUST_ADDR2")
@@ -958,8 +965,7 @@ Namespace OrdersImport
                             rowSOTORDRX.Item("CUST_SHIP_TO_EMAIL") = TruncateField(orderElements(42), "SOTORDR5", "CUST_EMAIL")
                             rowSOTORDRX.Item("CUST_SHIP_TO_COUNTRY") = "US"
 
-                            'These fields are used to set the Ship To if the customer wants
-                            ' us to use the data they provided.
+                            'These fields are used to set the Ship To if the customer wants us to use the data they provided.
                             rowSOTORDRX.Item("CUST_NAME") = TruncateField(orderElements(34), "SOTORDR5", "CUST_NAME")
                             rowSOTORDRX.Item("CUST_ADDR1") = TruncateField(orderElements(35), "SOTORDR5", "CUST_ADDR1")
                             rowSOTORDRX.Item("CUST_ADDR2") = TruncateField(orderElements(36), "SOTORDR5", "CUST_ADDR2")
@@ -1060,7 +1066,7 @@ Namespace OrdersImport
                     ORDR_NO = String.Empty
                     ORDR_CALLER_NAME = dst.Tables("SOTORDRX").Rows(0).Item("ORDR_CALLER_NAME") & String.Empty
                     ORDR_SHIP_COMPLETE = dst.Tables("SOTORDRX").Rows(0).Item("ORDR_SHIP_COMPLETE") & String.Empty
-                    If CreateSalesOrder(ORDR_NO, False, False, ORDR_SOURCE, ORDR_SOURCE, ORDR_CALLER_NAME, True, ORDR_SOURCE) Then
+                    If CreateSalesOrder(ORDR_NO, False, False, ORDR_SOURCE, ORDR_SOURCE, ORDR_CALLER_NAME, ORDR_SOURCE <> "U", ORDR_SOURCE) Then
                         dst.Tables("SOTORDR1").Rows(0).Item("ORDR_SHIP_COMPLETE") = ORDR_SHIP_COMPLETE
                         UpdateDataSetTables()
                         salesOrdersProcessed += 1
@@ -1473,6 +1479,7 @@ Namespace OrdersImport
                     If fileFtp.Length = 0 Then Continue For
                     If Not fileFtp.ToUpper.Trim.EndsWith(".CSV") Then Continue For
 
+                    Ftp1.Overwrite = True
                     Ftp1.RemoteFile = fileFtp
                     Ftp1.LocalFile = ftpConnection.LocalInDir & fileFtp
                     Ftp1.Download()
