@@ -1,5 +1,8 @@
 ﻿Imports ServiceEngine.Extensions
 Imports System.IO
+Imports System.Xml
+Imports System.Xml.Serialization
+Imports System.Xml.Schema
 
 Namespace OrdersImport
 
@@ -77,6 +80,24 @@ Namespace OrdersImport
         Private nSoftwareipportkey As String = "31504E38414131535542524153315445334538393333333158000000000000000000000000000000423252383654315A0000343854353048333650384B370000"
         Private nSoftwarepopkey As String = "31504E38414131535542524153315445334538393333333158000000000000000000000000000000394A37383437343200004E55523837363650504A42350000"
 
+        Private Enum VisionWebStatus
+            Received = 5
+            OrderInProcess = 7
+            WaitingForInformation = 10
+            WaitingForFrame = 15
+            RxLaunch = 20
+            Surfacing = 25
+            Treatment = 30
+            Tinting = 35
+            Finishing = 40
+            Inspection = 45
+            BreakageRedo = 50
+            Shipping = 50
+            Shipped = 60
+            Cancelled = 900
+            Other = 999
+        End Enum
+
         Private Class Connection
 
             Public RemoteHost As String = String.Empty
@@ -109,7 +130,7 @@ Namespace OrdersImport
                     LocalInDir = rowSOTPARMP.Item("SO_PARM_LOCAL_IN") & String.Empty
                     LocalInDir = LocalInDir.ToUpper.Trim
                     If convert And LocalInDir.StartsWith(DriveLetter) Then
-                        LocalInDir = LocalInDir.replace(DriveLetter, DriveLetterIP)
+                        LocalInDir = LocalInDir.Replace(DriveLetter, DriveLetterIP)
                     End If
 
                     If LocalInDir.Length > 0 AndAlso Not My.Computer.FileSystem.DirectoryExists(LocalInDir) Then
@@ -468,6 +489,10 @@ Namespace OrdersImport
                                 ImportErrorNotification.Add("B", ImportErrorNotification.Item("E"))
                                 ImportErrorNotification.Remove("E")
                             End If
+                        Case "V" 'Vision Web
+                            ProcessVisionWebSalesOrders(ORDR_SOURCE)
+                            System.Threading.Thread.Sleep(2000)
+                            ExportVisionWebStatus()
                     End Select
 
                     ABSolution.ASCMAIN1.MultiTask_Release(, , 1)
@@ -1066,7 +1091,11 @@ Namespace OrdersImport
                     ORDR_NO = String.Empty
                     ORDR_CALLER_NAME = dst.Tables("SOTORDRX").Rows(0).Item("ORDR_CALLER_NAME") & String.Empty
                     ORDR_SHIP_COMPLETE = dst.Tables("SOTORDRX").Rows(0).Item("ORDR_SHIP_COMPLETE") & String.Empty
-                    If CreateSalesOrder(ORDR_NO, False, False, ORDR_SOURCE, ORDR_SOURCE, ORDR_CALLER_NAME, ORDR_SOURCE <> "U", ORDR_SOURCE) Then
+
+                    ' For Aquity logic use address in ARTCUST2
+                    Dim AlwaysUseImportedShipToAddress As Boolean = ORDR_SOURCE <> "U"
+
+                    If CreateSalesOrder(ORDR_NO, False, False, ORDR_SOURCE, ORDR_SOURCE, ORDR_CALLER_NAME, AlwaysUseImportedShipToAddress, ORDR_SOURCE) Then
                         dst.Tables("SOTORDR1").Rows(0).Item("ORDR_SHIP_COMPLETE") = ORDR_SHIP_COMPLETE
                         UpdateDataSetTables()
                         salesOrdersProcessed += 1
@@ -1118,7 +1147,7 @@ Namespace OrdersImport
             Dim strVal As String = String.Empty
             Dim salesOrdersProcessed As Integer = 0
 
-            Sql = "Select Distinct EDI_ISA_NO From EDT850I1 Where EDI_BATCH_NO IS NULL"
+            sql = "Select Distinct EDI_ISA_NO From EDT850I1 Where EDI_BATCH_NO IS NULL"
             baseClass.Fill_Records("EDT850I1D", String.Empty, False, sql)
 
             Try
@@ -1715,6 +1744,593 @@ Namespace OrdersImport
 
         End Sub
 
+        Private Sub ProcessVisionWebSalesOrders(ByVal ORDR_SOURCE As String)
+
+            Dim vwConnection As New Connection(ORDR_SOURCE)
+            Dim rowSOTORDRX As DataRow = Nothing
+            Dim ORDR_NO As String = String.Empty
+            Dim ORDR_LNO As Integer = 0
+            Dim rowData As DataRow = Nothing
+            Dim Telephone As String = String.Empty
+            Dim AttentionTo As String = String.Empty
+            Dim orderNumLoop As Int16 = 0
+            Dim salesordersprocessed As Int16 = 0
+
+            Dim SOFT_Id As String = String.Empty
+            Dim HEADER_Id As String = String.Empty
+            Dim CUSTOMER_Id As String = String.Empty
+            Dim ACCOUNTS_Id As String = String.Empty
+            Dim ACCOUNT_Id As String = String.Empty
+
+            Dim DELIVERY_Id As String = String.Empty
+
+            Dim SOFTCONTACTS_id As String = String.Empty
+            Dim SOFTCONTACT_id As String = String.Empty
+            Dim PRESCRIPTION_id As String = String.Empty
+
+            Dim CUST_CODE As String = String.Empty
+            Dim CUST_SHIP_TO_NO As String = String.Empty
+
+            Try
+                ImportedFiles.Clear()
+
+                Dim xsdFile As String = vwConnection.LocalInDir & "ContactLensOrder.XSD"
+
+                If Not My.Computer.FileSystem.FileExists(xsdFile) Then
+                    RecordLogEntry("ProcessVisionWebSalesOrders: " & xsdFile & " could not be found.")
+                    Exit Sub
+                End If
+
+                ' Create the DataSet to read the schema into.
+                Dim vwXmlDataset As New DataSet
+                'Create a FileStream object with the file path and name.
+                Dim myFileStream As System.IO.FileStream = New System.IO.FileStream(xsdFile, System.IO.FileMode.Open)
+                'Create a new XmlTextReader object with the FileStream.
+                Dim myXmlTextReader As System.Xml.XmlTextReader = New System.Xml.XmlTextReader(myFileStream)
+                'Read the schema into the DataSet and close the reader.
+                vwXmlDataset.ReadXmlSchema(myXmlTextReader)
+                myXmlTextReader.Close()
+
+                For Each orderFile As String In My.Computer.FileSystem.GetFiles(vwConnection.LocalInDir, FileIO.SearchOption.SearchTopLevelOnly, "*.xml")
+
+                    For Each tbl As DataTable In vwXmlDataset.Tables
+                        tbl.Rows.Clear()
+                        tbl.BeginLoadData()
+                    Next
+
+                    vwXmlDataset.ReadXml(orderFile)
+
+                    For Each tbl As DataTable In vwXmlDataset.Tables
+                        tbl.EndLoadData()
+                    Next
+
+                    SOFT_Id = String.Empty
+
+                    ' These are the 2 types of Orders in the XML Document
+                    For Each tableName As String In New String() {"STK_SOFT_OFFICE", "RX_SOFT_PATIENT"}
+                        For Each rowSoftType As DataRow In vwXmlDataset.Tables(tableName).Select("", tableName & "_Id")
+                            SOFT_Id = rowSoftType.Item(tableName & "_Id") & String.Empty
+                            orderNumLoop += 1
+                            ORDR_NO = rowSoftType.Item("Id") & orderNumLoop.ToString
+                            If ORDR_NO.Length > 10 Then ORDR_NO = ORDR_NO.Substring(0, 10).Trim
+
+                            rowSOTORDRX = dst.Tables("SOTORDRX").NewRow
+                            rowSOTORDRX.Item("ORDR_NO") = ORDR_NO
+                            rowSOTORDRX.Item("ORDR_SOURCE") = ORDR_SOURCE
+                            rowSOTORDRX.Item("ORDR_DATE") = DateTime.Now
+                            rowSOTORDRX.Item("ORDR_COMMENT") = TruncateField(rowSoftType.Item("Comment") & String.Empty, "SOTORDRX", "ORDR_COMMENT")
+                            rowSOTORDRX.Item("EDI_CUST_REF_NO") = rowSoftType.Item("Id") & String.Empty
+                            rowSOTORDRX.Item("ORDR_TYPE_CODE") = "REG"
+                            rowSOTORDRX.Item("ORDR_LNO") = 1
+                            dst.Tables("SOTORDRX").Rows.Add(rowSOTORDRX)
+
+                            HEADER_Id = String.Empty
+                            CUSTOMER_Id = String.Empty
+                            ACCOUNTS_Id = String.Empty
+                            ACCOUNT_Id = String.Empty
+
+                            DELIVERY_Id = String.Empty
+                            SOFTCONTACTS_id = String.Empty
+                            SOFTCONTACT_id = String.Empty
+                            PRESCRIPTION_id = String.Empty
+
+                            For Each rowHeader As DataRow In vwXmlDataset.Tables("HEADER").Select(tableName & "_Id = " & SOFT_Id, "HEADER_Id")
+                                HEADER_Id = rowHeader.Item("HEADER_Id") & String.Empty
+                                rowSOTORDRX.Item("ORDR_CUST_PO") = TruncateField(rowSoftType.Item("Id") & ":" & rowHeader.Item("PurchaseOrderNumber") & String.Empty, "SOTORDRX", "ORDR_CUST_PO")
+                                rowSOTORDRX.Item("ORDR_CALLER_NAME") = TruncateField(rowHeader.Item("OrderPlacedBy") & String.Empty, "SOTORDRX", "ORDR_CALLER_NAME")
+
+                                CUSTOMER_Id = String.Empty
+                                For Each rowCustomer As DataRow In vwXmlDataset.Tables("CUSTOMER").Select("HEADER_Id = " & HEADER_Id, "CUSTOMER_ID")
+                                    CUSTOMER_Id = rowCustomer.Item("CUSTOMER_Id") & String.Empty
+
+                                    For Each rowACCOUNTS As DataRow In vwXmlDataset.Tables("ACCOUNTS").Select("CUSTOMER_Id = " & CUSTOMER_Id, "ACCOUNTS_ID")
+                                        ACCOUNTS_Id = rowACCOUNTS.Item("ACCOUNTS_ID") & String.Empty
+
+                                        For Each rowACCOUNT As DataRow In vwXmlDataset.Tables("ACCOUNT").Select("ACCOUNTS_ID = " & ACCOUNTS_Id, "ACCOUNT_ID")
+
+                                            Select Case (rowACCOUNT.Item("Class") & String.Empty).ToString.Trim.ToUpper
+                                                Case "BIL"
+                                                    ACCOUNT_Id = rowACCOUNT.Item("ACCOUNT_Id") & String.Empty
+                                                    If ACCOUNT_Id.Length > 0 AndAlso vwXmlDataset.Tables("ADDRESS").Select("ACCOUNT_Id = " & ACCOUNT_Id).Length > 0 Then
+                                                        rowData = vwXmlDataset.Tables("ADDRESS").Select("ACCOUNT_Id = " & ACCOUNT_Id)(0)
+                                                        rowSOTORDRX.Item("CUST_SHIP_TO_NAME") = String.Empty
+                                                        rowSOTORDRX.Item("CUST_SHIP_TO_ADDR1") = TruncateField((rowData.Item("Street_Number") & String.Empty & " " & rowData.Item("Street_Name") & String.Empty).ToString.Trim, "SOTORDRX", "CUST_SHIP_TO_ADDR1")
+                                                        rowSOTORDRX.Item("CUST_SHIP_TO_ADDR2") = TruncateField(rowData.Item("Suite") & String.Empty, "SOTORDRX", "CUST_SHIP_TO_ADDR2")
+                                                        rowSOTORDRX.Item("CUST_SHIP_TO_ADDR3") = String.Empty
+                                                        rowSOTORDRX.Item("CUST_SHIP_TO_CITY") = TruncateField(rowData.Item("City") & String.Empty, "SOTORDRX", "CUST_SHIP_TO_CITY")
+                                                        rowSOTORDRX.Item("CUST_SHIP_TO_STATE") = TruncateField(rowData.Item("State") & String.Empty, "SOTORDRX", "CUST_SHIP_TO_STATE")
+                                                        rowSOTORDRX.Item("CUST_SHIP_TO_ZIP_CODE") = TruncateField(rowData.Item("ZipCode") & String.Empty, "SOTORDRX", "CUST_SHIP_TO_ZIP_CODE")
+                                                        Telephone = rowData.Item("TEL") & String.Empty
+                                                        Telephone = FormatTelePhone(Telephone)
+                                                        rowSOTORDRX.Item("CUST_SHIP_TO_PHONE") = TruncateField(Telephone, "SOTORDRX", "CUST_SHIP_TO_PHONE")
+                                                        rowSOTORDRX.Item("CUST_SHIP_TO_COUNTRY") = TruncateField(rowData.Item("Country") & String.Empty, "SOTORDRX", "CUST_SHIP_TO_COUNTRY")
+                                                        rowSOTORDRX.Item("CUST_SHIP_TO_FAX") = String.Empty
+                                                        rowSOTORDRX.Item("CUST_SHIP_TO_EMAIL") = String.Empty
+                                                    End If
+
+                                                Case "SHP"
+                                                    CUST_CODE = String.Empty
+                                                    CUST_SHIP_TO_NO = String.Empty
+                                                    ACCOUNT_Id = rowACCOUNT.Item("ACCOUNT_Id") & String.Empty
+                                                    If ACCOUNT_Id.Length > 0 AndAlso vwXmlDataset.Tables("ADDRESS").Select("ACCOUNT_Id = " & ACCOUNT_Id).Length > 0 Then
+                                                        rowData = vwXmlDataset.Tables("ADDRESS").Select("ACCOUNT_Id = " & ACCOUNT_Id)(0)
+                                                        rowSOTORDRX.Item("CUST_NAME") = String.Empty
+                                                        rowSOTORDRX.Item("CUST_ADDR1") = TruncateField(rowData.Item("Street_Number") & String.Empty & " " & rowData.Item("Street_Name") & String.Empty, "SOTORDRX", "CUST_ADDR1")
+                                                        rowSOTORDRX.Item("CUST_ADDR2") = TruncateField(rowData.Item("Suite") & String.Empty, "SOTORDRX", "CUST_ADDR2")
+                                                        rowSOTORDRX.Item("CUST_CITY") = TruncateField(rowData.Item("City") & String.Empty, "SOTORDRX", "CUST_CITY")
+                                                        rowSOTORDRX.Item("CUST_STATE") = TruncateField(rowData.Item("State") & String.Empty, "SOTORDRX", "CUST_STATE")
+                                                        rowSOTORDRX.Item("CUST_ZIP_CODE") = TruncateField(rowData.Item("Zipcode") & String.Empty, "SOTORDRX", "CUST_ZIP_CODE")
+                                                        Telephone = rowData.Item("TEL") & String.Empty
+                                                        Telephone = FormatTelePhone(Telephone)
+                                                        rowSOTORDRX.Item("CUST_PHONE") = TruncateField(Telephone, "SOTORDRX", "CUST_PHONE")
+                                                        rowSOTORDRX.Item("CUST_FAX") = String.Empty
+                                                        rowSOTORDRX.Item("CUST_EMAIL") = String.Empty
+                                                        rowSOTORDRX.Item("CUST_COUNTRY") = TruncateField(rowData.Item("Country") & String.Empty, "SOTORDRX", "CUST_COUNTRY")
+
+                                                        CUST_CODE = rowACCOUNT.Item("Name") & String.Empty
+                                                        If CUST_CODE.Contains("-") Then
+                                                            CUST_SHIP_TO_NO = Split(CUST_CODE, "-")(1)
+                                                            CUST_CODE = Split(CUST_CODE, "-")(0)
+                                                        End If
+
+                                                        CUST_CODE = ABSolution.ASCMAIN1.Format_Field(CUST_CODE, "CUST_CODE")
+                                                        If CUST_CODE.Length = 0 Then
+                                                            CUST_CODE = rowACCOUNT.Item("Name") & String.Empty
+                                                        End If
+                                                        CUST_CODE = TruncateField(CUST_CODE, "SOTORDRX", "CUST_CODE")
+                                                        If CUST_SHIP_TO_NO.Length > 0 Then
+                                                            CUST_SHIP_TO_NO = ABSolution.ASCMAIN1.Format_Field(CUST_SHIP_TO_NO, "CUST_SHIP_TO_NO")
+                                                            CUST_SHIP_TO_NO = TruncateField(CUST_SHIP_TO_NO, "SOTORDRX", "CUST_SHIP_TO_NO")
+                                                        End If
+
+                                                        rowSOTORDRX.Item("CUST_CODE") = CUST_CODE
+                                                        rowSOTORDRX.Item("CUST_SHIP_TO_NO") = CUST_SHIP_TO_NO
+                                                    End If
+                                            End Select
+                                        Next
+                                    Next
+                                Next
+
+                                ' See if DPD Order
+                                rowSOTORDRX.Item("ORDR_DPD") = IIf(tableName = "RX_SOFT_PATIENT", "1", "0")
+                                AttentionTo = String.Empty
+                                DELIVERY_Id = String.Empty
+                                If vwXmlDataset.Tables("DELIVERY").Select("HEADER_Id = " & HEADER_Id, "DELIVERY_Id").Length > 0 Then
+                                    rowData = vwXmlDataset.Tables("DELIVERY").Select("HEADER_Id = " & HEADER_Id, "DELIVERY_Id")(0)
+                                    DELIVERY_Id = rowData.Item("DELIVERY_Id") & String.Empty
+                                    AttentionTo = rowData.Item("AttentionTo") & String.Empty
+
+                                    If vwXmlDataset.Tables("DELIVERY_METHOD").Select("DELIVERY_id = " & DELIVERY_Id).Length > 0 Then
+                                        rowData = vwXmlDataset.Tables("DELIVERY_METHOD").Select("DELIVERY_id = " & DELIVERY_Id)(0)
+                                        rowSOTORDRX.Item("SHIP_VIA_CODE") = rowData.Item("Name") & String.Empty
+
+                                        If rowSOTORDRX.Item("SHIP_VIA_CODE") & String.Empty = String.Empty Then
+                                            rowSOTORDRX.Item("SHIP_VIA_CODE") = rowData.Item("Id") & String.Empty
+                                        End If
+                                    End If
+
+                                End If
+
+                                ' Get DPD Address
+                                If DELIVERY_Id.Length > 0 AndAlso rowSOTORDRX.Item("ORDR_DPD") = "1" Then
+                                    If vwXmlDataset.Tables("ADDRESS").Select("DELIVERY_Id = " & DELIVERY_Id).Length > 0 Then
+                                        rowData = vwXmlDataset.Tables("ADDRESS").Select("DELIVERY_Id = " & DELIVERY_Id)(0)
+                                        rowSOTORDRX.Item("CUST_NAME") = TruncateField(AttentionTo, "SOTORDRX", "CUST_NAME")
+                                        rowSOTORDRX.Item("CUST_ADDR1") = TruncateField(rowData.Item("Street_Number") & String.Empty & " " & rowData.Item("Street_Name") & String.Empty, "SOTORDRX", "CUST_ADDR1")
+                                        rowSOTORDRX.Item("CUST_ADDR2") = TruncateField(rowData.Item("Suite") & String.Empty, "SOTORDRX", "CUST_ADDR2")
+                                        rowSOTORDRX.Item("CUST_CITY") = TruncateField(rowData.Item("City") & String.Empty, "SOTORDRX", "CUST_CITY")
+                                        rowSOTORDRX.Item("CUST_STATE") = TruncateField(rowData.Item("State") & String.Empty, "SOTORDRX", "CUST_STATE")
+                                        rowSOTORDRX.Item("CUST_ZIP_CODE") = TruncateField(rowData.Item("Zipcode") & String.Empty, "SOTORDRX", "CUST_ZIP_CODE")
+                                        Telephone = rowData.Item("TEL") & String.Empty
+                                        Telephone = FormatTelePhone(Telephone)
+                                        rowSOTORDRX.Item("CUST_PHONE") = TruncateField(Telephone, "SOTORDRX", "CUST_PHONE")
+                                        rowSOTORDRX.Item("CUST_FAX") = String.Empty
+                                        rowSOTORDRX.Item("CUST_EMAIL") = String.Empty
+                                        rowSOTORDRX.Item("CUST_COUNTRY") = TruncateField(rowData.Item("Country") & String.Empty, "SOTORDRX", "CUST_COUNTRY")
+                                    End If
+                                End If
+
+                                Dim fieldName As String = IIf(tableName = "STK_SOFT_OFFICE", "SOFTCONTACT_id", "RX_SOFT_PATIENT_ID")
+                                If vwXmlDataset.Tables("PATIENT").Select(fieldName & " = " & SOFT_Id).Length > 0 Then
+                                    rowData = vwXmlDataset.Tables("PATIENT").Select(fieldName & " = " & SOFT_Id)(0)
+                                    rowSOTORDRX.Item("PATIENT_NAME") = TruncateField((rowData.Item("FirstName") & " " & rowData.Item("LastName")).ToString.Trim, "SOTORDRX", "PATIENT_NAME")
+                                End If
+
+                                SOFTCONTACTS_id = String.Empty
+                                SOFTCONTACT_id = String.Empty
+                                ORDR_LNO = 1
+
+                                For Each rowSOFTCONTACTS As DataRow In vwXmlDataset.Tables("SOFTCONTACTS").Select(tableName & "_Id = " & SOFT_Id, "SOFTCONTACTS_id")
+                                    SOFTCONTACTS_id = rowSOFTCONTACTS.Item("SOFTCONTACTS_id") & String.Empty
+
+                                    For Each rowItem As DataRow In vwXmlDataset.Tables("SOFTCONTACT").Select("SOFTCONTACTS_id = " & SOFTCONTACTS_id, "LineItemID")
+
+                                        SOFTCONTACT_id = rowItem.Item("SOFTCONTACT_id") & String.Empty
+
+                                        ' Need to make header record data for multi item order
+                                        If ORDR_LNO > 1 Then
+                                            Dim rowHeaderX As DataRow = dst.Tables("SOTORDRX").NewRow
+                                            For Each col As DataColumn In dst.Tables("SOTORDRX").Columns
+                                                rowHeaderX.Item(col.ColumnName) = rowSOTORDRX.Item(col.ColumnName)
+                                            Next
+                                            rowHeaderX.Item("ORDR_LNO") = ORDR_LNO
+                                            rowHeaderX.Item("ITEM_SPHERE_POWER") = System.DBNull.Value
+                                            rowHeaderX.Item("ITEM_ADD_POWER") = System.DBNull.Value
+                                            dst.Tables("SOTORDRX").Rows.Add(rowHeaderX)
+                                            rowSOTORDRX = rowHeaderX
+                                        End If
+
+                                        rowSOTORDRX.Item("ORDR_LNO") = ORDR_LNO
+                                        ORDR_LNO += 1
+                                        rowSOTORDRX.Item("CUST_LINE_REF") = rowItem.Item("LineItemId") & String.Empty
+
+                                        ' Item Specific
+                                        rowSOTORDRX.Item("ORDR_QTY") = Val(rowItem.Item("Quantity") & String.Empty)
+                                        rowSOTORDRX.Item("ORDR_UNIT_PRICE_PATIENT") = Val(rowItem.Item("UnitPrice") & String.Empty)
+                                        rowSOTORDRX.Item("ORDR_LR") = TruncateField(rowItem.Item("Eye") & String.Empty, "SOTORDRX", "ORDR_LR")
+                                        rowSOTORDRX.Item("ORDR_LINE_SOURCE") = ORDR_SOURCE
+
+                                        If (rowItem.Item("Id") & String.Empty).ToString.Trim.Length > 0 Then
+                                            rowSOTORDRX.Item("ITEM_CODE") = TruncateField(rowItem.Item("Id") & String.Empty, "SOTORDRX", "ITEM_CODE")
+                                        Else
+                                            rowSOTORDRX.Item("ITEM_CODE") = TruncateField(rowItem.Item("UPCCode") & String.Empty, "SOTORDRX", "ITEM_CODE")
+                                        End If
+                                        rowSOTORDRX.Item("ITEM_DESC") = TruncateField(rowItem.Item("Name") & String.Empty, "SOTORDRX", "ITEM_DESC")
+                                        rowSOTORDRX.Item("ITEM_DESC2") = TruncateField(rowItem.Item("Family") & String.Empty, "SOTORDRX", "ITEM_DESC2")
+                                        rowSOTORDRX.Item("ITEM_BASE_CURVE") = Val(rowItem.Item("BaseCurveName") & String.Empty)
+                                        rowSOTORDRX.Item("ITEM_DIAMETER") = Val(rowItem.Item("Diameter") & String.Empty)
+                                        rowSOTORDRX.Item("ITEM_COLOR") = TruncateField(rowItem.Item("Color") & String.Empty, "SOTORDRX", "ITEM_COLOR")
+                                        rowSOTORDRX.Item("ITEM_MULTIFOCAL") = TruncateField(rowItem.Item("GeometricDesignName") & String.Empty, "SOTORDRX", "ITEM_MULTIFOCAL")
+
+                                        If vwXmlDataset.Tables("PRESCRIPTION").Select("SOFTCONTACT_id = " & SOFTCONTACT_id).Length > 0 Then
+                                            rowData = vwXmlDataset.Tables("PRESCRIPTION").Select("SOFTCONTACT_id = " & SOFTCONTACT_id)(0)
+
+                                            If rowData.Item("SPHERE") & String.Empty <> String.Empty Then
+                                                rowSOTORDRX.Item("ITEM_SPHERE_POWER") = Val(rowData.Item("SPHERE") & String.Empty)
+                                            End If
+
+                                            PRESCRIPTION_id = rowData.Item("PRESCRIPTION_id") & String.Empty
+                                            If vwXmlDataset.Tables("ADDITION").Select("PRESCRIPTION_id = " & PRESCRIPTION_id).Length > 0 Then
+                                                rowData = vwXmlDataset.Tables("ADDITION").Select("PRESCRIPTION_id = " & PRESCRIPTION_id)(0)
+
+                                                If rowData.Item("Value") & String.Empty <> String.Empty Then
+                                                    rowSOTORDRX.Item("ITEM_ADD_POWER") = Val(rowData.Item("Value") & String.Empty)
+                                                End If
+                                            End If
+
+                                            If vwXmlDataset.Tables("CYLINDER").Select("PRESCRIPTION_id = " & PRESCRIPTION_id).Length > 0 Then
+                                                rowData = vwXmlDataset.Tables("CYLINDER").Select("PRESCRIPTION_id = " & PRESCRIPTION_id)(0)
+
+                                                If rowData.Item("Axis") & String.Empty <> String.Empty Then
+                                                    rowSOTORDRX.Item("ITEM_AXIS") = Val(rowData.Item("Axis") & String.Empty)
+                                                End If
+
+                                                If rowData.Item("Value") & String.Empty <> String.Empty Then
+                                                    rowSOTORDRX.Item("ITEM_CYLINDER") = Val(rowData.Item("Value") & String.Empty)
+                                                End If
+                                            End If
+                                        End If
+                                    Next
+
+                                    ' Not Used here
+                                    'rowSOTORDRX.Item("BILLING_NAME") = String.Empty
+                                    'rowSOTORDRX.Item("BILLING_ADDRESS1") = String.Empty
+                                    'rowSOTORDRX.Item("BILLING_ADDRESS2") = String.Empty
+                                    'rowSOTORDRX.Item("BILLING_CITY") = String.Empty
+                                    'rowSOTORDRX.Item("BILLING_STATE") = String.Empty
+                                    'rowSOTORDRX.Item("BILLING_ZIP") = String.Empty
+
+                                    'rowSOTORDRX.Item("ITEM_CYLINDER") = String.Empty
+                                    'rowSOTORDRX.Item("ITEM_AXIS") = String.Empty
+                                    'rowSOTORDRX.Item("ITEM_PROD_ID") = String.Empty
+                                    'rowSOTORDRX.Item("PRICE_CATGY_CODE") = String.Empty
+
+                                    'rowSOTORDRX.Item("ORDR_SHIP_COMPLETE") = String.Empty
+                                    'rowSOTORDRX.Item("ORDR_LOCK_SHIP_VIA") = String.Empty
+                                    'rowSOTORDRX.Item("OFFICE_WEBSITE") = String.Empty
+                                    'rowSOTORDRX.Item("PROCESS_IND") = String.Empty
+                                    'rowSOTORDRX.Item("ITEM_UOM") = String.Empty
+                                Next
+                            Next
+                        Next
+                    Next
+
+                    ImportedFiles.Add(orderFile)
+                Next
+
+                If dst.Tables("SOTORDRX").Rows.Count > 0 Then
+                    ' Commit the data from the Excel file and then archive the file
+                    Dim UpdateInProcess As Boolean = False
+                    With baseClass
+                        Try
+                            .BeginTrans()
+                            UpdateInProcess = True
+                            .clsASCBASE1.Update_Record_TDA("SOTORDRX")
+                            .CommitTrans()
+                            UpdateInProcess = False
+
+                        Catch ex As Exception
+                            If UpdateInProcess Then .Rollback()
+                            RecordLogEntry("ProcessBLScan: " & ex.Message)
+                        End Try
+
+                    End With
+
+                End If
+
+                ' If DPD then set the LR
+                Dim ORDR_CALLER_NAME As String = String.Empty
+                Dim ORDR_SHIP_COMPLETE As String = String.Empty
+                dst.Tables("SOTORDRX").Rows.Clear()
+
+                ' Need to process each order individually for pricing reasons; therefore
+                ' need to move the datat to a temp data table and process each order individually
+                For Each headers As DataRow In ABSolution.ASCDATA1.GetDataTable("SELECT DISTINCT ORDR_NO FROM SOTORDRX WHERE PROCESS_IND IS NULL AND ORDR_SOURCE = :PARM1", String.Empty, "V", New Object() {ORDR_SOURCE}).Rows
+                    ClearDataSetTables(True)
+                    ORDR_NO = headers.Item("ORDR_NO") & String.Empty
+                    baseClass.Fill_Records("SOTORDRX", New Object() {ORDR_SOURCE, ORDR_NO})
+
+                    If dst.Tables("SOTORDRX").Rows.Count = 0 Then
+                        RecordLogEntry("ProcessVisionWebSalesOrders: Invalid Order Number (" & ORDR_NO & ") for " & vwConnection.ConnectionDescription)
+                        Continue For
+                    End If
+
+                    'ORDR_NO = String.Empty
+                    ORDR_CALLER_NAME = dst.Tables("SOTORDRX").Rows(0).Item("ORDR_CALLER_NAME") & String.Empty
+                    ORDR_SHIP_COMPLETE = dst.Tables("SOTORDRX").Rows(0).Item("ORDR_SHIP_COMPLETE") & String.Empty
+                    If CreateSalesOrder(ORDR_NO, False, False, ORDR_SOURCE, ORDR_SOURCE, ORDR_CALLER_NAME, False, ORDR_SOURCE) Then
+                        dst.Tables("SOTORDR1").Rows(0).Item("ORDR_SHIP_COMPLETE") = ORDR_SHIP_COMPLETE
+                        UpdateDataSetTables()
+                        salesordersprocessed += 1
+                        Try
+                            ABSolution.ASCDATA1.ExecuteSQL("DELETE FROM SOTORDRX WHERE ORDR_SOURCE = :PARM1 AND ORDR_NO = :PARM2", _
+                                                           "VV", _
+                                                        New Object() {ORDR_SOURCE, dst.Tables("SOTORDRX").Rows(0).Item("ORDR_NO") & String.Empty})
+
+                        Catch ex As Exception
+
+                        End Try
+                    Else
+                        RecordLogEntry("ProcessVisionWebSalesOrders: " & "Could not create sales order for " & dst.Tables("SOTORDRX").Rows(0).Item("ORDR_NO"))
+                    End If
+                Next
+            Catch ex As Exception
+                RecordLogEntry("ProcessVisionWebSalesOrders: " & ex.Message)
+            Finally
+                If salesordersprocessed > 0 Then
+                    RecordLogEntry(salesordersprocessed & " " & vwConnection.ConnectionDescription & " Orders imported.")
+                End If
+
+                ' Move Xml files to the archive directory
+                For Each orderFile As String In ImportedFiles
+                    My.Computer.FileSystem.MoveFile(orderFile, vwConnection.LocalInDirArchive & My.Computer.FileSystem.GetName(orderFile), True)
+                Next
+
+            End Try
+
+        End Sub
+
+        Private Sub ExportVisionWebStatus()
+
+            Dim numOrdersProcessed As Int16 = 0
+            Dim vwConnection As New Connection("V")
+            Dim xmlFilename As String = String.Empty
+            Dim xmlWriter As XmlTextWriter
+
+            Dim statusDesc As List(Of String)
+            Dim ordersProcessed As List(Of String) = New List(Of String)
+
+            Dim ORDR_NO As String = String.Empty
+
+            Dim ORDR_QTY_OPEN As Integer = 0
+            Dim ORDR_QTY_PICK As Integer = 0
+            Dim ORDR_QTY_SHIP As Integer = 0
+            Dim ORDR_QTY_CANC As Integer = 0
+            Dim ORDR_QTY_BACK As Integer = 0
+            Dim ORDR_QTY_ONPO As Integer = 0
+            Dim ORDR_LINE_STATUS As String = String.Empty
+            Dim VWebStatus As String = String.Empty
+
+            Try
+                Dim rowSOTORDR1 As DataRow = Nothing
+                Dim tblSOTORDR2 As DataTable = Nothing
+
+                baseClass.Fill_Records("XSTORDRQ", String.Empty, True, "Select * From XSTORDRQ WHERE ORDR_SOURCE = 'V'")
+
+                For Each rowXSTORDRQ As DataRow In dst.Tables("XSTORDRQ").Select("", "ORDR_NO, LAST_DATE DESC")
+
+                    ORDR_NO = rowXSTORDRQ.Item("ORDR_NO")
+
+                    If ordersProcessed.Contains(ORDR_NO) Then
+                        Continue For
+                    End If
+
+                    ordersProcessed.Add(ORDR_NO)
+
+                    rowSOTORDR1 = ABSolution.ASCDATA1.GetDataRow("Select * From SOTORDR1 Where ORDR_NO = :PARM1", "V", New Object() {ORDR_NO})
+                    tblSOTORDR2 = ABSolution.ASCDATA1.GetDataTable("Select * From SOTORDR2 Where ORDR_NO = :PARM1", "", "V", New Object() {ORDR_NO})
+
+                    ' We need to have the Vision Web ID code.
+                    ' The Import uses EDI_CUST_REF_NO and keyed in orders use ORDR_CUST_PO
+                    If rowSOTORDR1.Item("EDI_CUST_REF_NO") & String.Empty = String.Empty AndAlso _
+                        rowSOTORDR1.Item("ORDR_CUST_PO") & String.Empty = String.Empty Then
+                        Continue For
+                    End If
+
+                    numOrdersProcessed += 1
+
+                    xmlFilename = ORDR_NO & ".xml"
+
+                    If My.Computer.FileSystem.FileExists(vwConnection.LocalOutDir & xmlFilename) Then
+                        My.Computer.FileSystem.DeleteFile(vwConnection.LocalOutDir & xmlFilename)
+                    End If
+
+                    xmlWriter = New XmlTextWriter(vwConnection.LocalOutDir & xmlFilename, System.Text.Encoding.UTF8)
+                    xmlWriter.WriteStartDocument(True)
+                    xmlWriter.Formatting = Formatting.Indented
+                    xmlWriter.Indentation = 4
+                    xmlWriter.WriteStartElement("VW_TRACKING")
+
+                    xmlWriter.WriteStartElement("SUPPLIER")
+                    xmlWriter.WriteStartAttribute("Id")
+                    xmlWriter.WriteValue("5540")
+                    xmlWriter.WriteEndAttribute()
+
+                    xmlWriter.WriteStartElement("ACCOUNT")
+
+                    For Each rowSOTORDR2 As DataRow In tblSOTORDR2.Select("", "ORDR_LNO")
+                        xmlWriter.WriteStartElement("ITEM")
+
+                        xmlWriter.WriteStartAttribute("Tracking_Id")
+                        xmlWriter.WriteValue(rowSOTORDR1.Item("ORDR_NO") & String.Empty)
+                        xmlWriter.WriteEndAttribute()
+
+                        xmlWriter.WriteStartAttribute("Type")
+                        If rowSOTORDR1.Item("ORDR_NO") & String.Empty = "1" Then
+                            xmlWriter.WriteValue("CP")
+                        Else
+                            xmlWriter.WriteValue("CO")
+                        End If
+                        xmlWriter.WriteEndAttribute()
+
+                        xmlWriter.WriteStartAttribute("Visionweb_Tracking_Id")
+                        If rowSOTORDR1.Item("EDI_CUST_REF_NO") & String.Empty <> String.Empty Then
+                            xmlWriter.WriteValue(rowSOTORDR1.Item("EDI_CUST_REF_NO") & String.Empty)
+                        ElseIf rowSOTORDR1.Item("ORDR_CUST_PO") & String.Empty <> String.Empty Then
+                            xmlWriter.WriteValue((rowSOTORDR1.Item("ORDR_CUST_PO") & String.Empty).ToString.ToUpper.Trim)
+                        End If
+                        xmlWriter.WriteEndAttribute()
+
+                        xmlWriter.WriteStartAttribute("Patient")
+                        xmlWriter.WriteValue(rowSOTORDR2.Item("PATIENT_NAME") & String.Empty)
+                        xmlWriter.WriteEndAttribute()
+
+                        xmlWriter.WriteStartAttribute("Received_at")
+                        xmlWriter.WriteValue(rowSOTORDR1.Item("INIT_DATE") & String.Empty)
+                        xmlWriter.WriteEndAttribute()
+
+                        xmlWriter.WriteStartAttribute("Origin")
+                        If rowSOTORDR1.Item("EDI_CUST_REF_NO") & String.Empty = String.Empty Then
+                            xmlWriter.WriteValue("PHN")
+                        Else
+                            xmlWriter.WriteValue("VWB")
+                        End If
+                        xmlWriter.WriteEndAttribute()
+
+
+                        statusDesc = New List(Of String)
+
+                        ORDR_QTY_OPEN = Val(rowSOTORDR2.Item("ORDR_QTY_OPEN") & String.Empty)
+                        If ORDR_QTY_OPEN > 0 Then
+                            statusDesc.Add(ORDR_QTY_OPEN & " piece(s) Open")
+                        End If
+
+                        ORDR_QTY_PICK = Val(rowSOTORDR2.Item("ORDR_QTY_PICK") & String.Empty)
+                        If ORDR_QTY_PICK > 0 Then
+                            statusDesc.Add(ORDR_QTY_PICK & " piece(s) sent to warehouse")
+                        End If
+
+                        ORDR_QTY_SHIP = Val(rowSOTORDR2.Item("ORDR_QTY_SHIP") & String.Empty)
+                        If ORDR_QTY_SHIP > 0 Then
+                            statusDesc.Add(ORDR_QTY_SHIP & " piece(s) shipped")
+                        End If
+
+                        ORDR_QTY_CANC = Val(rowSOTORDR2.Item("ORDR_QTY_CANC") & String.Empty)
+                        If ORDR_QTY_CANC > 0 Then
+                            statusDesc.Add(ORDR_QTY_SHIP & " piece(s) cancelled")
+                        End If
+
+                        ORDR_QTY_BACK = Val(rowSOTORDR2.Item("ORDR_QTY_BACK") & String.Empty)
+                        If ORDR_QTY_BACK > 0 Then
+                            statusDesc.Add(ORDR_QTY_BACK & " piece(s) backordered")
+                        End If
+
+                        ORDR_QTY_ONPO = Val(rowSOTORDR2.Item("ORDR_QTY_ONPO") & String.Empty)
+                        If ORDR_QTY_ONPO > 0 Then
+                            statusDesc.Add(ORDR_QTY_BACK & " piece(s) backordered and ordered from vendor")
+                        End If
+
+                        ORDR_LINE_STATUS = rowSOTORDR2.Item("ORDR_LINE_STATUS") & String.Empty
+                        Select Case ORDR_LINE_STATUS
+                            Case "F"
+                                VWebStatus = CInt(VisionWebStatus.Shipped).ToString.Trim
+                            Case "P"
+                                VWebStatus = CInt(VisionWebStatus.Shipping).ToString.Trim
+                            Case "B"
+                                VWebStatus = CInt(VisionWebStatus.Other).ToString.Trim
+                            Case "V", "C"
+                                VWebStatus = CInt(VisionWebStatus.Cancelled).ToString.Trim
+                            Case "O"
+                                VWebStatus = CInt(VisionWebStatus.OrderInProcess).ToString.Trim
+                            Case Else
+                                VWebStatus = CInt(VisionWebStatus.Other).ToString.Trim
+                        End Select
+
+                        If rowSOTORDR1.Item("ORDR_HOLD_SALES") & String.Empty = "1" OrElse rowSOTORDR1.Item("ORDR_HOLD_CREDIT") & String.Empty = "1" Then
+                            statusDesc.Add("Sales Order on hold")
+                        End If
+
+                        xmlWriter.WriteStartAttribute("Status")
+                        xmlWriter.WriteValue(VWebStatus)
+                        xmlWriter.WriteEndAttribute()
+
+                        ' Write out Status Descriptions
+                        For iLoop As Integer = 0 To statusDesc.Count - 1
+                            xmlWriter.WriteElementString("STATUS_DESCRIPTION", statusDesc(iLoop))
+                        Next
+
+                        xmlWriter.WriteElementString("DESCRIPTION", rowSOTORDR2.Item("ITEM_DESC") & String.Empty)
+
+                        xmlWriter.WriteEndElement() ' ITEM
+                    Next
+
+                    xmlWriter.WriteEndElement() ' ACCOUNT
+                    xmlWriter.WriteEndElement() ' SUPPLIER
+                    xmlWriter.WriteEndElement() ' VW_TRACKING
+                    xmlWriter.WriteEndDocument()
+                    xmlWriter.Close()
+
+                Next
+
+            Catch ex As Exception
+                RecordLogEntry("ExportVisionWebStatus: " & ex.Message)
+            Finally
+
+                ' Delete processed Orders
+                Dim sql As String = String.Empty
+
+                For Each orderNumber As String In ordersProcessed
+                    For Each row As DataRow In baseClass.clsASCBASE1.dst.Tables("XSTORDRQ").Select("ORDR_NO = '" & orderNumber & "'")
+                        sql = "Delete From XSTORDRQ Where ORDR_NO = '" & orderNumber & "' AND LAST_DATE <= TO_TIMESTAMP('" & row.Item("LAST_DATE") & "','MM/DD/YYYY HH:MI:SS AM') +.00001"
+                        ABSolution.ASCDATA1.ExecuteSQL(sql)
+                    Next
+                Next
+
+                RecordLogEntry("ExportVisionWebStatus: " & numOrdersProcessed & " sales order updates placed in " & vwConnection.LocalOutDir)
+            End Try
+
+        End Sub
+
         Private Sub DisposeOPD()
             Try
                 With baseClass.clsASCBASE1
@@ -1889,7 +2505,6 @@ Namespace OrdersImport
             Next
 
         End Sub
-
 
         Private Function CreateCustomerShipTo(ByVal CUST_CODE As String, ByVal CUST_SHIP_TO_NO As String _
                                             , ByRef rowSOTORDRX As DataRow, ByRef rowARTCUST1 As DataRow) As Boolean
@@ -3231,6 +3846,8 @@ Namespace OrdersImport
                     .Tables("SOTORDRW").Clear()
                     .Tables("SOTORDRX").Clear()
 
+                    .Tables("XSTORDRQ").Clear()
+
                     If ClearXMTtables Then
                         .Tables("XSTORDR1").Clear()
                         .Tables("XSTORDR2").Clear()
@@ -3374,6 +3991,8 @@ Namespace OrdersImport
 
                     baseClass.Create_TDA(.Tables.Add, "XMTXREF1", "*")
                     baseClass.Fill_Records("XMTXREF1", String.Empty, True, "Select * From XMTXREF1")
+
+                    baseClass.Create_TDA(.Tables.Add, "XSTORDRQ", "*", 2)
 
                     baseClass.Create_TDA(dst.Tables.Add, "SOTORDRO", "Select LPAD( ' ', 15) ORDR_REL_HOLD_CODES, ORDR_COMMENT From SOTORDR1", , False)
 
@@ -3623,6 +4242,19 @@ Namespace OrdersImport
 
             Return strVal
 
+        End Function
+
+        Private Function FormatTelePhone(ByVal Telephone As String) As String
+
+            Dim strval As String = String.Empty
+
+            For Each Chr As Char In Telephone
+                If Char.IsDigit(Chr) Then
+                    strval &= Chr
+                End If
+            Next
+
+            Return strval
         End Function
 #End Region
 
