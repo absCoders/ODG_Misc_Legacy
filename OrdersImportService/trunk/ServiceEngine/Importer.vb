@@ -1770,6 +1770,7 @@ Namespace OrdersImport
 
             Dim CUST_CODE As String = String.Empty
             Dim CUST_SHIP_TO_NO As String = String.Empty
+            Dim creationDate As String = String.Empty
 
             Try
                 ImportedFiles.Clear()
@@ -1817,7 +1818,14 @@ Namespace OrdersImport
                             rowSOTORDRX = dst.Tables("SOTORDRX").NewRow
                             rowSOTORDRX.Item("ORDR_NO") = ORDR_NO
                             rowSOTORDRX.Item("ORDR_SOURCE") = ORDR_SOURCE
-                            rowSOTORDRX.Item("ORDR_DATE") = DateTime.Now
+
+                            creationDate = (rowSoftType.Item("Creation_date") & String.Empty).ToString.Replace("T", String.Empty)
+                            If IsDate(creationDate) Then
+                                rowSOTORDRX.Item("ORDR_DATE") = CDate(creationDate).ToString("dd-MMM-yyyy")
+                            Else
+                                rowSOTORDRX.Item("ORDR_DATE") = DateTime.Now
+                            End If
+
                             rowSOTORDRX.Item("ORDR_COMMENT") = TruncateField(rowSoftType.Item("Comment") & String.Empty, "SOTORDRX", "ORDR_COMMENT")
                             rowSOTORDRX.Item("EDI_CUST_REF_NO") = rowSoftType.Item("Id") & String.Empty
                             rowSOTORDRX.Item("ORDR_TYPE_CODE") = "REG"
@@ -1836,7 +1844,7 @@ Namespace OrdersImport
 
                             For Each rowHeader As DataRow In vwXmlDataset.Tables("HEADER").Select(tableName & "_Id = " & SOFT_Id, "HEADER_Id")
                                 HEADER_Id = rowHeader.Item("HEADER_Id") & String.Empty
-                                rowSOTORDRX.Item("ORDR_CUST_PO") = TruncateField(rowSoftType.Item("Id") & ":" & rowHeader.Item("PurchaseOrderNumber") & String.Empty, "SOTORDRX", "ORDR_CUST_PO")
+                                rowSOTORDRX.Item("ORDR_CUST_PO") = TruncateField(rowSoftType.Item("Id") & IIf(rowHeader.Item("PurchaseOrderNumber") & String.Empty <> String.Empty, " : " & rowHeader.Item("PurchaseOrderNumber"), String.Empty), "SOTORDRX", "ORDR_CUST_PO")
                                 rowSOTORDRX.Item("ORDR_CALLER_NAME") = TruncateField(rowHeader.Item("OrderPlacedBy") & String.Empty, "SOTORDRX", "ORDR_CALLER_NAME")
 
                                 CUSTOMER_Id = String.Empty
@@ -1988,6 +1996,10 @@ Namespace OrdersImport
                                         rowSOTORDRX.Item("ORDR_QTY") = Val(rowItem.Item("Quantity") & String.Empty)
                                         rowSOTORDRX.Item("ORDR_UNIT_PRICE_PATIENT") = Val(rowItem.Item("UnitPrice") & String.Empty)
                                         rowSOTORDRX.Item("ORDR_LR") = TruncateField(rowItem.Item("Eye") & String.Empty, "SOTORDRX", "ORDR_LR")
+                                        If Not "RL".Contains(rowSOTORDRX.Item("ORDR_LR") & String.Empty) Then
+                                            rowSOTORDRX.Item("ORDR_LR") = String.Empty
+                                        End If
+
                                         rowSOTORDRX.Item("ORDR_LINE_SOURCE") = ORDR_SOURCE
 
                                         If (rowItem.Item("Id") & String.Empty).ToString.Trim.Length > 0 Then
