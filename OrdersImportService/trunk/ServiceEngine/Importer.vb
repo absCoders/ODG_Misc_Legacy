@@ -1772,6 +1772,9 @@ Namespace OrdersImport
             Dim CUST_SHIP_TO_NO As String = String.Empty
             Dim creationDate As String = String.Empty
 
+            Dim itemCode As String = String.Empty
+            Dim upcCode As String = String.Empty
+
             Try
                 ImportedFiles.Clear()
 
@@ -1932,6 +1935,10 @@ Namespace OrdersImport
                                         rowData = vwXmlDataset.Tables("DELIVERY_METHOD").Select("DELIVERY_id = " & DELIVERY_Id)(0)
                                         rowSOTORDRX.Item("SHIP_VIA_CODE") = rowData.Item("Name") & String.Empty
 
+                                        If (rowSOTORDRX.Item("SHIP_VIA_CODE") & String.Empty).ToString.ToUpper = "STANDARD CONTRACT" Then
+                                            rowSOTORDRX.Item("SHIP_VIA_CODE") = "STANDARD"
+                                        End If
+
                                         If rowSOTORDRX.Item("SHIP_VIA_CODE") & String.Empty = String.Empty Then
                                             rowSOTORDRX.Item("SHIP_VIA_CODE") = rowData.Item("Id") & String.Empty
                                         End If
@@ -2003,11 +2010,22 @@ Namespace OrdersImport
 
                                         rowSOTORDRX.Item("ORDR_LINE_SOURCE") = ORDR_SOURCE
 
-                                        If (rowItem.Item("Id") & String.Empty).ToString.Trim.Length > 0 Then
-                                            rowSOTORDRX.Item("ITEM_CODE") = TruncateField(rowItem.Item("Id") & String.Empty, "SOTORDRX", "ITEM_CODE")
+                                        itemCode = (rowItem.Item("Id") & String.Empty).ToString.Trim
+                                        upcCode = (rowItem.Item("UPCCode") & String.Empty).ToString.Trim
+
+                                        ' As per Maria Use Item Code first.
+                                        If itemCode.Length > 0 _
+                                            AndAlso ABSolution.ASCDATA1.GetDataRow("Select * From ICTCATL1 Where ITEM_CODE = :PARM1", "V", New Object() {itemCode}) IsNot Nothing Then
+                                            rowSOTORDRX.Item("ITEM_CODE") = itemCode
+                                        ElseIf upcCode.Length > 0 _
+                                            AndAlso ABSolution.ASCDATA1.GetDataRow("Select * From ICTCATL1 Where ITEM_PROD_ID = :PARM1", "V", New Object() {upcCode}) IsNot Nothing Then
+                                            rowSOTORDRX.Item("ITEM_CODE") = upcCode
+                                        ElseIf itemCode.Length > 0 Then
+                                            rowSOTORDRX.Item("ITEM_CODE") = itemCode
                                         Else
-                                            rowSOTORDRX.Item("ITEM_CODE") = TruncateField(rowItem.Item("UPCCode") & String.Empty, "SOTORDRX", "ITEM_CODE")
+                                            rowSOTORDRX.Item("ITEM_CODE") = upcCode
                                         End If
+
                                         rowSOTORDRX.Item("ITEM_DESC") = TruncateField(rowItem.Item("Name") & String.Empty, "SOTORDRX", "ITEM_DESC")
                                         rowSOTORDRX.Item("ITEM_DESC2") = TruncateField(rowItem.Item("Family") & String.Empty, "SOTORDRX", "ITEM_DESC2")
                                         rowSOTORDRX.Item("ITEM_BASE_CURVE") = Val(rowItem.Item("BaseCurveName") & String.Empty)
@@ -2206,7 +2224,7 @@ Namespace OrdersImport
 
                     numOrdersProcessed += 1
 
-                    xmlFilename = ORDR_NO & ".xml"
+                    xmlFilename = ORDR_NO & DateTime.Now.ToString("_yyyyMMddhhmmss") & ".xml"
 
                     If My.Computer.FileSystem.FileExists(vwConnection.LocalOutDir & xmlFilename) Then
                         My.Computer.FileSystem.DeleteFile(vwConnection.LocalOutDir & xmlFilename)
@@ -2340,7 +2358,7 @@ Namespace OrdersImport
                                 xmlWriter.WriteStartElement("SHIPPING")
 
                                 xmlWriter.WriteStartAttribute("Tracking")
-                                xmlWriter.WriteValue(StrConv(rowSotinvh1.Item("SHIP_VIA_DESC") & String.Empty, VbStrConv.ProperCase))
+                                xmlWriter.WriteValue(rowSotinvh1.Item("SHIP_VIA_DESC") & String.Empty)
                                 xmlWriter.WriteEndAttribute()
 
                                 xmlWriter.WriteStartAttribute("Url")
@@ -2380,7 +2398,14 @@ Namespace OrdersImport
 
         Private Function Track_Shipment(ByVal SHIP_VIA_CODE As String, ByVal SHIP_REF As String) As String
 
-            Try '
+            Try
+
+                SHIP_VIA_CODE = SHIP_VIA_CODE.Trim
+                SHIP_REF = SHIP_REF.Trim
+
+                If SHIP_VIA_CODE.Length = 0 OrElse SHIP_REF.Length = 0 Then
+                    Return String.Empty
+                End If
 
                 Dim sql As String = String.Empty
                 sql = "Select CARRIER_URL_TRACKING, CARRIER_TRACKING_IND" _
