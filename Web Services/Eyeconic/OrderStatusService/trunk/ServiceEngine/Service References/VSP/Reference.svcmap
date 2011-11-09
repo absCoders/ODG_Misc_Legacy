@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ReferenceGroup xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" ID="2b4de643-a966-4a33-85fa-ba2d1f7dfed5" xmlns="urn:schemas-microsoft-com:xml-wcfservicemap">
+  <ClientOptions>
+    <GenerateAsynchronousMethods>false</GenerateAsynchronousMethods>
+    <EnableDataBinding>true</EnableDataBinding>
+    <ExcludedTypes />
+    <ImportXmlTypes>false</ImportXmlTypes>
+    <GenerateInternalTypes>false</GenerateInternalTypes>
+    <GenerateMessageContracts>false</GenerateMessageContracts>
+    <NamespaceMappings />
+    <CollectionMappings>
+      <CollectionMapping TypeName="System.Collections.Generic.List`1" Category="List" />
+    </CollectionMappings>
+    <GenerateSerializableTypes>true</GenerateSerializableTypes>
+    <Serializer>Auto</Serializer>
+    <ReferenceAllAssemblies>true</ReferenceAllAssemblies>
+    <ReferencedAssemblies />
+    <ReferencedDataContractTypes />
+    <ServiceContractMappings />
+  </ClientOptions>
+  <MetadataSources>
+    <MetadataSource Address="http://ostservprv.cloudapp.net/ODGOrderStatusService.svc" Protocol="http" SourceId="1" />
+  </MetadataSources>
+  <Metadata>
+    <MetadataFile FileName="ODGOrderStatusService.xsd" MetadataType="Schema" ID="4af7afd8-bf5d-48f6-8358-a30b9329fce2" SourceId="1" SourceUrl="http://ostservprv.cloudapp.net/ODGOrderStatusService.svc?xsd=xsd2" />
+    <MetadataFile FileName="ODGOrderStatusService.wsdl" MetadataType="Wsdl" ID="1627447c-53ce-4b13-b3a4-21999d61a606" SourceId="1" SourceUrl="http://ostservprv.cloudapp.net/ODGOrderStatusService.svc?wsdl=wsdl0" />
+    <MetadataFile FileName="ODGOrderStatusService1.wsdl" MetadataType="Wsdl" ID="f788e0d7-4943-42b3-a746-ff30b9075165" SourceId="1" SourceUrl="http://ostservprv.cloudapp.net/ODGOrderStatusService.svc?wsdl" />
+    <MetadataFile FileName="ODGOrderStatusService.disco" MetadataType="Disco" ID="6f22d604-76df-4e95-801e-24ed30417b03" SourceId="1" SourceUrl="http://ostservprv.cloudapp.net/ODGOrderStatusService.svc?disco" />
+    <MetadataFile FileName="ODGOrderStatusService1.xsd" MetadataType="Schema" ID="68f9a5ca-6c9b-4aeb-82fd-9c70c50e99f9" SourceId="1" SourceUrl="http://ostservprv.cloudapp.net/ODGOrderStatusService.svc?xsd=xsd1" />
+    <MetadataFile FileName="ODGOrderStatusService2.xsd" MetadataType="Schema" ID="966200b0-a21e-42e7-8eb4-25abcfddb835" SourceId="1" SourceUrl="http://ostservprv.cloudapp.net/ODGOrderStatusService.svc?xsd=xsd0" />
+  </Metadata>
+  <Extensions>
+    <ExtensionFile FileName="configuration91.svcinfo" Name="configuration91.svcinfo" />
+    <ExtensionFile FileName="configuration.svcinfo" Name="configuration.svcinfo" />
+  </Extensions>
+</ReferenceGroup>

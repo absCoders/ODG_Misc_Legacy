@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:tns="http://schemas.datacontract.org/2004/07/OOS.WCF" elementFormDefault="qualified" targetNamespace="http://schemas.datacontract.org/2004/07/OOS.WCF" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:complexType name="CLOrderDetails">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="FreightCost" type="xs:decimal" />
+      <xs:element name="Items" nillable="true" type="tns:ArrayOfCLOrderDetails.CLOrderItem" />
+      <xs:element minOccurs="0" name="ODGInvoiceNumber" nillable="true" type="xs:string" />
+      <xs:element name="OrderId" type="xs:int" />
+      <xs:element name="OrderStatus" type="tns:CLOrderDetails.CLOrderStatus" />
+      <xs:element minOccurs="0" name="ShipDate" type="xs:dateTime" />
+      <xs:element minOccurs="0" name="ShippingCarrier" nillable="true" type="xs:string" />
+      <xs:element minOccurs="0" name="ShippingTrackingNumber" nillable="true" type="xs:string" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="CLOrderDetails" nillable="true" type="tns:CLOrderDetails" />
+  <xs:complexType name="ArrayOfCLOrderDetails.CLOrderItem">
+    <xs:sequence>
+      <xs:element minOccurs="0" maxOccurs="unbounded" name="CLOrderDetails.CLOrderItem" nillable="true" type="tns:CLOrderDetails.CLOrderItem" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ArrayOfCLOrderDetails.CLOrderItem" nillable="true" type="tns:ArrayOfCLOrderDetails.CLOrderItem" />
+  <xs:complexType name="CLOrderDetails.CLOrderItem">
+    <xs:sequence>
+      <xs:element name="ItemCost" type="xs:decimal" />
+      <xs:element name="ItemId" type="xs:int" />
+      <xs:element name="ItemStatus" type="tns:CLOrderDetails.CLOrderItemStatus" />
+      <xs:element name="PRD_ID" nillable="true" type="xs:string" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="CLOrderDetails.CLOrderItem" nillable="true" type="tns:CLOrderDetails.CLOrderItem" />
+  <xs:simpleType name="CLOrderDetails.CLOrderItemStatus">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Cancelled" />
+      <xs:enumeration value="Hold" />
+      <xs:enumeration value="InProcess" />
+      <xs:enumeration value="Backordered" />
+      <xs:enumeration value="Shipped" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element name="CLOrderDetails.CLOrderItemStatus" nillable="true" type="tns:CLOrderDetails.CLOrderItemStatus" />
+  <xs:simpleType name="CLOrderDetails.CLOrderStatus">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Cancelled" />
+      <xs:enumeration value="Hold" />
+      <xs:enumeration value="InProcess" />
+      <xs:enumeration value="Backordered" />
+      <xs:enumeration value="Shipped" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element name="CLOrderDetails.CLOrderStatus" nillable="true" type="tns:CLOrderDetails.CLOrderStatus" />
+  <xs:complexType name="UpdateOrderStatusResponse">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="DetailedMessage" nillable="true" type="xs:string" />
+      <xs:element minOccurs="0" name="IsSuccess" type="xs:boolean" />
+      <xs:element minOccurs="0" name="Message" nillable="true" type="xs:string" />
+      <xs:element minOccurs="0" name="StatusCode" type="xs:int" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="UpdateOrderStatusResponse" nillable="true" type="tns:UpdateOrderStatusResponse" />
+</xs:schema>
