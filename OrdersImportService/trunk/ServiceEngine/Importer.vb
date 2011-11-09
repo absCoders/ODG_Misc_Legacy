@@ -92,7 +92,7 @@ Namespace OrdersImport
             Finishing = 40
             Inspection = 45
             BreakageRedo = 50
-            Shipping = 50
+            Shipping = 55
             Shipped = 60
             Cancelled = 900
             Other = 999
@@ -1958,12 +1958,6 @@ Namespace OrdersImport
                                     End If
                                 End If
 
-                                Dim fieldName As String = IIf(tableName = "STK_SOFT_OFFICE", "SOFTCONTACT_id", "RX_SOFT_PATIENT_ID")
-                                If vwXmlDataset.Tables("PATIENT").Select(fieldName & " = " & SOFT_Id).Length > 0 Then
-                                    rowData = vwXmlDataset.Tables("PATIENT").Select(fieldName & " = " & SOFT_Id)(0)
-                                    rowSOTORDRX.Item("PATIENT_NAME") = TruncateField((rowData.Item("FirstName") & " " & rowData.Item("LastName")).ToString.Trim, "SOTORDRX", "PATIENT_NAME")
-                                End If
-
                                 SOFTCONTACTS_id = String.Empty
                                 SOFTCONTACT_id = String.Empty
                                 ORDR_LNO = 1
@@ -1991,6 +1985,13 @@ Namespace OrdersImport
                                         rowSOTORDRX.Item("ORDR_LNO") = ORDR_LNO
                                         ORDR_LNO += 1
                                         rowSOTORDRX.Item("CUST_LINE_REF") = rowItem.Item("LineItemId") & String.Empty
+
+                                        Dim fieldName As String = IIf(tableName = "STK_SOFT_OFFICE", "SOFTCONTACT_id", "RX_SOFT_PATIENT_ID")
+                                        If vwXmlDataset.Tables("PATIENT").Select(fieldName & " = " & SOFTCONTACT_id).Length > 0 Then
+                                            rowData = vwXmlDataset.Tables("PATIENT").Select(fieldName & " = " & SOFTCONTACT_id)(0)
+                                            rowSOTORDRX.Item("PATIENT_NAME") = TruncateField((rowData.Item("FirstName") & " " & rowData.Item("LastName")).ToString.Trim, "SOTORDRX", "PATIENT_NAME")
+                                            rowSOTORDRX.Item("PATIENT_NAME") = StrConv(rowSOTORDRX.Item("PATIENT_NAME") & String.Empty, VbStrConv.ProperCase)
+                                        End If
 
                                         ' Item Specific
                                         rowSOTORDRX.Item("ORDR_QTY") = Val(rowItem.Item("Quantity") & String.Empty)
@@ -2153,6 +2154,10 @@ Namespace OrdersImport
             Dim ordersProcessed As List(Of String) = New List(Of String)
 
             Dim ORDR_NO As String = String.Empty
+            Dim sql As String = String.Empty
+
+            Dim tblSotinvh1 As DataTable = Nothing
+            Dim rowSotinvh1 As DataRow = Nothing
 
             Dim ORDR_QTY_OPEN As Integer = 0
             Dim ORDR_QTY_PICK As Integer = 0
@@ -2181,6 +2186,16 @@ Namespace OrdersImport
 
                     rowSOTORDR1 = ABSolution.ASCDATA1.GetDataRow("Select * From SOTORDR1 Where ORDR_NO = :PARM1", "V", New Object() {ORDR_NO})
                     tblSOTORDR2 = ABSolution.ASCDATA1.GetDataTable("Select * From SOTORDR2 Where ORDR_NO = :PARM1", "", "V", New Object() {ORDR_NO})
+
+                    ' Send over the Shipping / Tracking / Url for the shipment
+                    sql = " SELECT SOTINVH1.INV_NO, SOTINVH2.INV_LNO, SOTINVH1.INV_DATE, SOTINVH1.SHIP_VIA_CODE, SOTSVIA1.SHIP_VIA_DESC, SOTINVH1.SHIP_REF"
+                    sql &= " FROM SOTINVH1, SOTINVH2, SOTSVIA1"
+                    sql &= " WHERE SOTINVH1.INV_NO = SOTINVH2.INV_NO"
+                    sql &= " AND SOTINVH1.INV_TYPE = SOTINVH1.INV_TYPE"
+                    sql &= " AND SOTSVIA1.SHIP_VIA_CODE = SOTINVH1.SHIP_VIA_CODE"
+                    sql &= " AND SOTINVH1.ORDR_NO = :PARM1"
+
+                    tblSotinvh1 = ABSolution.ASCDATA1.GetDataTable(sql, "", "V", New Object() {ORDR_NO})
 
                     ' We need to have the Vision Web ID code.
                     ' The Import uses EDI_CUST_REF_NO and keyed in orders use ORDR_CUST_PO
@@ -2249,37 +2264,36 @@ Namespace OrdersImport
                         End If
                         xmlWriter.WriteEndAttribute()
 
-
                         statusDesc = New List(Of String)
 
                         ORDR_QTY_OPEN = Val(rowSOTORDR2.Item("ORDR_QTY_OPEN") & String.Empty)
                         If ORDR_QTY_OPEN > 0 Then
-                            statusDesc.Add(ORDR_QTY_OPEN & " piece(s) Open")
+                            statusDesc.Add(rowSOTORDR2.Item("ITEM_CODE") & ": " & ORDR_QTY_OPEN & " piece(s) Open")
                         End If
 
                         ORDR_QTY_PICK = Val(rowSOTORDR2.Item("ORDR_QTY_PICK") & String.Empty)
                         If ORDR_QTY_PICK > 0 Then
-                            statusDesc.Add(ORDR_QTY_PICK & " piece(s) sent to warehouse")
+                            statusDesc.Add(rowSOTORDR2.Item("ITEM_CODE") & ": " & ORDR_QTY_PICK & " piece(s) sent to warehouse")
                         End If
 
                         ORDR_QTY_SHIP = Val(rowSOTORDR2.Item("ORDR_QTY_SHIP") & String.Empty)
                         If ORDR_QTY_SHIP > 0 Then
-                            statusDesc.Add(ORDR_QTY_SHIP & " piece(s) shipped")
+                            statusDesc.Add(rowSOTORDR2.Item("ITEM_CODE") & ": " & ORDR_QTY_SHIP & " piece(s) shipped")
                         End If
 
                         ORDR_QTY_CANC = Val(rowSOTORDR2.Item("ORDR_QTY_CANC") & String.Empty)
                         If ORDR_QTY_CANC > 0 Then
-                            statusDesc.Add(ORDR_QTY_SHIP & " piece(s) cancelled")
+                            statusDesc.Add(rowSOTORDR2.Item("ITEM_CODE") & ": " & ORDR_QTY_CANC & " piece(s) cancelled")
                         End If
 
                         ORDR_QTY_BACK = Val(rowSOTORDR2.Item("ORDR_QTY_BACK") & String.Empty)
                         If ORDR_QTY_BACK > 0 Then
-                            statusDesc.Add(ORDR_QTY_BACK & " piece(s) backordered")
+                            statusDesc.Add(rowSOTORDR2.Item("ITEM_CODE") & ": " & ORDR_QTY_BACK & " piece(s) backordered")
                         End If
 
                         ORDR_QTY_ONPO = Val(rowSOTORDR2.Item("ORDR_QTY_ONPO") & String.Empty)
                         If ORDR_QTY_ONPO > 0 Then
-                            statusDesc.Add(ORDR_QTY_BACK & " piece(s) backordered and ordered from vendor")
+                            statusDesc.Add(rowSOTORDR2.Item("ITEM_CODE") & ": " & ORDR_QTY_ONPO & " piece(s) ordered from vendor")
                         End If
 
                         ORDR_LINE_STATUS = rowSOTORDR2.Item("ORDR_LINE_STATUS") & String.Empty
@@ -2307,12 +2321,35 @@ Namespace OrdersImport
                         xmlWriter.WriteEndAttribute()
 
                         ' Write out Status Descriptions
+                        Dim desc As String = String.Empty
                         For iLoop As Integer = 0 To statusDesc.Count - 1
-                            xmlWriter.WriteElementString("STATUS_DESCRIPTION", statusDesc(iLoop))
+                            desc = statusDesc(iLoop)
+                            If desc.Length > 59 Then
+                                desc = desc.Substring(0, 59).Trim
+                            End If
+                            xmlWriter.WriteElementString("STATUS_DESCRIPTION", desc)
                         Next
 
                         xmlWriter.WriteElementString("DESCRIPTION", rowSOTORDR2.Item("ITEM_DESC") & String.Empty)
 
+                        sql = "INV_LNO = " & rowSOTORDR2.Item("ORDR_LNO")
+                        If tblSotinvh1.Select(sql).Length > 0 Then
+                            rowSotinvh1 = tblSotinvh1.Select(sql, "INV_NO DESC")(0)
+                            ' If the invoice is more than 1 day old then do not send shipping info 
+                            If Math.Abs(DateDiff(DateInterval.Day, DateTime.Now, CDate(rowSotinvh1.Item("INV_DATE")))) <= 1 Then
+                                xmlWriter.WriteStartElement("SHIPPING")
+
+                                xmlWriter.WriteStartAttribute("Tracking")
+                                xmlWriter.WriteValue(StrConv(rowSotinvh1.Item("SHIP_VIA_DESC") & String.Empty, VbStrConv.ProperCase))
+                                xmlWriter.WriteEndAttribute()
+
+                                xmlWriter.WriteStartAttribute("Url")
+                                xmlWriter.WriteValue(Track_Shipment(rowSotinvh1.Item("SHIP_VIA_CODE") & String.Empty, rowSotinvh1.Item("SHIP_REF") & String.Empty))
+                                xmlWriter.WriteEndAttribute()
+
+                                xmlWriter.WriteEndElement() ' SHIPPING
+                            End If
+                        End If
                         xmlWriter.WriteEndElement() ' ITEM
                     Next
 
@@ -2329,8 +2366,6 @@ Namespace OrdersImport
             Finally
 
                 ' Delete processed Orders
-                Dim sql As String = String.Empty
-
                 For Each orderNumber As String In ordersProcessed
                     For Each row As DataRow In baseClass.clsASCBASE1.dst.Tables("XSTORDRQ").Select("ORDR_NO = '" & orderNumber & "'")
                         sql = "Delete From XSTORDRQ Where ORDR_NO = '" & orderNumber & "' AND LAST_DATE <= TO_TIMESTAMP('" & row.Item("LAST_DATE") & "','MM/DD/YYYY HH:MI:SS AM') +.00001"
@@ -2342,6 +2377,40 @@ Namespace OrdersImport
             End Try
 
         End Sub
+
+        Private Function Track_Shipment(ByVal SHIP_VIA_CODE As String, ByVal SHIP_REF As String) As String
+
+            Try '
+
+                Dim sql As String = String.Empty
+                sql = "Select CARRIER_URL_TRACKING, CARRIER_TRACKING_IND" _
+                & " from SOTCARR1,SOTROUT1,SOTSVIA1 " _
+                & " where SOTSVIA1.SHIP_VIA_CODE = '" & SHIP_VIA_CODE & "'" _
+                & "   and SOTROUT1.ROUTE_CODE = SOTSVIA1.ROUTE_CODE " _
+                & "   and SOTCARR1.CARRIER_CODE = SOTROUT1.CARRIER_CODE"
+
+                Dim rowSOTCARR1 As DataRow = ABSolution.ASCDATA1.GetDataRow(sql, True)
+                Dim CARRIER_URL_TRACKING As String = rowSOTCARR1.Item("CARRIER_URL_TRACKING") & String.Empty
+                Dim CARRIER_TRACKING_IND As String = rowSOTCARR1.Item("CARRIER_TRACKING_IND") & String.Empty
+
+                If CARRIER_TRACKING_IND = "I" Then
+                    sql = "SELECT NVL(INV_NO_RESHIP, INV_NO) FROM SOTINVH1 WHERE SHIP_REF = :PARM1 AND SHIP_VIA_CODE = :PARM2"
+                    SHIP_REF = ABSolution.ASCDATA1.GetDataValue(sql, "VV", New String() {SHIP_REF, SHIP_VIA_CODE}) & String.Empty
+                End If
+
+                If CARRIER_URL_TRACKING = "" Then
+                    Return String.Empty
+                ElseIf SHIP_REF.Length = 0 AndAlso CARRIER_TRACKING_IND = "I" Then
+                    Return String.Empty
+                Else
+                    Return CARRIER_URL_TRACKING & SHIP_REF
+                End If
+
+            Catch ex As Exception
+                Return String.Empty
+            End Try
+
+        End Function
 
         Private Sub DisposeOPD()
             Try
@@ -4007,6 +4076,7 @@ Namespace OrdersImport
                     baseClass.Create_TDA(.Tables.Add, "XSTORDRQ", "*", 2)
 
                     baseClass.Create_TDA(dst.Tables.Add, "SOTORDRO", "Select LPAD( ' ', 15) ORDR_REL_HOLD_CODES, ORDR_COMMENT From SOTORDR1", , False)
+                    CreateOrderRelCodesTable()
 
                     ' EDI Import 
                     baseClass.Create_TDA(.Tables.Add, "EDT850I0", "*", 1)
@@ -4148,6 +4218,7 @@ Namespace OrdersImport
         Private Sub CreateOrderRelCodesTable()
 
             Dim rowSOTORDRO As DataRow = Nothing
+            dst.Tables("SOTORDRO").Rows.Clear()
 
             ' Order Header Errors
             rowSOTORDRO = dst.Tables("SOTORDRO").NewRow
