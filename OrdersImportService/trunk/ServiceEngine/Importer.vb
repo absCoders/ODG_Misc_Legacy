@@ -479,7 +479,7 @@ Namespace OrdersImport
                         Case "X", "Y" ' Web Service - (X) 800 Anylens, (Y) Eyeconic
                             ProcessWebServiceSalesOrders(ORDR_SOURCE)
                         Case "U", "F" ' (U) AcuityLogic, (F) eyeFinity - Replaces SOFORDRF
-                            ProcessEyeFinitySalesOrders(ORDR_SOURCE)
+                            ProcessEyeFinAquitySalesOrders(ORDR_SOURCE)
                         Case "E" 'EDI - (S) Spectera
                             ProcessEDISalesOrders(ORDR_SOURCE)
                         Case "B" ' US Vision Care Scan
@@ -752,7 +752,7 @@ Namespace OrdersImport
         ''' </summary>
         ''' <param name="ORDR_SOURCE"></param>
         ''' <remarks></remarks>
-        Private Sub ProcessEyeFinitySalesOrders(ByVal ORDR_SOURCE As String)
+        Private Sub ProcessEyeFinAquitySalesOrders(ByVal ORDR_SOURCE As String)
 
             Dim ftpConnection As New Connection(ORDR_SOURCE)
             Dim orderFileName As String = String.Empty
@@ -771,14 +771,14 @@ Namespace OrdersImport
             Dim ITEM_DESC2 As String = String.Empty
 
             If testMode Then
-                RecordLogEntry("ProcessEyeFinitySalesOrders LocalInDir: " & ftpConnection.LocalInDir)
-                RecordLogEntry("ProcessEyeFinitySalesOrders LocalInDirArchive: " & ftpConnection.LocalInDirArchive)
-                RecordLogEntry("ProcessEyeFinitySalesOrders LocalOutDir: " & ftpConnection.LocalOutDir)
-                RecordLogEntry("ProcessEyeFinitySalesOrders LocalOutDirArchive: " & ftpConnection.LocalOutDirArchive)
-                RecordLogEntry("ProcessEyeFinitySalesOrders RemoteInDirectory: " & ftpConnection.RemoteInDirectory)
-                RecordLogEntry("ProcessEyeFinitySalesOrders RemoteInDirectoryArchive: " & ftpConnection.RemoteInDirectoryArchive)
-                RecordLogEntry("ProcessEyeFinitySalesOrders RemoteOutDirectory: " & ftpConnection.RemoteOutDirectory)
-                RecordLogEntry("ProcessEyeFinitySalesOrders RemoteOutDirectoryArchive: " & ftpConnection.RemoteOutDirectoryArchive)
+                RecordLogEntry("ProcessEyeFinAquitySalesOrders LocalInDir: " & ftpConnection.LocalInDir)
+                RecordLogEntry("ProcessEyeFinAquitySalesOrders LocalInDirArchive: " & ftpConnection.LocalInDirArchive)
+                RecordLogEntry("ProcessEyeFinAquitySalesOrders LocalOutDir: " & ftpConnection.LocalOutDir)
+                RecordLogEntry("ProcessEyeFinAquitySalesOrders LocalOutDirArchive: " & ftpConnection.LocalOutDirArchive)
+                RecordLogEntry("ProcessEyeFinAquitySalesOrders RemoteInDirectory: " & ftpConnection.RemoteInDirectory)
+                RecordLogEntry("ProcessEyeFinAquitySalesOrders RemoteInDirectoryArchive: " & ftpConnection.RemoteInDirectoryArchive)
+                RecordLogEntry("ProcessEyeFinAquitySalesOrders RemoteOutDirectory: " & ftpConnection.RemoteOutDirectory)
+                RecordLogEntry("ProcessEyeFinAquitySalesOrders RemoteOutDirectoryArchive: " & ftpConnection.RemoteOutDirectoryArchive)
             End If
 
             ' Perform FTP Here
@@ -802,30 +802,30 @@ Namespace OrdersImport
                 For Each fileFtp As String In ftpFileList
 
                     If fileFtp.Length = 0 Then Continue For
-                    If testMode Then RecordLogEntry("ProcessEyeFinitySalesOrders ftp: " & fileFtp)
+                    If testMode Then RecordLogEntry("ProcessEyeFinAquitySalesOrders ftp: " & fileFtp)
 
                     If Not fileFtp.EndsWith(".snt") Then Continue For
                     If Not fileFtp.StartsWith(ftpConnection.Filename) Then Continue For
 
                     Dim filePrefix As String = DateTime.Now.ToString("yyyyMMddhhmmss") & "_"
 
-                    If testMode Then RecordLogEntry("ProcessEyeFinitySalesOrders ftp Download: " & fileFtp)
+                    If testMode Then RecordLogEntry("ProcessEyeFinAquitySalesOrders ftp Download: " & fileFtp)
                     Ftp1.RemoteFile = fileFtp
                     Ftp1.LocalFile = ftpConnection.LocalInDir & filePrefix & fileFtp
                     Ftp1.Download()
-                    RecordLogEntry("ProcessEyeFinitySalesOrders ftp Delete: " & fileFtp)
+                    RecordLogEntry("ProcessEyeFinAquitySalesOrders ftp Delete: " & fileFtp)
                     Ftp1.DeleteFile(fileFtp)
 
                     fileFtp = fileFtp.Replace(".snt", ".csv")
                     Ftp1.RemoteFile = fileFtp
                     Ftp1.LocalFile = ftpConnection.LocalInDir & filePrefix & fileFtp
                     Ftp1.Download()
-                    If testMode Then RecordLogEntry("ProcessEyeFinitySalesOrders ftp Delete: " & fileFtp)
+                    If testMode Then RecordLogEntry("ProcessEyeFinAquitySalesOrders ftp Delete: " & fileFtp)
                     Ftp1.DeleteFile(fileFtp)
                 Next
 
             Catch ex As Exception
-                RecordLogEntry("ProcessEyeFinitySalesOrders ftp: " & ex.Message)
+                RecordLogEntry("ProcessEyeFinAquitySalesOrders ftp: " & ex.Message)
             Finally
                 Ftp1.Logoff()
                 Ftp1.Dispose()
@@ -965,7 +965,8 @@ Namespace OrdersImport
                                 rowSOTORDRX.Item("SHIP_VIA_CODE") = "SD"
                             End If
 
-                            rowSOTORDRX.Item("ORDR_SHIP_COMPLETE") = IIf(orderElements(33) = "1", "1", "0")
+                            ' Second part of Else - As per Maria id DPD the ship complete
+                            rowSOTORDRX.Item("ORDR_SHIP_COMPLETE") = IIf(orderElements(33) = "1", "1", "0") OrElse IIf(orderElements(4) = "1", "1", "0")
 
                             rowSOTORDRX.Item("PATIENT_NAME") = orderElements(44)
                             If rowSOTORDRX.Item("ORDR_DPD") = "1" AndAlso (rowSOTORDRX.Item("PATIENT_NAME") & String.Empty).ToString.Length = 0 Then
@@ -1002,6 +1003,11 @@ Namespace OrdersImport
                             rowSOTORDRX.Item("CUST_EMAIL") = TruncateField(orderElements(42), "SOTORDR5", "CUST_EMAIL")
                             rowSOTORDRX.Item("CUST_COUNTRY") = "US"
 
+                            ' If Aquity Logic and DPD and ShipTo Name is blank then use Patient name
+                            If ORDR_SOURCE = "U" AndAlso rowSOTORDRX.Item("ORDR_DPD") = "1" AndAlso rowSOTORDRX.Item("CUST_NAME") & String.Empty = String.Empty Then
+                                rowSOTORDRX.Item("CUST_NAME") = TruncateField(orderElements(44), "SOTORDR5", "CUST_NAME")
+                            End If
+
                             ' Grab Customer Name from master tables when not a DPD, since we always use the 
                             ' Address provided as the Ship To Address
                             If rowSOTORDRX.Item("ORDR_DPD") & String.Empty <> "1" Then
@@ -1035,7 +1041,7 @@ Namespace OrdersImport
 
                         Catch ex As Exception
                             If UpdateInProcess Then .Rollback()
-                            RecordLogEntry("ProcessEyeFinitySalesOrders: " & ex.Message)
+                            RecordLogEntry("ProcessEyeFinAquitySalesOrders: " & ex.Message)
                         End Try
 
                     End With
@@ -1045,17 +1051,17 @@ Namespace OrdersImport
                 Try
                     ' Move CSN and any SNT file extensions to the archive directory
                     For Each orderFile As String In ImportedFiles
-                        If testMode Then RecordLogEntry("ProcessEyeFinitySalesOrders ftp Move file: " & orderFile)
+                        If testMode Then RecordLogEntry("ProcessEyeFinAquitySalesOrders ftp Move file: " & orderFile)
                         My.Computer.FileSystem.MoveFile(orderFile, ftpConnection.LocalInDirArchive & My.Computer.FileSystem.GetName(orderFile))
                         orderFile = orderFile.Replace(".csv", ".snt")
                         If My.Computer.FileSystem.FileExists(orderFile) Then
-                            If testMode Then RecordLogEntry("ProcessEyeFinitySalesOrders ftp Move file: " & orderFile)
+                            If testMode Then RecordLogEntry("ProcessEyeFinAquitySalesOrders ftp Move file: " & orderFile)
                             My.Computer.FileSystem.MoveFile(orderFile, ftpConnection.LocalInDirArchive & My.Computer.FileSystem.GetName(orderFile))
                         End If
                     Next
 
                 Catch ex As Exception
-                    RecordLogEntry("ProcessEyeFinitySalesOrders: Move files to Archive" & ex.Message)
+                    RecordLogEntry("ProcessEyeFinAquitySalesOrders: Move files to Archive" & ex.Message)
                 End Try
 
                 ' If DPD then set the LR
@@ -1073,7 +1079,7 @@ Namespace OrdersImport
                     baseClass.Fill_Records("SOTORDRX", New Object() {ORDR_SOURCE, ORDR_NO})
 
                     If dst.Tables("SOTORDRX").Rows.Count = 0 Then
-                        RecordLogEntry("ProcessEyeFinitySalesOrders: Invalid Order Number (" & ORDR_NO & ") for " & ftpConnection.ConnectionDescription)
+                        RecordLogEntry("ProcessEyeFinAquitySalesOrders: Invalid Order Number (" & ORDR_NO & ") for " & ftpConnection.ConnectionDescription)
                         Continue For
                     End If
 
@@ -1108,11 +1114,11 @@ Namespace OrdersImport
 
                         End Try
                     Else
-                        RecordLogEntry("ProcessEyeFinitySalesOrders: " & "Could not create sales order for " & dst.Tables("SOTORDRX").Rows(0).Item("ORDR_NO"))
+                        RecordLogEntry("ProcessEyeFinAquitySalesOrders: " & "Could not create sales order for " & dst.Tables("SOTORDRX").Rows(0).Item("ORDR_NO"))
                     End If
                 Next
             Catch ex As Exception
-                RecordLogEntry("ProcessEyeFinitySalesOrders Loop Directory: " & ex.Message)
+                RecordLogEntry("ProcessEyeFinAquitySalesOrders Loop Directory: " & ex.Message)
             Finally
                 If salesOrdersProcessed > 0 Then
                     RecordLogEntry(salesOrdersProcessed & " " & ftpConnection.ConnectionDescription & " Orders imported.")
