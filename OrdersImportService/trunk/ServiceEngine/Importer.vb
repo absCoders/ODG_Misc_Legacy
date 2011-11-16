@@ -1892,7 +1892,7 @@ Namespace OrdersImport
                                                     If ACCOUNT_Id.Length > 0 AndAlso vwXmlDataset.Tables("ADDRESS").Select("ACCOUNT_Id = " & ACCOUNT_Id).Length > 0 Then
                                                         rowData = vwXmlDataset.Tables("ADDRESS").Select("ACCOUNT_Id = " & ACCOUNT_Id)(0)
                                                         rowSOTORDRX.Item("CUST_NAME") = String.Empty
-                                                        rowSOTORDRX.Item("CUST_ADDR1") = TruncateField(rowData.Item("Street_Number") & String.Empty & " " & rowData.Item("Street_Name") & String.Empty, "SOTORDRX", "CUST_ADDR1")
+                                                        rowSOTORDRX.Item("CUST_ADDR1") = TruncateField((rowData.Item("Street_Number") & String.Empty & " " & rowData.Item("Street_Name") & String.Empty).ToString.Trim, "SOTORDRX", "CUST_ADDR1")
                                                         rowSOTORDRX.Item("CUST_ADDR2") = TruncateField(rowData.Item("Suite") & String.Empty, "SOTORDRX", "CUST_ADDR2")
                                                         rowSOTORDRX.Item("CUST_CITY") = TruncateField(rowData.Item("City") & String.Empty, "SOTORDRX", "CUST_CITY")
                                                         rowSOTORDRX.Item("CUST_STATE") = TruncateField(rowData.Item("State") & String.Empty, "SOTORDRX", "CUST_STATE")
@@ -1952,12 +1952,19 @@ Namespace OrdersImport
 
                                 End If
 
+                                ' If not DPD and Not Standard delivery, then lock the ship via
+                                If rowSOTORDRX.Item("ORDR_DPD") = "1" _
+                                AndAlso (rowSOTORDRX.Item("SHIP_VIA_CODE") & String.Empty).ToString.Trim.Length > 0 _
+                                AndAlso rowSOTORDRX.Item("SHIP_VIA_CODE") & String.Empty <> "STANDARD" Then
+                                    rowSOTORDRX.Item("ORDR_LOCK_SHIP_VIA") = "1"
+                                End If
+
                                 ' Get DPD Address
                                 If DELIVERY_Id.Length > 0 AndAlso rowSOTORDRX.Item("ORDR_DPD") = "1" Then
                                     If vwXmlDataset.Tables("ADDRESS").Select("DELIVERY_Id = " & DELIVERY_Id).Length > 0 Then
                                         rowData = vwXmlDataset.Tables("ADDRESS").Select("DELIVERY_Id = " & DELIVERY_Id)(0)
                                         rowSOTORDRX.Item("CUST_NAME") = TruncateField(AttentionTo, "SOTORDRX", "CUST_NAME")
-                                        rowSOTORDRX.Item("CUST_ADDR1") = TruncateField(rowData.Item("Street_Number") & String.Empty & " " & rowData.Item("Street_Name") & String.Empty, "SOTORDRX", "CUST_ADDR1")
+                                        rowSOTORDRX.Item("CUST_ADDR1") = TruncateField((rowData.Item("Street_Number") & String.Empty & " " & rowData.Item("Street_Name") & String.Empty).ToString.Trim, "SOTORDRX", "CUST_ADDR1")
                                         rowSOTORDRX.Item("CUST_ADDR2") = TruncateField(rowData.Item("Suite") & String.Empty, "SOTORDRX", "CUST_ADDR2")
                                         rowSOTORDRX.Item("CUST_CITY") = TruncateField(rowData.Item("City") & String.Empty, "SOTORDRX", "CUST_CITY")
                                         rowSOTORDRX.Item("CUST_STATE") = TruncateField(rowData.Item("State") & String.Empty, "SOTORDRX", "CUST_STATE")
@@ -2004,6 +2011,11 @@ Namespace OrdersImport
                                             rowData = vwXmlDataset.Tables("PATIENT").Select(fieldName & " = " & SOFTCONTACT_id)(0)
                                             rowSOTORDRX.Item("PATIENT_NAME") = TruncateField((rowData.Item("FirstName") & " " & rowData.Item("LastName")).ToString.Trim, "SOTORDRX", "PATIENT_NAME")
                                             rowSOTORDRX.Item("PATIENT_NAME") = StrConv(rowSOTORDRX.Item("PATIENT_NAME") & String.Empty, VbStrConv.ProperCase)
+                                        End If
+
+                                        ' If it is a DPD and The Patient Name is Blank then use the name on the DPD Address
+                                        If (rowSOTORDRX.Item("ORDR_DPD") & String.Empty) = "1" AndAlso (rowSOTORDRX.Item("PATIENT_NAME") & String.Empty).ToString.Trim.Length = 0 Then
+                                            rowSOTORDRX.Item("PATIENT_NAME") = StrConv(rowSOTORDRX.Item("CUST_NAME") & String.Empty, VbStrConv.ProperCase)
                                         End If
 
                                         ' Item Specific
