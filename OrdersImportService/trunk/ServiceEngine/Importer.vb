@@ -31,6 +31,7 @@ Namespace OrdersImport
         Private rowARTCUST1 As DataRow = Nothing
         Private rowARTCUST2 As DataRow = Nothing
         Private rowARTCUST3 As DataRow = Nothing
+        Private rowWBTPARM1 As DataRow = Nothing
 
         Private rowSOTSVIA1 As DataRow = Nothing
         Private rowTATTERM1 As DataRow = Nothing
@@ -54,6 +55,8 @@ Namespace OrdersImport
         Private Const InvalidSalesOrderTotal = "J"
         Private Const ShipToClosed = "C"
         Private Const ShipToOrderBlocked = "A"
+        Private Const DPDNoAnnualSupply = "9"
+        Private Const DpdCODCustomer = "P"
 
         'Detail Errors
         Private Const QtyOrdered = "Q"
@@ -73,6 +76,7 @@ Namespace OrdersImport
         Private SO_PARM_SHIP_ND As String = String.Empty
         Private SO_PARM_SHIP_ND_DPD As String = String.Empty
         Private SO_PARM_SHIP_ND_COD As String = String.Empty
+        Private aspPriceCatgys As List(Of String)
 
         ' nSoftware License Keys
         Private nSoftwareZipkey As String = "315A4E384141315355425241533154453345383933333331580000000000000000000000000000003532323931555536000042424D454B375544463730460000"
@@ -447,6 +451,10 @@ Namespace OrdersImport
                     ABSolution.ASCMAIN1.ActiveForm = New ABSolution.ASFBASE1
                 End If
                 ABSolution.ASCMAIN1.ActiveForm.SELECTION_NO = "1"
+
+                ' Initialize so we get a fresh copy for each processing cycle
+                aspPriceCatgys = New List(Of String)
+                rowWBTPARM1 = Nothing
 
                 For Each rowSOTPARMP As DataRow In ABSolution.ASCDATA1.GetDataTable("SELECT DISTINCT SO_PARM_KEY ORDR_SOURCE FROM SOTPARMP WHERE NVL(SO_PARM_USE_SERVICE, '0') = '1' ORDER BY SO_PARM_KEY").Rows
 
@@ -965,8 +973,12 @@ Namespace OrdersImport
                                 rowSOTORDRX.Item("SHIP_VIA_CODE") = "SD"
                             End If
 
-                            ' Second part of Else - As per Maria id DPD the ship complete
-                            rowSOTORDRX.Item("ORDR_SHIP_COMPLETE") = IIf(orderElements(33) = "1", "1", "0") OrElse IIf(orderElements(4) = "1", "1", "0")
+                            ' Second part of Else - As per Maria if DPD the ship complete
+                            If rowSOTORDRX.Item("ORDR_DPD") = "1" Then
+                                rowSOTORDRX.Item("ORDR_SHIP_COMPLETE") = "1"
+                            Else
+                                rowSOTORDRX.Item("ORDR_SHIP_COMPLETE") = IIf(orderElements(33) = "1", "1", "0")
+                            End If
 
                             rowSOTORDRX.Item("PATIENT_NAME") = orderElements(44)
                             If rowSOTORDRX.Item("ORDR_DPD") = "1" AndAlso (rowSOTORDRX.Item("PATIENT_NAME") & String.Empty).ToString.Length = 0 Then
@@ -1953,7 +1965,7 @@ Namespace OrdersImport
                                 End If
 
                                 ' If not DPD and Not Standard delivery, then lock the ship via
-                                If rowSOTORDRX.Item("ORDR_DPD") = "1" _
+                                If rowSOTORDRX.Item("ORDR_DPD") & String.Empty <> "1" _
                                 AndAlso (rowSOTORDRX.Item("SHIP_VIA_CODE") & String.Empty).ToString.Trim.Length > 0 _
                                 AndAlso rowSOTORDRX.Item("SHIP_VIA_CODE") & String.Empty <> "STANDARD" Then
                                     rowSOTORDRX.Item("ORDR_LOCK_SHIP_VIA") = "1"
@@ -3155,6 +3167,9 @@ Namespace OrdersImport
                 End If
 
                 SOTORDR1ErrorCodes &= String.Empty
+                SOTORDR1ErrorCodes &= DpdOrderWithoutAnAnnualSupply(rowSOTORDR1, dst.Tables("SOTORDR2"))
+                SOTORDR1ErrorCodes &= DpdOrderCODneedsAuthorization(rowSOTORDR1, dst.Tables("SOTORDR2"))
+
                 rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") = SOTORDR1ErrorCodes.Trim
 
                 If (rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") & String.Empty).ToString.Trim.Length = 0 Then
@@ -3944,6 +3959,83 @@ Namespace OrdersImport
             Catch ex As Exception
                 RecordLogEntry("UpdateSalesOrderTotal: (" & ORDR_NO & ") " & ex.Message)
                 Return False
+            End Try
+        End Function
+
+        ''' <summary>
+        ''' Looks for DPD order without an Annual Supply.
+        ''' </summary>
+        ''' <param name="rowSOTORDR1"></param>
+        ''' <returns></returns>
+        ''' <remarks></remarks>
+        Private Function DpdOrderWithoutAnAnnualSupply(ByRef rowSOTORDR1 As DataRow, ByRef tblSOTORDR2 As DataTable) As String
+
+            Try
+                ' Must be DPD
+                If rowSOTORDR1.Item("ORDR_DPD") & String.Empty <> "1" Then Return String.Empty
+
+                ' Must be Vision Web
+                If rowSOTORDR1.Item("ORDR_SOURCE") & String.Empty <> "V" Then Return String.Empty
+
+                ' Must have Revenue
+                If tblSOTORDR2.Select("ORDR_UNIT_PRICE > 0").Length = 0 Then Return String.Empty
+
+                ' Must have ASP Code
+                If tblSOTORDR2.Select("ASP_CODE IS NULL OR ASP_CODE = ''").Length = 0 Then Return String.Empty
+
+                ' This is so it does not happen all the time, only initially for each processing cycle
+                If aspPriceCatgys.Count = 0 Then
+                    aspPriceCatgys = (From r In ABSolution.ASCDATA1.GetDataTable("SELECT DISTINCT PRICE_CATGY_CODE FROM PPTASPM1 P1 JOIN PPTASPM2 P2 USING (ASP_CODE) WHERE P1.ASP_STATUS='A' AND NVL(P1.ASP_DATE_END,TO_DATE('31-DEC-9999')) >= SYSDATE").AsEnumerable() _
+                         Select (r.Item("PRICE_CATGY_CODE").ToString())).ToList()
+                End If
+
+                If rowWBTPARM1 Is Nothing Then
+                    rowWBTPARM1 = ABSolution.ASCDATA1.GetDataRow("SELECT * FROM WBTPARM1 WHERE WB_PARM_KEY = :PARM1", "V", New Object() {"Z"})
+                End If
+
+                'make sure qty ordered > min asp qty
+                Dim x = (From r In tblSOTORDR2.AsEnumerable() _
+                                   Group By PG = r.Item("PATIENT_GROUP") Into OQ = Sum(Val(r.Item("ORDR_QTY"))) _
+                                   Where OQ >= Val(rowWBTPARM1.Item("MIN_ASP_QTY"))).Count()
+                If x > 0 Then
+                    'make sure price catgys ordered exist in asp table
+                    Dim orderPriceCatgys As List(Of String) = (From r In tblSOTORDR2.AsEnumerable() _
+                                                             Select (r.Item("PRICE_CATGY_CODE").ToString()) Distinct).ToList()
+                    If orderPriceCatgys.Intersect(aspPriceCatgys).Count > 0 Then
+                        Return DPDNoAnnualSupply
+                    End If
+                End If
+
+                Return String.Empty
+            Catch ex As Exception
+                RecordLogEntry("DpdOrderWithoutAnAnnualSupply: " & ex.Message)
+                Return String.Empty
+            End Try
+
+            Return String.Empty
+        End Function
+
+        Private Function DpdOrderCODneedsAuthorization(ByRef rowSOTORDR1 As DataRow, ByRef tblSOTORDR2 As DataTable) As String
+
+            Try
+                ' Must be DPD
+                If rowSOTORDR1.Item("ORDR_DPD") & String.Empty <> "1" Then Return String.Empty
+
+                ' Must be Vision Web
+                If rowSOTORDR1.Item("ORDR_SOURCE") & String.Empty <> "V" Then Return String.Empty
+
+                ' Must have Revenue
+                If tblSOTORDR2.Select("ORDR_UNIT_PRICE > 0").Length = 0 Then Return String.Empty
+
+                Dim rowTATTERM1 As DataRow = baseClass.LookUp("TATTERM1", rowSOTORDR1.Item("TERM_CODE") & String.Empty)
+                If rowTATTERM1 Is Nothing Then Return String.Empty
+                If rowTATTERM1.Item("TERM_TYPE") = "A" Then Return String.Empty
+
+                Return DpdCODCustomer
+
+            Catch ex As Exception
+                RecordLogEntry("DpdOrderCODneedsAuthorization: " & ex.Message)
+                Return String.Empty
             End Try
         End Function
 
