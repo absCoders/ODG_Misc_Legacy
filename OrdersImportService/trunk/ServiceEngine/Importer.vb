@@ -39,7 +39,7 @@ Namespace OrdersImport
 
         Private dst As DataSet
 
-        Private Const testMode As Boolean = True
+        Private Const testMode As Boolean = False
         Private ImportErrorNotification As Hashtable
 
         ' Header Errors
@@ -748,9 +748,7 @@ Namespace OrdersImport
             Catch ex As Exception
                 RecordLogEntry("ProcessWebServiceSalesOrders: " & ex.Message)
             Finally
-                If salesOrdersProcessed > 0 Then
-                    RecordLogEntry(salesOrdersProcessed & " Web Service Sales Orders imported")
-                End If
+                RecordLogEntry(salesOrdersProcessed & " Web Service Sales Orders imported")
             End Try
 
         End Sub
@@ -1132,12 +1130,8 @@ Namespace OrdersImport
             Catch ex As Exception
                 RecordLogEntry("ProcessEyeFinAquitySalesOrders Loop Directory: " & ex.Message)
             Finally
-                If salesOrdersProcessed > 0 Then
-                    RecordLogEntry(salesOrdersProcessed & " " & ftpConnection.ConnectionDescription & " Orders imported.")
-                End If
+                RecordLogEntry(salesOrdersProcessed & " " & ftpConnection.ConnectionDescription & " Sales Orders imported.")
             End Try
-
-
         End Sub
 
         ''' <summary>
@@ -1149,6 +1143,7 @@ Namespace OrdersImport
 
             Dim sql As String = String.Empty
 
+            Dim ediConnection As Connection = New Connection(ORDR_SOURCE)
             Dim rowSOTORDRX As DataRow = Nothing
             Dim rowWK As DataRow = Nothing
             Dim rowEDT850I0 As DataRow = Nothing
@@ -1473,9 +1468,7 @@ Namespace OrdersImport
             Catch ex As Exception
                 RecordLogEntry("ProcessEDISalesOrders: " & ex.Message)
             Finally
-                If salesOrdersProcessed > 0 Then
-                    RecordLogEntry(salesOrdersProcessed & " " & ORDR_SOURCE & " Orders imported.")
-                End If
+                RecordLogEntry(salesOrdersProcessed & " " & ediConnection.ConnectionDescription & " Sales Orders imported.")
             End Try
 
 
@@ -1749,9 +1742,7 @@ Namespace OrdersImport
             Catch ex As Exception
                 RecordLogEntry("ProcessBLScan: " & ex.Message)
             Finally
-                If salesOrdersProcessed > 0 Then
-                    RecordLogEntry(salesOrdersProcessed & " " & ftpConnection.ConnectionDescription & " Orders imported.")
-                End If
+                RecordLogEntry(salesOrdersProcessed & " " & ftpConnection.ConnectionDescription & " Sales Orders imported.")
 
                 ' Move CSN and any SNT file extensions to the archive directory
                 For Each orderFile As String In ImportedFiles
@@ -2178,9 +2169,7 @@ Namespace OrdersImport
             Catch ex As Exception
                 RecordLogEntry("ProcessVisionWebSalesOrders: " & ex.Message)
             Finally
-                If salesordersprocessed > 0 Then
-                    RecordLogEntry(salesordersprocessed & " " & vwConnection.ConnectionDescription & " Orders imported.")
-                End If
+                RecordLogEntry(salesordersprocessed & " " & vwConnection.ConnectionDescription & " Sales Orders imported.")
 
                 ' Move Xml files to the archive directory
                 For Each orderFile As String In ImportedFiles
