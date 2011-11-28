@@ -532,7 +532,7 @@ Namespace OrdersImport
 
                 If testMode Then RecordLogEntry("Exit ProcessShellSalesOrders.")
 
-                RecordLogEntry("0 Sales Orders to rocess")
+                RecordLogEntry("0 Sales Orders to process")
 
             Catch ex As Exception
                 RecordLogEntry("ProcessShellSalesOrders: " & ex.Message)
@@ -554,6 +554,7 @@ Namespace OrdersImport
             Dim CALLER_NAME As String = String.Empty
             Dim ORDR_SHIP_COMPLETE As String = String.Empty
             Dim sql As String = String.Empty
+            Dim webConnection As New Connection(ORDR_SOURCE)
 
             Try
                 If testMode Then RecordLogEntry("Enter ProcessWebServiceSalesOrders.")
@@ -572,12 +573,11 @@ Namespace OrdersImport
                 End If
 
                 baseClass.clsASCBASE1.Fill_Records("XSTORDR1", String.Empty, True, "SELECT * FROM XSTORDR1 WHERE NVL(PROCESS_IND, '0') = '0'" & sql)
+                RecordLogEntry(dst.Tables("XSTORDR1").Rows.Count & " " & webConnection.ConnectionDescription & " Sales Orders to process.")
+
                 If dst.Tables("XSTORDR1").Rows.Count = 0 Then
-                    RecordLogEntry("0 Web Service Sales Orders to process.")
                     Exit Sub
                 End If
-
-                RecordLogEntry(dst.Tables("XSTORDR1").Rows.Count & " Web Service Sales Orders to process.")
 
                 For Each rowXSTORDR1 As DataRow In dst.Tables("XSTORDR1").Select("", "XS_DOC_SEQ_NO")
                     ClearDataSetTables(False)
@@ -748,7 +748,7 @@ Namespace OrdersImport
             Catch ex As Exception
                 RecordLogEntry("ProcessWebServiceSalesOrders: " & ex.Message)
             Finally
-                RecordLogEntry(salesOrdersProcessed & " Web Service Sales Orders imported")
+                RecordLogEntry(salesOrdersProcessed & " " & webConnection.ConnectionDescription & " Sales Orders imported")
             End Try
 
         End Sub
