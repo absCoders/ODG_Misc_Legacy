@@ -3167,9 +3167,6 @@ Namespace OrdersImport
                 End If
 
                 SOTORDR1ErrorCodes &= String.Empty
-                SOTORDR1ErrorCodes &= DpdOrderWithoutAnAnnualSupply(rowSOTORDR1, dst.Tables("SOTORDR2"))
-                SOTORDR1ErrorCodes &= DpdOrderCODneedsAuthorization(rowSOTORDR1, dst.Tables("SOTORDR2"))
-
                 rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") = SOTORDR1ErrorCodes.Trim
 
                 If (rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") & String.Empty).ToString.Trim.Length = 0 Then
@@ -3196,6 +3193,9 @@ Namespace OrdersImport
                         rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") = rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") & InvalidSalesOrderTotal
                     End If
                 End If
+
+                rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") &= DpdOrderWithoutAnAnnualSupply(rowSOTORDR1, dst.Tables("SOTORDR2")) & String.Empty
+                rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") &= DpdOrderCODneedsAuthorization(rowSOTORDR1, dst.Tables("SOTORDR2")) & String.Empty
 
                 If (rowSOTORDR1.Item("ORDR_REL_HOLD_CODES") & String.Empty).ToString.Trim.Length > 0 Then
                     rowSOTORDR1.Item("ORDR_STATUS_WEB") = ORDR_STATUS_WEB
