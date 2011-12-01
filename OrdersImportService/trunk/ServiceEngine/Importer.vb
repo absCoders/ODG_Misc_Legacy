@@ -484,7 +484,7 @@ Namespace OrdersImport
                     ' Make sure there is an Entry in ASTNOTE1 for each Ordr Source
                     ' *****************************************************************************
                     Select Case ORDR_SOURCE
-                        Case "X", "Y" ' Web Service - (X) 800 Anylens, (Y) Eyeconic
+                        Case "X", "Y", "D" ' Web Service - (X) 800 Anylens, (Y) Eyeconic, (D) DBVision
                             ProcessWebServiceSalesOrders(ORDR_SOURCE)
                         Case "U", "F" ' (U) AcuityLogic, (F) eyeFinity - Replaces SOFORDRF
                             ProcessEyeFinAquitySalesOrders(ORDR_SOURCE)
@@ -555,24 +555,19 @@ Namespace OrdersImport
             Dim ORDR_SHIP_COMPLETE As String = String.Empty
             Dim sql As String = String.Empty
             Dim webConnection As New Connection(ORDR_SOURCE)
+            Dim sqlOrdrLineSource As String = String.Empty
 
             Try
                 If testMode Then RecordLogEntry("Enter ProcessWebServiceSalesOrders.")
 
-                baseClass.clsASCBASE1.Fill_Records("SOTPARMC", ORDR_SOURCE)
-                sql = String.Empty
-                If dst.Tables("SOTPARMC").Rows.Count > 0 Then
-                    sql = String.Empty
-                    For Each rowSOTPARMC As DataRow In dst.Tables("SOTPARMC").Rows
-                        sql &= ",'" & rowSOTPARMC.Item("CUST_CODE") & "'"
-                    Next
-                    If sql.Length > 0 Then
-                        sql = sql.Substring(1)
-                        sql = " And CUSTOMER_ID IN (" & sql & ")"
-                    End If
-                End If
+                ' Need to convert Any Lens (X) in SOTPARMP to an (A) for XMTXREF1
+                sqlOrdrLineSource = ORDR_SOURCE
+                If ORDR_SOURCE = "X" Then sqlOrdrLineSource = "A"
 
-                baseClass.clsASCBASE1.Fill_Records("XSTORDR1", String.Empty, True, "SELECT * FROM XSTORDR1 WHERE NVL(PROCESS_IND, '0') = '0'" & sql)
+                sql = "SELECT * FROM XSTORDR1 WHERE NVL(PROCESS_IND, '0') = '0'"
+                sql &= " AND ORDR_SOURCE = (SELECT XML_ORDR_SOURCE FROM XMTXREF1 WHERE ORDR_LINE_SOURCE = '" & sqlOrdrLineSource & "')"
+
+                baseClass.clsASCBASE1.Fill_Records("XSTORDR1", String.Empty, True, sql)
                 RecordLogEntry(dst.Tables("XSTORDR1").Rows.Count & " " & webConnection.ConnectionDescription & " Sales Orders to process.")
 
                 If dst.Tables("XSTORDR1").Rows.Count = 0 Then
@@ -1856,7 +1851,7 @@ Namespace OrdersImport
 
                             For Each rowHeader As DataRow In vwXmlDataset.Tables("HEADER").Select(tableName & "_Id = " & SOFT_Id, "HEADER_Id")
                                 HEADER_Id = rowHeader.Item("HEADER_Id") & String.Empty
-                                rowSOTORDRX.Item("ORDR_CUST_PO") = TruncateField(rowSoftType.Item("Id") & IIf(rowHeader.Item("PurchaseOrderNumber") & String.Empty <> String.Empty, " : " & rowHeader.Item("PurchaseOrderNumber"), String.Empty), "SOTORDRX", "ORDR_CUST_PO")
+                                rowSOTORDRX.Item("ORDR_CUST_PO") = TruncateField(rowSoftType.Item("Id") & IIf(rowHeader.Item("PurchaseOrderNumber") & String.Empty <> String.Empty, ":" & rowHeader.Item("PurchaseOrderNumber"), String.Empty), "SOTORDRX", "ORDR_CUST_PO")
                                 rowSOTORDRX.Item("ORDR_CALLER_NAME") = TruncateField(rowHeader.Item("OrderPlacedBy") & String.Empty, "SOTORDRX", "ORDR_CALLER_NAME")
 
                                 CUSTOMER_Id = String.Empty
@@ -4221,8 +4216,6 @@ Namespace OrdersImport
                     SO_PARM_SHIP_ND = (dst.Tables("SOTPARMB").Rows(0).Item("SO_PARM_SHIP_ND") & String.Empty).ToString.Trim
                     SO_PARM_SHIP_ND_DPD = (dst.Tables("SOTPARMB").Rows(0).Item("SO_PARM_SHIP_ND_DPD") & String.Empty).ToString.Trim
                     SO_PARM_SHIP_ND_COD = (dst.Tables("SOTPARMB").Rows(0).Item("SO_PARM_SHIP_ND_COD") & String.Empty).ToString.Trim
-
-                    baseClass.Create_TDA(.Tables.Add, "SOTPARMC", "*", "1", False)
 
                     If dst.Tables("SOTPARM1") IsNot Nothing AndAlso dst.Tables("SOTPARM1").Rows.Count > 0 Then
                         DpdDefaultShipViaCode = (dst.Tables("SOTPARM1").Rows(0).Item("SO_PARM_SHIP_VIA_CODE_DPD") & String.Empty).ToString.Trim
