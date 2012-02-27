@@ -54,7 +54,6 @@ C:\VS\InvoiceEmailService\ServiceEngine\obj\x86\Release\InvoiceEmail.pdb
 C:\VS\StatementsSvc\ServiceEngine\obj\x86\Release\ResolveAssemblyReference.cache
 C:\VS\StatementsSvc\ServiceEngine\obj\x86\Release\ServiceEngine.vbproj.GenerateResource.Cache
 C:\VS\StatementsSvc\ServiceEngine\bin\x86\Release\ABS.exe
-C:\VS\StatementsSvc\ServiceEngine\bin\x86\Release\SO.dll
 C:\VS\StatementsSvc\ServiceEngine\bin\x86\Release\TAC.dll
 C:\VS\StatementsSvc\ServiceEngine\bin\x86\Release\ABSX.dll
 C:\VS\StatementsSvc\ServiceEngine\bin\x86\Release\ABSCS.dll

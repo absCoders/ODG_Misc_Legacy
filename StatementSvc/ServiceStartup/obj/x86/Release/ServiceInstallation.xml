@@ -2,7 +2,7 @@
 <doc>
 <assembly>
 <name>
-ABSEmailInvoiceService
+ABSStatementService
 </name>
 </assembly>
 <members>

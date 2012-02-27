@@ -72,11 +72,7 @@ C:\VS\InvoiceEmailService\ServiceStartup\obj\x86\Release\ABSEmailInvoiceService.
 C:\VS\StatementsSvc\ServiceStartup\obj\x86\Release\ResolveAssemblyReference.cache
 C:\VS\StatementsSvc\ServiceStartup\obj\x86\Release\ServiceStartup.Resources.resources
 C:\VS\StatementsSvc\ServiceStartup\obj\x86\Release\ServiceStartup.vbproj.GenerateResource.Cache
-C:\VS\StatementsSvc\ServiceStartup\obj\x86\Release\ABSEmailInvoiceService.exe
 C:\VS\StatementsSvc\ServiceStartup\obj\x86\Release\ServiceInstallation.xml
-C:\VS\StatementsSvc\ServiceStartup\obj\x86\Release\ABSEmailInvoiceService.pdb
-C:\VS\StatementsSvc\ServiceStartup\bin\x86\Release\ABSEmailInvoiceService.exe
-C:\VS\StatementsSvc\ServiceStartup\bin\x86\Release\ABSEmailInvoiceService.pdb
 C:\VS\StatementsSvc\ServiceStartup\bin\x86\Release\ServiceInstallation.xml
 C:\VS\StatementsSvc\ServiceStartup\bin\x86\Release\ServiceShared.dll
 C:\VS\StatementsSvc\ServiceStartup\bin\x86\Release\ABSX.dll
@@ -89,3 +85,7 @@ C:\VS\StatementsSvc\ServiceStartup\bin\x86\Release\TAC.XmlSerializers.dll
 C:\VS\StatementsSvc\ServiceStartup\bin\x86\Release\StatementsEmail.dll
 C:\VS\StatementsSvc\ServiceStartup\bin\x86\Release\StatementsEmail.pdb
 C:\VS\StatementsSvc\ServiceStartup\bin\x86\Release\StatementsEmail.xml
+C:\VS\StatementsSvc\ServiceStartup\bin\x86\Release\ABSStatementService.exe
+C:\VS\StatementsSvc\ServiceStartup\bin\x86\Release\ABSStatementService.pdb
+C:\VS\StatementsSvc\ServiceStartup\obj\x86\Release\ABSStatementService.exe
+C:\VS\StatementsSvc\ServiceStartup\obj\x86\Release\ABSStatementService.pdb

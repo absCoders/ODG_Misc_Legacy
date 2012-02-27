@@ -13,7 +13,7 @@ StatementsEmail
 	<value></value>
 	<returns></returns>
 	<remarks></remarks>
-</member><member name="M:StatementsEmail.StatementEmail.StatementEmailer.EmailDocument(System.String,System.String,System.String,System.String,System.String)">
+</member><member name="M:StatementsEmail.StatementEmail.StatementEmailer.EmailDocument(System.String,System.String,System.String,System.String,System.String,System.String@,System.String)">
 	<summary>
  Sends an email
  </summary>
