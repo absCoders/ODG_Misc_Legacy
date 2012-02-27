@@ -647,7 +647,7 @@ Namespace InvoiceEmail
                     CR_RPT.SetDataSource(rptSORINVC1.dst)
 
                     SetStandardReportParameters(CR_RPT, "SORINVC3")
-                    SetParameterValue(CR_RPT, "PRE_PRINTED_FORM", "0")
+                    'SetParameterValue(CR_RPT, "PRE_PRINTED_FORM", "0")
 
                     generatedReport = TempFolder & CustomerCode & "_ecp3.pdf"
                     CR_RPT.ExportToDisk(CrystalDecisions.Shared.ExportFormatType.PortableDocFormat, generatedReport)
