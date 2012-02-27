@@ -1,0 +1,802 @@
+<?xml version="1.0" standalone="yes"?>
+<SODRTRN1>
+  <xs:schema id="SODRTRN1" xmlns="" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata" xmlns:msprop="urn:schemas-microsoft-com:xml-msprop">
+    <xs:element name="SODRTRN1" msdata:IsDataSet="true" msdata:UseCurrentLocale="true">
+      <xs:complexType>
+        <xs:choice minOccurs="0" maxOccurs="unbounded">
+          <xs:element name="SOTRTRN1" msprop:BaseTable.0="ASW25709" msprop:BaseTable.1="SOTREAS1" msprop:BaseTable.2="ARTCUST1">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="RTRN_NO" msprop:OraDbType="126" msprop:BaseColumn="RTRN_NO">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="10" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="RTRN_DATE" msprop:OraDbType="106" msprop:BaseColumn="RTRN_DATE" type="xs:dateTime" minOccurs="0" />
+                <xs:element name="CUST_CODE" msprop:OraDbType="126" msprop:BaseColumn="CUST_CODE" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="10" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_NAME" msprop:OraDbType="126" msprop:BaseColumn="CUST_NAME" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="35" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_NO" msprop:OraDbType="126" msprop:BaseColumn="CUST_SHIP_TO_NO" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="6" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_NAME" msprop:OraDbType="126" msprop:BaseColumn="CUST_SHIP_TO_NAME" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="35" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="INV_NO" msprop:OraDbType="126" msprop:BaseColumn="INV_NO">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="10" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="WHSE_CODE" msprop:OraDbType="126" msprop:BaseColumn="WHSE_CODE" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="6" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="WHSE_CODE_DEF" msprop:OraDbType="126" msprop:BaseColumn="WHSE_CODE_DEF" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="6" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="WHSE_CODE_RTV" msprop:OraDbType="126" msprop:BaseColumn="WHSE_CODE_RTV" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="6" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="REASON_CODE" msprop:OraDbType="126" msprop:BaseColumn="REASON_CODE" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="6" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="RTRN_NOTE" msprop:OraDbType="126" msprop:BaseColumn="RTRN_NOTE" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="200" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="RTRN_SOURCE" msprop:OraDbType="126" msprop:BaseColumn="RTRN_SOURCE" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="1" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="INIT_OPER" msprop:OraDbType="126" msprop:BaseColumn="INIT_OPER" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="8" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="INIT_DATE" msprop:OraDbType="106" msprop:BaseColumn="INIT_DATE" type="xs:dateTime" minOccurs="0" />
+                <xs:element name="LAST_OPER" msprop:OraDbType="126" msprop:BaseColumn="LAST_OPER" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="8" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="LAST_DATE" msprop:OraDbType="106" msprop:BaseColumn="LAST_DATE" type="xs:dateTime" minOccurs="0" />
+                <xs:element name="REGISTER_IND" msprop:OraDbType="126" msprop:BaseColumn="REGISTER_IND" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="1" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="REGISTER_XNO" msprop:OraDbType="126" msprop:BaseColumn="REGISTER_XNO" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="10" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="RTRN_STATUS" msprop:OraDbType="126" msprop:BaseColumn="RTRN_STATUS" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="1" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="OPS_YYYYPP" msprop:OraDbType="126" msprop:BaseColumn="OPS_YYYYPP" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="6" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="TOTAL_SALES" msprop:OraDbType="108" msprop:BaseColumn="TOTAL_SALES" type="xs:decimal" minOccurs="0" />
+                <xs:element name="TOTAL_COSTS" msprop:OraDbType="108" msprop:BaseColumn="TOTAL_COSTS" type="xs:decimal" minOccurs="0" />
+                <xs:element name="TOTAL_STAX" msprop:OraDbType="108" msprop:BaseColumn="TOTAL_STAX" type="xs:decimal" minOccurs="0" />
+                <xs:element name="TOTAL_FREIGHT" msprop:OraDbType="108" msprop:BaseColumn="TOTAL_FREIGHT" type="xs:decimal" minOccurs="0" />
+                <xs:element name="TOTAL_RESTOCK" msprop:OraDbType="108" msprop:BaseColumn="TOTAL_RESTOCK" type="xs:decimal" minOccurs="0" />
+                <xs:element name="TOTAL_AMOUNT" msprop:OraDbType="108" msprop:BaseColumn="TOTAL_AMOUNT" type="xs:decimal" minOccurs="0" />
+                <xs:element name="POST_CODE" msprop:OraDbType="126" msprop:BaseColumn="POST_CODE" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="6" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="RESTOCK_FEE_PCT" msprop:OraDbType="122" msprop:BaseColumn="RESTOCK_FEE_PCT" type="xs:decimal" minOccurs="0" />
+                <xs:element name="RTRN_BATCH_NO" msprop:OraDbType="126" msprop:BaseColumn="RTRN_BATCH_NO" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="6" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="STAX_CODE" msprop:OraDbType="126" msprop:BaseColumn="STAX_CODE" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="6" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="INV_PRINTED" msprop:OraDbType="126" msprop:BaseColumn="INV_PRINTED" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="1" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="INV_PRINTED_BY" msprop:OraDbType="126" msprop:BaseColumn="INV_PRINTED_BY" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="8" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="INV_PRINTED_DATE" msprop:OraDbType="106" msprop:BaseColumn="INV_PRINTED_DATE" type="xs:dateTime" minOccurs="0" />
+                <xs:element name="INV_NO_ORIG" msprop:OraDbType="126" msprop:BaseColumn="INV_NO_ORIG" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="10" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="WH_OPER_ID" msprop:OraDbType="126" msprop:BaseColumn="WH_OPER_ID" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="4" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="RTRN_CREDIT_ONLY" msprop:OraDbType="126" msprop:BaseColumn="RTRN_CREDIT_ONLY" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="1" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="REVERSED_BY_RTRN_NO" msprop:OraDbType="126" msprop:BaseColumn="REVERSED_BY_RTRN_NO" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="10" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="REVERSES_RTRN_NO" msprop:OraDbType="126" msprop:BaseColumn="REVERSES_RTRN_NO" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="10" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="OPS_YYYYPP_ORIG" msprop:OraDbType="126" msprop:BaseColumn="OPS_YYYYPP_ORIG" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="6" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="RTRN_STATUS_ORIG" msprop:OraDbType="126" msprop:BaseColumn="RTRN_STATUS_ORIG" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="1" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="SHIP_VIA_CODE" msprop:OraDbType="126" msprop:BaseColumn="SHIP_VIA_CODE" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="6" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="SHIP_MANIFEST_IND" msprop:OraDbType="126" msprop:BaseColumn="SHIP_MANIFEST_IND" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="1" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="SHIP_MANIFEST_NO" msprop:OraDbType="126" msprop:BaseColumn="SHIP_MANIFEST_NO" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="10" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="REASON_DESC" msprop:OraDbType="126" msprop:BaseColumn="REASON_DESC" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="30" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="SREP_CODE" msprop:OraDbType="126" msprop:BaseColumn="SREP_CODE" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="6" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_ADDR1" msprop:OraDbType="126" msprop:BaseColumn="CUST_ADDR1" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="35" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_ADDR2" msprop:OraDbType="126" msprop:BaseColumn="CUST_ADDR2" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="35" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_ADDR3" msprop:OraDbType="126" msprop:BaseColumn="CUST_ADDR3" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="35" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_CITY" msprop:OraDbType="126" msprop:BaseColumn="CUST_CITY" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="25" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_STATE" msprop:OraDbType="126" msprop:BaseColumn="CUST_STATE" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="2" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_ZIP_CODE" msprop:OraDbType="126" msprop:BaseColumn="CUST_ZIP_CODE" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="10" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_MEMO_NO_COPIES" msprop:OraDbType="104" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="1" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_NAME1" msprop:OraDbType="126" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="35" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_ADDR1" msprop:OraDbType="126" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="35" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_ADDR2" msprop:OraDbType="126" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="35" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_ADDR3" msprop:OraDbType="126" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="35" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_CITY" msprop:OraDbType="126" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="25" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_STATE" msprop:OraDbType="126" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="2" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_ZIP_CODE" msprop:OraDbType="126" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="10" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+              </xs:sequence>
+            </xs:complexType>
+          </xs:element>
+          <xs:element name="SOTRTRN2" msprop:BaseTable.0="SOTRTRN2" msprop:BaseTable.1="ICTITEM1">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="RTRN_NO" msprop:OraDbType="126" msprop:BaseColumn="RTRN_NO">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="10" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="RTRN_LNO" msprop:OraDbType="112" msprop:BaseColumn="RTRN_LNO" type="xs:long" />
+                <xs:element name="ITEM_CODE" msprop:OraDbType="126" msprop:BaseColumn="ITEM_CODE" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="25" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="RTRN_QTY" msprop:OraDbType="112" msprop:BaseColumn="RTRN_QTY" type="xs:long" minOccurs="0" />
+                <xs:element name="RTRN_QTY_DEF" msprop:OraDbType="112" msprop:BaseColumn="RTRN_QTY_DEF" type="xs:long" minOccurs="0" />
+                <xs:element name="RTRN_QTY_REF" msprop:OraDbType="112" msprop:BaseColumn="RTRN_QTY_REF" type="xs:long" minOccurs="0" />
+                <xs:element name="RTRN_QTY_RTV" msprop:OraDbType="112" msprop:BaseColumn="RTRN_QTY_RTV" type="xs:long" minOccurs="0" />
+                <xs:element name="RTRN_PRICE" msprop:OraDbType="122" msprop:BaseColumn="RTRN_PRICE" type="xs:decimal" minOccurs="0" />
+                <xs:element name="PRICE_CATGY_COST_TOTAL" msprop:OraDbType="108" msprop:BaseColumn="PRICE_CATGY_COST_TOTAL" type="xs:decimal" minOccurs="0" />
+                <xs:element name="PRICE_CATGY_CODE" msprop:OraDbType="126" msprop:BaseColumn="PRICE_CATGY_CODE" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="6" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="PROD_CATGY_CODE" msprop:OraDbType="126" msprop:BaseColumn="PROD_CATGY_CODE" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="1" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="OPS_YYYYPP" msprop:OraDbType="126" msprop:BaseColumn="OPS_YYYYPP" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="6" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="REASON_CODE_REF" msprop:OraDbType="126" msprop:BaseColumn="REASON_CODE_REF" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="6" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="ITEM_ORDER_CODE" msprop:OraDbType="126" msprop:BaseColumn="ITEM_ORDER_CODE" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="1" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="ITEM_DESC" msprop:OraDbType="126" msprop:BaseColumn="ITEM_DESC" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="60" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+              </xs:sequence>
+            </xs:complexType>
+          </xs:element>
+          <xs:element name="ARTCUST2" msprop:BaseTable.0="ARTCUST2">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="CUST_CODE" msprop:OraDbType="126" msprop:BaseColumn="CUST_CODE">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="10" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_NO" msprop:OraDbType="126" msprop:BaseColumn="CUST_SHIP_TO_NO">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="6" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_NAME" msprop:OraDbType="126" msprop:BaseColumn="CUST_SHIP_TO_NAME" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="35" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_ADDR1" msprop:OraDbType="126" msprop:BaseColumn="CUST_SHIP_TO_ADDR1" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="35" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_ADDR2" msprop:OraDbType="126" msprop:BaseColumn="CUST_SHIP_TO_ADDR2" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="35" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_ADDR3" msprop:OraDbType="126" msprop:BaseColumn="CUST_SHIP_TO_ADDR3" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="35" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_CITY" msprop:OraDbType="126" msprop:BaseColumn="CUST_SHIP_TO_CITY" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="25" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_STATE" msprop:OraDbType="126" msprop:BaseColumn="CUST_SHIP_TO_STATE" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="2" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_ZIP_CODE" msprop:OraDbType="126" msprop:BaseColumn="CUST_SHIP_TO_ZIP_CODE" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="10" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_COUNTRY" msprop:OraDbType="126" msprop:BaseColumn="CUST_SHIP_TO_COUNTRY" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="20" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_CONTACT" msprop:OraDbType="126" msprop:BaseColumn="CUST_SHIP_TO_CONTACT" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="35" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_PHONE" msprop:OraDbType="126" msprop:BaseColumn="CUST_SHIP_TO_PHONE" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="15" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_EXT" msprop:OraDbType="126" msprop:BaseColumn="CUST_SHIP_TO_EXT" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="5" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_FAX" msprop:OraDbType="126" msprop:BaseColumn="CUST_SHIP_TO_FAX" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="15" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_EMAIL" msprop:OraDbType="126" msprop:BaseColumn="CUST_SHIP_TO_EMAIL" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="60" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_STATUS" msprop:OraDbType="126" msprop:BaseColumn="CUST_SHIP_TO_STATUS" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="1" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="INIT_OPER" msprop:OraDbType="126" msprop:BaseColumn="INIT_OPER" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="8" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="LAST_OPER" msprop:OraDbType="126" msprop:BaseColumn="LAST_OPER" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="8" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="INIT_DATE" msprop:OraDbType="106" msprop:BaseColumn="INIT_DATE" type="xs:dateTime" minOccurs="0" />
+                <xs:element name="LAST_DATE" msprop:OraDbType="106" msprop:BaseColumn="LAST_DATE" type="xs:dateTime" minOccurs="0" />
+                <xs:element name="CUST_SHIP_TO_STAX_CODE" msprop:OraDbType="126" msprop:BaseColumn="CUST_SHIP_TO_STAX_CODE" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="6" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_SHIP_VIA_CODE" msprop:OraDbType="126" msprop:BaseColumn="CUST_SHIP_TO_SHIP_VIA_CODE" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="6" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_WEB_ID" msprop:OraDbType="126" msprop:BaseColumn="CUST_SHIP_TO_WEB_ID" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="6" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="B2C_CUST_CODE" msprop:OraDbType="126" msprop:BaseColumn="B2C_CUST_CODE" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="10" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_WEB_AUTH_FLAG" msprop:OraDbType="126" msprop:BaseColumn="CUST_SHIP_TO_WEB_AUTH_FLAG" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="1" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_WEB_AUTH_DATE" msprop:OraDbType="106" msprop:BaseColumn="CUST_SHIP_TO_WEB_AUTH_DATE" type="xs:dateTime" minOccurs="0" />
+                <xs:element name="CUST_SHIP_TO_WEB_AUTH_DATE_B2C" msprop:OraDbType="106" msprop:BaseColumn="CUST_SHIP_TO_WEB_AUTH_DATE_B2C" type="xs:dateTime" minOccurs="0" />
+                <xs:element name="CUST_SHIP_TO_WEB_AUTH_FLAG_B2C" msprop:OraDbType="126" msprop:BaseColumn="CUST_SHIP_TO_WEB_AUTH_FLAG_B2C" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="1" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_B2C_MGR" msprop:OraDbType="126" msprop:BaseColumn="CUST_SHIP_TO_B2C_MGR" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="8" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_DOMAIN" msprop:OraDbType="126" msprop:BaseColumn="CUST_SHIP_TO_DOMAIN" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="255" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_URL" msprop:OraDbType="126" msprop:BaseColumn="CUST_SHIP_TO_URL" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="255" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_SHIP_VIA_CODE_DPD" msprop:OraDbType="126" msprop:BaseColumn="CUST_SHIP_TO_SHIP_VIA_CODE_DPD" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="6" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="STAX_EXEMPT" msprop:OraDbType="126" msprop:BaseColumn="STAX_EXEMPT" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="1" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_ORDER_BLOCK" msprop:OraDbType="126" msprop:BaseColumn="CUST_SHIP_TO_ORDER_BLOCK" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="1" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_WEB_EMAIL" msprop:OraDbType="126" msprop:BaseColumn="CUST_SHIP_TO_WEB_EMAIL" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="60" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="SHELF_EXCEPTION_BIN_REG" msprop:OraDbType="126" msprop:BaseColumn="SHELF_EXCEPTION_BIN_REG" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="1" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_SHIP_VIA_FREE_FRT" msprop:OraDbType="126" msprop:BaseColumn="CUST_SHIP_TO_SHIP_VIA_FREE_FRT" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="6" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_WEB_FREE_FRT_AMT" msprop:OraDbType="122" msprop:BaseColumn="CUST_SHIP_TO_WEB_FREE_FRT_AMT" type="xs:decimal" minOccurs="0" />
+                <xs:element name="FSC_EXEMPT_SHIP_TO" msprop:OraDbType="126" msprop:BaseColumn="FSC_EXEMPT_SHIP_TO" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="1" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_DPD_COPIES" msprop:OraDbType="126" msprop:BaseColumn="CUST_SHIP_TO_DPD_COPIES" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="1" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_CRM_COPIES" msprop:OraDbType="126" msprop:BaseColumn="CUST_SHIP_TO_CRM_COPIES" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="1" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="CUST_SHIP_TO_ECP_COPIES" msprop:OraDbType="126" msprop:BaseColumn="CUST_SHIP_TO_ECP_COPIES" minOccurs="0">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:maxLength value="1" />
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+              </xs:sequence>
+            </xs:complexType>
+          </xs:element>
+        </xs:choice>
+      </xs:complexType>
+      <xs:unique name="Constraint1" msdata:PrimaryKey="true">
+        <xs:selector xpath=".//SOTRTRN1" />
+        <xs:field xpath="RTRN_NO" />
+      </xs:unique>
+      <xs:unique name="SOTRTRN2_Constraint1" msdata:ConstraintName="Constraint1" msdata:PrimaryKey="true">
+        <xs:selector xpath=".//SOTRTRN2" />
+        <xs:field xpath="RTRN_NO" />
+        <xs:field xpath="RTRN_LNO" />
+      </xs:unique>
+      <xs:unique name="ARTCUST2_Constraint1" msdata:ConstraintName="Constraint1" msdata:PrimaryKey="true">
+        <xs:selector xpath=".//ARTCUST2" />
+        <xs:field xpath="CUST_CODE" />
+        <xs:field xpath="CUST_SHIP_TO_NO" />
+      </xs:unique>
+    </xs:element>
+  </xs:schema>
+  <SOTRTRN1>
+    <RTRN_NO>0000281956</RTRN_NO>
+    <RTRN_DATE>2010-10-08T00:00:00-04:00</RTRN_DATE>
+    <CUST_CODE>010241</CUST_CODE>
+    <CUST_NAME>POCONO EYE ASSOCIATES INC</CUST_NAME>
+    <CUST_SHIP_TO_NO>000002</CUST_SHIP_TO_NO>
+    <CUST_SHIP_TO_NAME>POCONO EYE ASSOCIATES INC</CUST_SHIP_TO_NAME>
+    <INV_NO>0011740109</INV_NO>
+    <WHSE_CODE>001</WHSE_CODE>
+    <WHSE_CODE_DEF>002</WHSE_CODE_DEF>
+    <WHSE_CODE_RTV>001</WHSE_CODE_RTV>
+    <REASON_CODE>ORDDUP</REASON_CODE>
+    <RTRN_SOURCE>E</RTRN_SOURCE>
+    <INIT_OPER>wh5</INIT_OPER>
+    <INIT_DATE>2010-10-08T12:25:20-04:00</INIT_DATE>
+    <REGISTER_IND>0</REGISTER_IND>
+    <RTRN_STATUS>A</RTRN_STATUS>
+    <OPS_YYYYPP>201010</OPS_YYYYPP>
+    <TOTAL_SALES>69.9</TOTAL_SALES>
+    <TOTAL_COSTS>65</TOTAL_COSTS>
+    <TOTAL_STAX>0</TOTAL_STAX>
+    <TOTAL_FREIGHT>0</TOTAL_FREIGHT>
+    <TOTAL_RESTOCK>0</TOTAL_RESTOCK>
+    <TOTAL_AMOUNT>69.9</TOTAL_AMOUNT>
+    <POST_CODE>REG</POST_CODE>
+    <RESTOCK_FEE_PCT>15</RESTOCK_FEE_PCT>
+    <RTRN_BATCH_NO>007006</RTRN_BATCH_NO>
+    <INV_PRINTED>0</INV_PRINTED>
+    <INV_PRINTED_BY>patrickp</INV_PRINTED_BY>
+    <INV_PRINTED_DATE>2010-10-12T10:29:53-04:00</INV_PRINTED_DATE>
+    <INV_NO_ORIG>0011711162</INV_NO_ORIG>
+    <WH_OPER_ID>750</WH_OPER_ID>
+    <RTRN_CREDIT_ONLY>0</RTRN_CREDIT_ONLY>
+    <OPS_YYYYPP_ORIG>201010</OPS_YYYYPP_ORIG>
+    <RTRN_STATUS_ORIG>A</RTRN_STATUS_ORIG>
+    <REASON_DESC>Duplicate order</REASON_DESC>
+    <SREP_CODE>FL</SREP_CODE>
+    <CUST_ADDR1>300 PLAZA CT</CUST_ADDR1>
+    <CUST_ADDR2>SUITE A</CUST_ADDR2>
+    <CUST_CITY>EAST STROUDSBURG</CUST_CITY>
+    <CUST_STATE>PA</CUST_STATE>
+    <CUST_ZIP_CODE>18301</CUST_ZIP_CODE>
+    <CUST_MEMO_NO_COPIES>0</CUST_MEMO_NO_COPIES>
+    <CUST_SHIP_TO_NAME1>POCONO EYE ASSOCIATES INC</CUST_SHIP_TO_NAME1>
+    <CUST_SHIP_TO_ADDR1>MOUNTAIN HEALTHCARE CENTER</CUST_SHIP_TO_ADDR1>
+    <CUST_SHIP_TO_ADDR2>100 COMMUNITY DRIVE STE 204A</CUST_SHIP_TO_ADDR2>
+    <CUST_SHIP_TO_CITY>TOBYHANNA</CUST_SHIP_TO_CITY>
+    <CUST_SHIP_TO_STATE>PA</CUST_SHIP_TO_STATE>
+    <CUST_SHIP_TO_ZIP_CODE>18466</CUST_SHIP_TO_ZIP_CODE>
+  </SOTRTRN1>
+  <SOTRTRN2>
+    <RTRN_NO>0000281956</RTRN_NO>
+    <RTRN_LNO>1</RTRN_LNO>
+    <ITEM_CODE>FDACP9087-150</ITEM_CODE>
+    <RTRN_QTY>1</RTRN_QTY>
+    <RTRN_QTY_RTV>0</RTRN_QTY_RTV>
+    <RTRN_PRICE>34.95</RTRN_PRICE>
+    <PRICE_CATGY_COST_TOTAL>32.5</PRICE_CATGY_COST_TOTAL>
+    <PRICE_CATGY_CODE>CDACP9</PRICE_CATGY_CODE>
+    <PROD_CATGY_CODE>D</PROD_CATGY_CODE>
+    <OPS_YYYYPP>201010</OPS_YYYYPP>
+    <ITEM_ORDER_CODE>N</ITEM_ORDER_CODE>
+    <ITEM_DESC>DAILIES AQUA CP 90P 87 -1.50</ITEM_DESC>
+  </SOTRTRN2>
+  <SOTRTRN2>
+    <RTRN_NO>0000281956</RTRN_NO>
+    <RTRN_LNO>2</RTRN_LNO>
+    <ITEM_CODE>FDACP9087-200</ITEM_CODE>
+    <RTRN_QTY>1</RTRN_QTY>
+    <RTRN_QTY_RTV>0</RTRN_QTY_RTV>
+    <RTRN_PRICE>34.95</RTRN_PRICE>
+    <PRICE_CATGY_COST_TOTAL>32.5</PRICE_CATGY_COST_TOTAL>
+    <PRICE_CATGY_CODE>CDACP9</PRICE_CATGY_CODE>
+    <PROD_CATGY_CODE>D</PROD_CATGY_CODE>
+    <OPS_YYYYPP>201010</OPS_YYYYPP>
+    <ITEM_ORDER_CODE>N</ITEM_ORDER_CODE>
+    <ITEM_DESC>DAILIES AQUA CP 90P 87 -2.00</ITEM_DESC>
+  </SOTRTRN2>
+</SODRTRN1>

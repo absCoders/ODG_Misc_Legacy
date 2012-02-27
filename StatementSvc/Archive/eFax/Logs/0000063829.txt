@@ -1,0 +1,8 @@
+02/22/12 17:27:53 Retrieving bindings
+02/22/12 17:27:54 Binding = https://na2.esker.com/EDPWS_C/EDPWS.dll?BindingId=20120222222754odg@opticaldg.com&Handler=Default
+02/22/12 17:27:54 Authenticating session
+02/22/12 17:27:54 SessionID = MA-ASC5#P/r8SfYpmgztlmnwBWeGmdcF0OTa76BHfW+4BHXdQiizU824pXiBzIWXesIBTbq5Jtg0wxJT2S53KTr5n74plUuM7WhKUPQXlbCltSOIdCrZ0kn2QXr9pQFQNEjj
+02/22/12 17:27:54 Registering cover resource
+02/22/12 17:27:56 Sending Fax Request
+02/22/12 17:27:58 Request submitted with transportID 970182410
+02/22/12 17:27:58 Releasing session and server files

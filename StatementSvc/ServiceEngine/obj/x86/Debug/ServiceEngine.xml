@@ -1,0 +1,102 @@
+﻿<?xml version="1.0"?>
+<doc>
+<assembly>
+<name>
+ServiceEngine
+</name>
+</assembly>
+<members>
+<member name="M:ServiceEngine.OrdersImport.SalesOrderImporter.AddCharNoDups(System.String,System.String@)">
+	<summary>
+ Appends Chars of charToAdd to addToString if the char is not in addToString
+ </summary>
+	<param name="charsToAdd"></param>
+	<param name="addToString"></param>
+	<remarks></remarks>
+</member><member name="M:ServiceEngine.OrdersImport.SalesOrderImporter.CreateOrderErrorRecord(System.String,System.Int32,System.String,System.String)">
+	<summary>
+ Creates and Entry in SOTORDRW for errors on the order
+ </summary>
+	<param name="ErrorCode"></param>
+	<param name="ORDR_LNO"></param>
+	<remarks></remarks>
+</member><member name="M:ServiceEngine.OrdersImport.SalesOrderImporter.SetDPDShipViaSettings(System.Data.DataRow@,System.String@)">
+	<summary>
+ Overrides Order Settings for DPD orders
+ </summary>
+	<param name="rowSOTORDR1"></param>
+	<param name="errorCodes"></param>
+	<remarks></remarks>
+</member><member name="M:ServiceEngine.OrdersImport.SalesOrderImporter.Record_Event(System.String,System.String)">
+	<summary>
+ Record sales order event
+ </summary>
+	<param name="ORDR_NO"></param>
+	<param name="EVENT_DESC"></param>
+	<remarks></remarks>
+</member><member name="M:ServiceEngine.OrdersImport.SalesOrderImporter.SetBillToAttributes(System.String,System.String,System.Data.DataRow@,System.String@)">
+	<summary>
+ Sets Order Header Information based on the Bill To Customer Attributes
+ </summary>
+	<param name="CUST_CODE"></param>
+	<param name="CUST_SHIP_TO_NO"></param>
+	<param name="rowSOTORDR1"></param>
+	<param name="errorCodes"></param>
+	<remarks></remarks>
+</member><member name="M:ServiceEngine.OrdersImport.SalesOrderImporter.SetItemInfo(System.Data.DataRow@,System.String@)">
+	<summary>
+ Sets Order Detail Information based on the Item's Attributes
+ </summary>
+	<param name="rowSOTORDR2"></param>
+	<param name="errorCodes"></param>
+	<remarks></remarks>
+</member><member name="M:ServiceEngine.OrdersImport.SalesOrderImporter.SetShipToAttributes(System.Data.DataRow@,System.String@)">
+	<summary>
+ Ship Tos have Overrides to the Customer Master data.
+ </summary>
+	<param name="rowSOTORDR1"></param>
+	<param name="errorCodes"></param>
+	<remarks></remarks>
+</member><member name="M:ServiceEngine.OrdersImport.SalesOrderImporter.TruncateField(System.String,System.String,System.String)">
+	<summary>
+ Truncates a fields value if the length is longer the the max length of the field
+ </summary>
+	<param name="fieldValue"></param>
+	<param name="TableName"></param>
+	<param name="FieldName"></param>
+	<returns></returns>
+	<remarks></remarks>
+</member><member name="M:ServiceEngine.OrdersImport.SalesOrderImporter.UpdateSalesOrderTotal(System.String)">
+	<summary>
+ Updates the Freight for an Order
+ </summary>
+	<param name="ORDR_NO"></param>
+	<remarks></remarks>
+</member><member name="M:ServiceEngine.OrdersImport.SalesOrderImporter.CreateOrderRelCodesTable">
+	<summary>
+ Creates a Table of Order Release Hold Codes
+ </summary>
+	<remarks></remarks>
+</member><member name="P:ServiceEngine.StatusUpdateEventArgs.Message">
+	<summary>
+ This is the custom message
+ </summary>
+	<value></value>
+	<returns></returns>
+	<remarks></remarks>
+</member><member name="P:ServiceEngine.My.Resources.Resources.ResourceManager">
+	<summary>
+  Returns the cached ResourceManager instance used by this class.
+</summary>
+</member><member name="P:ServiceEngine.My.Resources.Resources.Culture">
+	<summary>
+  Overrides the current thread's CurrentUICulture property for all
+  resource lookups using this strongly typed resource class.
+</summary>
+</member><member name="T:ServiceEngine.My.Resources.Resources">
+	<summary>
+  A strongly-typed resource class, for looking up localized strings, etc.
+</summary>
+</member>
+</members>
+</doc>

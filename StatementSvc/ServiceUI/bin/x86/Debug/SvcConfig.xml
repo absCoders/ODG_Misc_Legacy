@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<SvcConfig xml:lang="en-US">
+  <DefaultTNS>ODG</DefaultTNS>
+  <DefaultUID>ODG</DefaultUID>
+  <DefaultPWD>ODG</DefaultPWD>
+  <StartStatements>1400</StartStatements>
+  <StatementDay>SUN</StatementDay>
+  <CCEmail></CCEmail>
+  <LastTimeExecuted>2/27/2012 10:54:07 AM</LastTimeExecuted>
+</SvcConfig>

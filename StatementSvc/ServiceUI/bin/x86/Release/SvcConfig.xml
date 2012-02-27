@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<SvcConfig xml:lang="en-US">
+  <DefaultTNS>ODG</DefaultTNS>
+  <DefaultUID>ODG</DefaultUID>
+  <DefaultPWD>ODG</DefaultPWD>
+  <StartEmail>1400</StartEmail>
+  <EmailDay>SUN</EmailDay>
+  <CCEmail>maria@absolution.com</CCEmail>
+  <LastTimeExecuted>6/22/2011 1:05:32 PM</LastTimeExecuted>
+</SvcConfig>

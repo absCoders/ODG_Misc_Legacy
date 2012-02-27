@@ -1,0 +1,202 @@
+Setting environment for using Microsoft Visual Studio 2005 x86 tools.
+
+C:\Program Files\Microsoft Visual Studio 8\VC>cd \vs
+
+C:\VS>dir
+ Volume in drive C is OS
+ Volume Serial Number is ACA3-1BBA
+
+ Directory of C:\VS
+
+08/26/2007  11:58 AM    <DIR>          .
+08/26/2007  11:58 AM    <DIR>          ..
+08/19/2007  04:44 PM    <DIR>          abs
+01/01/2007  10:35 AM    <DIR>          ABS.UI
+04/19/2007  10:01 AM    <DIR>          bcfont
+01/01/2007  10:35 AM    <DIR>          CustomBorderForm
+09/17/2006  04:53 PM           238,602 CustomBorderForm_0_5_src.zip
+01/01/2007  10:35 AM    <DIR>          DMLOperOnDS
+10/04/2006  04:24 PM            27,469 DMLOperOnDS.zip
+08/19/2007  06:46 PM    <DIR>          dnrtv
+01/01/2007  10:35 AM    <DIR>          dotnetnuke
+01/01/2007  10:34 AM    <DIR>          DSPopulateVB
+10/04/2006  04:21 PM            24,840 DSPopulateVB.zip
+07/12/2007  09:02 PM    <DIR>          infragistics
+04/19/2007  10:17 AM    <DIR>          KAA
+01/01/2007  10:34 AM    <DIR>          MHM
+08/10/2007  01:56 PM    <DIR>          ODG
+08/01/2007  08:37 AM        41,300,574 ODG.zip
+02/28/2007  11:33 PM    <DIR>          ODGxxx
+06/11/2007  08:52 AM        36,116,414 ODG_gold.zip
+01/01/2007  10:34 AM    <DIR>          OSS
+08/26/2007  04:07 PM    <DIR>          PasswordService
+10/25/2003  12:49 PM             5,160 PMICR.TTF
+04/12/2007  07:42 PM    <DIR>          PUBLISH
+02/26/2007  08:55 AM    <DIR>          SEA
+01/01/2007  10:33 AM    <DIR>          SEA_BEFORE_NO_SQLSERVER
+02/27/2007  08:08 PM    <DIR>          SEA_jic
+10/01/2006  08:44 PM         8,354,436 SEA_SAVE.zip
+06/29/2007  11:32 AM    <DIR>          SOS
+01/03/2007  09:41 PM    <DIR>          SQLWS
+02/07/2007  11:33 AM         1,182,356 SQLWS.zip
+01/01/2007  10:33 AM    <DIR>          Tracker
+07/12/2007  08:54 PM    <DIR>          TrinugDemo
+09/12/2006  08:47 PM            36,040 VBNETRegistry.zip
+               9 File(s)     87,285,891 bytes
+              25 Dir(s)   1,406,402,560 bytes free
+
+C:\VS>cd passwordservice
+
+C:\VS\PasswordService>dir /w
+ Volume in drive C is OS
+ Volume Serial Number is ACA3-1BBA
+
+ Directory of C:\VS\PasswordService
+
+[.]                     [..]                    [PasswordEngine]
+[PasswordService]       PasswordService.sln     [PasswordServiceShared]
+[PasswordServiceUI]
+               1 File(s)          2,452 bytes
+               6 Dir(s)   1,406,402,560 bytes free
+
+C:\VS\PasswordService>cd passwordservice
+
+C:\VS\PasswordService\PasswordService>dir
+ Volume in drive C is OS
+ Volume Serial Number is ACA3-1BBA
+
+ Directory of C:\VS\PasswordService\PasswordService
+
+08/26/2007  04:35 PM    <DIR>          .
+08/26/2007  04:35 PM    <DIR>          ..
+08/26/2007  04:07 PM    <DIR>          bin
+08/26/2007  04:07 PM    <DIR>          My Project
+08/26/2007  04:07 PM    <DIR>          obj
+08/26/2007  04:07 PM             1,795 PasswordService.Designer.vb
+08/26/2007  04:35 PM             2,390 PasswordService.vb
+08/26/2007  04:35 PM             4,818 PasswordService.vbproj
+08/26/2007  04:18 PM               168 PasswordService.vbproj.user
+08/26/2007  04:35 PM               595 PasswordServiceInstaller.vb
+               5 File(s)          9,766 bytes
+               5 Dir(s)   1,406,402,560 bytes free
+
+C:\VS\PasswordService\PasswordService>cd bin
+
+C:\VS\PasswordService\PasswordService\bin>cd debig
+The system cannot find the path specified.
+
+C:\VS\PasswordService\PasswordService\bin>cd debug
+
+C:\VS\PasswordService\PasswordService\bin\Debug>dir
+ Volume in drive C is OS
+ Volume Serial Number is ACA3-1BBA
+
+ Directory of C:\VS\PasswordService\PasswordService\bin\Debug
+
+08/26/2007  04:35 PM    <DIR>          .
+08/26/2007  04:35 PM    <DIR>          ..
+08/26/2007  04:35 PM            28,672 PasswordEngine.dll
+08/26/2007  04:35 PM            36,352 PasswordEngine.pdb
+08/26/2007  04:35 PM               318 PasswordEngine.xml
+08/26/2007  04:35 PM            28,672 PasswordService.exe
+08/26/2007  04:35 PM            34,304 PasswordService.pdb
+08/26/2007  04:35 PM               123 PasswordService.xml
+08/26/2007  04:35 PM            24,576 PasswordServiceShared.dll
+08/26/2007  04:35 PM            28,160 PasswordServiceShared.pdb
+08/26/2007  04:35 PM               129 PasswordServiceShared.xml
+               9 File(s)        181,306 bytes
+               2 Dir(s)   1,406,402,560 bytes free
+
+C:\VS\PasswordService\PasswordService\bin\Debug>installutil
+Microsoft (R) .NET Framework Installation utility Version 2.0.50727.832
+Copyright (c) Microsoft Corporation.  All rights reserved.
+
+Usage: InstallUtil [/u | /uninstall] [option [...]] assembly [[option [...]] ass
+embly] [...]]
+
+InstallUtil executes the installers in each given assembly.
+If the /u or /uninstall switch is specified, it uninstalls
+the assemblies, otherwise it installs them. Unlike other
+options, /u applies to all assemblies, regardless of where it
+appears on the command line.
+
+Installation is done in a transactioned way: If one of the
+assemblies fails to install, the installations of all other
+assemblies are rolled back. Uninstall is not transactioned.
+
+Options take the form /switch=[value]. Any option that occurs
+before the name of an assembly will apply to that assembly's
+installation. Options are cumulative but overridable - options
+specified for one assembly will apply to the next as well unless
+the option is specified with a new value. The default for all
+options is empty or false unless otherwise specified.
+
+Options recognized:
+
+Options for installing any assembly:
+/AssemblyName
+ The assembly parameter will be interpreted as an assembly name (Name,
+ Locale, PublicKeyToken, Version). The default is to interpret the
+ assembly parameter as the filename of the assembly on disk.
+
+/LogFile=[filename]
+ File to write progress to. If empty, do not write log. Default
+ is <assemblyname>.InstallLog
+
+/LogToConsole={true|false}
+ If false, suppresses output to the console.
+
+/ShowCallStack
+ If an exception occurs at any point during installation, the call
+ stack will be printed to the log.
+
+
+Individual installers used within an assembly may recognize other
+options. To learn about these options, run InstallUtil with the paths
+of the assemblies on the command line along with the /? or /help option.
+
+
+
+C:\VS\PasswordService\PasswordService\bin\Debug>installutil passwordservice.exe
+Microsoft (R) .NET Framework Installation utility Version 2.0.50727.832
+Copyright (c) Microsoft Corporation.  All rights reserved.
+
+
+Running a transacted installation.
+
+Beginning the Install phase of the installation.
+See the contents of the log file for the C:\VS\PasswordService\PasswordService\b
+in\Debug\passwordservice.exe assembly's progress.
+The file is located at C:\VS\PasswordService\PasswordService\bin\Debug\passwords
+ervice.InstallLog.
+Installing assembly 'C:\VS\PasswordService\PasswordService\bin\Debug\passwordser
+vice.exe'.
+Affected parameters are:
+   logtoconsole =
+   assemblypath = C:\VS\PasswordService\PasswordService\bin\Debug\passwordservic
+e.exe
+   logfile = C:\VS\PasswordService\PasswordService\bin\Debug\passwordservice.Ins
+tallLog
+Installing service ABSPasswordSvc...
+Service ABSPasswordSvc has been successfully installed.
+Creating EventLog source ABSPasswordSvc in log Application...
+
+The Install phase completed successfully, and the Commit phase is beginning.
+See the contents of the log file for the C:\VS\PasswordService\PasswordService\b
+in\Debug\passwordservice.exe assembly's progress.
+The file is located at C:\VS\PasswordService\PasswordService\bin\Debug\passwords
+ervice.InstallLog.
+Committing assembly 'C:\VS\PasswordService\PasswordService\bin\Debug\passwordser
+vice.exe'.
+Affected parameters are:
+   logtoconsole =
+   assemblypath = C:\VS\PasswordService\PasswordService\bin\Debug\passwordservic
+e.exe
+   logfile = C:\VS\PasswordService\PasswordService\bin\Debug\passwordservice.Ins
+tallLog
+
+The Commit phase completed successfully.
+
+The transacted install has completed.
+
+C:\VS\PasswordService\PasswordService\bin\Debug>

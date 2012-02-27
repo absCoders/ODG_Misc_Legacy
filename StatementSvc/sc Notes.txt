@@ -1,0 +1,45 @@
+Microsoft Windows [Version 6.1.7600]
+Copyright (c) 2009 Microsoft Corporation.  All rights reserved.
+
+C:\Users\wjz>sc create ABSPhoneMonitorService binpath=c:\phone\bin\ABSPhoneMonit
+orService.exe
+DESCRIPTION:
+        Creates a service entry in the registry and Service Database.
+USAGE:
+        sc <server> create [service name] [binPath= ] <option1> <option2>...
+
+OPTIONS:
+NOTE: The option name includes the equal sign.
+      A space is required between the equal sign and the value.
+ type= <own|share|interact|kernel|filesys|rec>
+       (default = own)
+ start= <boot|system|auto|demand|disabled|delayed-auto>
+       (default = demand)
+ error= <normal|severe|critical|ignore>
+       (default = normal)
+ binPath= <BinaryPathName>
+ group= <LoadOrderGroup>
+ tag= <yes|no>
+ depend= <Dependencies(separated by / (forward slash))>
+ obj= <AccountName|ObjectName>
+       (default = LocalSystem)
+ DisplayName= <display name>
+ password= <password>
+
+C:\Users\wjz>sc create ABSPhoneMonitorService binpath= "c:\phone\bin\ABSPhoneMon
+itorService.exe" DisplayName= "ABS Phone Monitor Service"
+[SC] CreateService SUCCESS
+
+C:\Users\wjz>
+
+ABSSalesOrderImport
+
+
+sc create ABSEmailInvProd binpath= "C:\ABService\EmailInvoice\Prod\ABSEmailInvoiceService.exe" DisplayName= "ABS Prod Email Invoice"
+
+sc description ABSEmailInvProd "Production Email Invoices"
+
+
+sc create ABSEmailInvPreProd binpath= "C:\ABService\EmailInvoice\PreProd\ABSEmailInvoiceService.exe" DisplayName= "ABS PreProd Email Invoice"
+
+sc description ABSEmailInvPreProd "PreProd Email Invoices"

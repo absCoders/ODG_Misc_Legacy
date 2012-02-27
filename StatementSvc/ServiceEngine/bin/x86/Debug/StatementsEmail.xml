@@ -1,0 +1,36 @@
+﻿<?xml version="1.0"?>
+<doc>
+<assembly>
+<name>
+StatementsEmail
+</name>
+</assembly>
+<members>
+<member name="P:StatementsEmail.StatusUpdateEventArgs.Message">
+	<summary>
+ This is the custom message
+ </summary>
+	<value></value>
+	<returns></returns>
+	<remarks></remarks>
+</member><member name="M:StatementsEmail.StatementEmail.StatementEmailer.EmailDocument(System.String,System.String,System.String,System.String,System.String)">
+	<summary>
+ Sends an email
+ </summary>
+	<remarks></remarks>
+</member><member name="P:StatementsEmail.My.Resources.Resources.ResourceManager">
+	<summary>
+  Returns the cached ResourceManager instance used by this class.
+</summary>
+</member><member name="P:StatementsEmail.My.Resources.Resources.Culture">
+	<summary>
+  Overrides the current thread's CurrentUICulture property for all
+  resource lookups using this strongly typed resource class.
+</summary>
+</member><member name="T:StatementsEmail.My.Resources.Resources">
+	<summary>
+  A strongly-typed resource class, for looking up localized strings, etc.
+</summary>
+</member>
+</members>
+</doc>

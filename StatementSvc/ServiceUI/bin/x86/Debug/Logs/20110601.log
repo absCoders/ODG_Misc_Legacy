@@ -1,0 +1,30 @@
+6/1/2011 11:59:51 AM: 
+6/1/2011 11:59:52 AM: Enter MainProcess.
+6/1/2011 11:59:55 AM: Successful log into Oracle.
+6/1/2011 12:02:04 PM: 0 Emails sent out
+6/1/2011 12:02:04 PM: Closing Log file.
+6/1/2011 12:02:35 PM: 
+6/1/2011 12:02:35 PM: Enter MainProcess.
+6/1/2011 12:02:38 PM: Successful log into Oracle.
+6/1/2011 12:03:25 PM: EmailInvoicesToCustomers: Too early to process invoices.
+6/1/2011 12:03:31 PM: 0 Emails sent out
+6/1/2011 12:03:31 PM: Closing Log file.
+6/1/2011 12:03:47 PM: 
+6/1/2011 12:03:47 PM: Enter MainProcess.
+6/1/2011 12:04:02 PM: Successful log into Oracle.
+6/1/2011 12:04:32 PM: EmailInvoicesToCustomers: Too early to process invoices.
+6/1/2011 12:09:34 PM: 1 Emails sent out
+6/1/2011 12:09:37 PM: Closing Log file.
+6/1/2011 12:54:47 PM: 
+6/1/2011 12:54:48 PM: Enter MainProcess.
+6/1/2011 12:58:40 PM: Main Process: Emails already imported today.
+6/1/2011 12:58:40 PM: Closing Log file.
+6/1/2011 1:00:09 PM: 
+6/1/2011 1:00:09 PM: Enter MainProcess.
+6/1/2011 1:01:17 PM: Main Process: Emails already sent today.
+6/1/2011 1:01:32 PM: Closing Log file.
+6/1/2011 1:18:48 PM: 
+6/1/2011 1:18:48 PM: Enter MainProcess.
+6/1/2011 1:18:55 PM: MainProcess: Invalid day to process emails
+6/1/2011 1:19:31 PM: Main Process: Emails already sent today.
+6/1/2011 1:19:58 PM: Closing Log file.
