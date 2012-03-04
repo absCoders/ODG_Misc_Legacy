@@ -20,6 +20,7 @@ Namespace CustomerActivity
         Private Const testMode As Boolean = False
 
         Private rowTATMAIL1 As DataRow = Nothing
+        Private rowSOTPARM1 As DataRow = Nothing
         Private rowASTUSER1_EMAIL_FROM As DataRow = Nothing
 
 #End Region
@@ -225,8 +226,6 @@ Namespace CustomerActivity
 
                 dst = New DataSet
 
-                rowTATMAIL1 = ABSolution.ASCDATA1.GetDataRow("SELECT * FROM TATMAIL1 WHERE EMAIL_KEY = 'SO'")
-
                 ABSolution.ASCMAIN1.USER_ID = "service"
                 ABSolution.ASCMAIN1.Set_DBS_Dependent_Strings()
 
@@ -379,9 +378,23 @@ Namespace CustomerActivity
                 ' Process email statements by customer
                 baseClass.clsASCBASE1.Fill_Records("ARTCUST1", New Object() {DateAdd(DateInterval.Day, -7, DateTime.Now)})
 
+                ' Remove these here to avoid 'Not Like' in query.
+                For Each rowARTCUST1 As DataRow In dst.Tables("ARTCUST1").Select()
+                    If "89".Contains((rowARTCUST1.Item("CUST_CODE") & "9").ToString.Substring(0, 1)) Then
+                        rowARTCUST1.Delete()
+                    End If
+                Next
+
+                dst.Tables("ARTCUST1").AcceptChanges()
+
                 If dst.Tables("ARTCUST1").Rows.Count = 0 Then
                     Return 0
                 End If
+
+                ' Always grab updated values
+                rowSOTPARM1 = ABSolution.ASCDATA1.GetDataRow("SELECT * FROM SOTPARM1 WHERE SO_PARM_KEY = :PARM1", "V", "Z")
+                rowASTUSER1_EMAIL_FROM = baseClass.LookUp("ASTUSER1", rowSOTPARM1.Item("SO_PARM_EMAIL_FROM") & "", True)
+                rowTATMAIL1 = ABSolution.ASCDATA1.GetDataRow("SELECT * FROM TATMAIL1 WHERE EMAIL_KEY = :PARM1", "V", "SO")
 
                 Dim customerCode As String = String.Empty
                 Dim customerName As String = String.Empty
@@ -390,6 +403,8 @@ Namespace CustomerActivity
                 Dim salesRepEmail As String = String.Empty
                 Dim salesRepCode As String = String.Empty
 
+                Dim CUST_LAST_ORDR_DATE As String = String.Empty
+                Dim CUST_LAST_JOB_DATE As String = String.Empty
 
                 For Each rowARTCUST1 As DataRow In dst.Tables("ARTCUST1").Select("", "SREP_CODE, CUST_CODE")
 
@@ -398,7 +413,7 @@ Namespace CustomerActivity
                         If emailBody.Length > 0 Then
                             emailBody &= CreateHtmlFooter()
 
-                            EmailDocument(salesRepEmail, salesRepEmail, emailSubject, String.Empty, CCemail, emailBody)
+                            EmailDocument(salesRepEmail, salesRepEmail, emailSubject & " (" & salesRepCode & ")", String.Empty, CCemail, emailBody)
                             numEmails += 1
                             RecordLogEntry("Email sent to sales rep: " & salesRepCode)
                         End If
@@ -407,15 +422,33 @@ Namespace CustomerActivity
 
                         salesRepCode = rowARTCUST1.Item("SREP_CODE") & String.Empty
                         salesRepEmail = rowARTCUST1.Item("SREP_EMAIL") & String.Empty
+
+                        rowASTUSER1_EMAIL_FROM = Nothing
+
                     End If
 
                     customerCode = rowARTCUST1.Item("CUST_CODE") & String.Empty
                     customerName = rowARTCUST1.Item("CUST_NAME") & String.Empty
 
+                    CUST_LAST_ORDR_DATE = String.Empty
+                    CUST_LAST_JOB_DATE = String.Empty
+
+                    If IsDate(rowARTCUST1.Item("CUST_LAST_ORDR_DATE") & String.Empty) Then
+                        CUST_LAST_ORDR_DATE = CDate(rowARTCUST1.Item("CUST_LAST_ORDR_DATE")).ToString("MM/dd/yyyy")
+                    End If
+
+                    If IsDate(rowARTCUST1.Item("CUST_LAST_JOB_DATE") & String.Empty) Then
+                        CUST_LAST_JOB_DATE = CDate(rowARTCUST1.Item("CUST_LAST_JOB_DATE")).ToString("MM/dd/yyyy")
+                    End If
+
+
                     emailBody &= CreateHtmlDetail(customerCode, customerName, _
-                                                  rowARTCUST1.Item("CUST_LAST_ORDR_NO"), _
-                                                  CDate(rowARTCUST1.Item("CUST_LAST_ORDR_DATE")).ToString("MM/dd/yyyy"), _
+                                                  rowARTCUST1.Item("CUST_LAST_ORDR_NO") & String.Empty, _
+                                                  CUST_LAST_ORDR_DATE, _
                                                   Format(Val(rowARTCUST1.Item("CUST_LAST_ORDR_AMT") & String.Empty), "#,##0.00"), _
+                                                  rowARTCUST1.Item("CUST_LAST_JOB_NO") & String.Empty, _
+                                                  CUST_LAST_JOB_DATE, _
+                                                  Format(Val(rowARTCUST1.Item("CUST_LAST_JOB_AMT") & String.Empty), "#,##0.00"), _
                                                   Format(Val(rowARTCUST1.Item("CUST_SALES_MTD") & String.Empty), "#,##0.00"), _
                                                   Format(Val(rowARTCUST1.Item("CUST_SALES_YTD") & String.Empty), "#,##0.00"))
 
@@ -424,7 +457,7 @@ Namespace CustomerActivity
                 If emailBody.Length > 0 Then
                     emailBody &= CreateHtmlFooter()
 
-                    EmailDocument(salesRepEmail, salesRepEmail, emailSubject, String.Empty, CCemail, emailBody)
+                    EmailDocument(salesRepEmail, salesRepEmail, emailSubject & " (" & salesRepCode & ")", String.Empty, CCemail, emailBody)
                     numEmails += 1
                 End If
 
@@ -453,6 +486,9 @@ Namespace CustomerActivity
             htmlHeader &= "<th>Order No</th>" & Environment.NewLine
             htmlHeader &= "<th>Order Date</th>" & Environment.NewLine
             htmlHeader &= "<th>Order Total</th>" & Environment.NewLine
+            htmlHeader &= "<th>Job No</th>" & Environment.NewLine
+            htmlHeader &= "<th>Job Date</th>" & Environment.NewLine
+            htmlHeader &= "<th>Job Total</th>" & Environment.NewLine
             htmlHeader &= "<th>MTD Sales</th>" & Environment.NewLine
             htmlHeader &= "<th>YTD Sales</th>" & Environment.NewLine
             htmlHeader &= "</tr>" & Environment.NewLine
@@ -463,15 +499,22 @@ Namespace CustomerActivity
 
         Private Function CreateHtmlDetail(ByVal customerCode As String, ByVal customerName As String, _
                                           ByVal orderNumber As String, ByVal orderdate As String, ByVal orderTotal As String, _
-                                          ByVal mtdSales As String, ByVal ytdSales As String) As String
+                                          ByVal JobNumber As String, ByVal Jobdate As String, ByVal JobTotal As String, _
+                                         ByVal mtdSales As String, ByVal ytdSales As String) As String
             Dim htmlDetail As String
 
             htmlDetail = "<tr>" & Environment.NewLine
             htmlDetail &= "<td>" & customerCode & "</td>" & Environment.NewLine
             htmlDetail &= "<td>" & customerName & "</td>" & Environment.NewLine
+
             htmlDetail &= "<td>" & orderNumber & "</td>" & Environment.NewLine
             htmlDetail &= "<td>" & orderdate & "</td>" & Environment.NewLine
             htmlDetail &= "<td style=""text-align:right"">" & orderTotal & "</td>" & Environment.NewLine
+
+            htmlDetail &= "<td>" & JobNumber & "</td>" & Environment.NewLine
+            htmlDetail &= "<td>" & Jobdate & "</td>" & Environment.NewLine
+            htmlDetail &= "<td style=""text-align:right"">" & JobTotal & "</td>" & Environment.NewLine
+
             htmlDetail &= "<td style=""text-align:right"">" & mtdSales & "</td>" & Environment.NewLine
             htmlDetail &= "<td style=""text-align:right"">" & ytdSales & "</td>" & Environment.NewLine
             htmlDetail &= "</tr>" & Environment.NewLine
@@ -622,6 +665,7 @@ Namespace CustomerActivity
 
                     sql = "Select ARTCUST1.CUST_CODE, ARTCUST1.CUST_NAME, ARTCUST1.SREP_CODE, SOTSREP1.SREP_EMAIL" _
                         & ", ARTCUST6.CUST_LAST_ORDR_NO, ARTCUST6.CUST_LAST_ORDR_DATE, ARTCUST6.CUST_LAST_ORDR_AMT" _
+                        & ", ARTCUST6.CUST_LAST_JOB_NO, ARTCUST6.CUST_LAST_JOB_DATE, ARTCUST6.CUST_LAST_JOB_AMT" _
                         & ", ARTCUST6.CUST_SALES_MTD, ARTCUST6.CUST_SALES_YTD " _
                         & " from ARTCUST1, ARTCUST6, SOTSREP1 " _
                         & " where ARTCUST6.CUST_CODE = ARTCUST1.CUST_CODE" _
@@ -630,7 +674,8 @@ Namespace CustomerActivity
                         & " and ARTCUST1.SREP_CODE IS NOT NULL" _
                         & " and SOTSREP1.SREP_EMAIL IS NOT NULL" _
                         & " and SOTSREP1.SREP_STATUS = 'A'" _
-                        & " AND NVL(ARTCUST6.CUST_LAST_ORDR_DATE, SYSDATE) < :PARM1"
+                        & " and ( NVL(ARTCUST6.CUST_LAST_ORDR_DATE, SYSDATE) < :PARM1" _
+                        & " or NVL(ARTCUST6.CUST_LAST_JOB_DATE, SYSDATE) < :PARM1 )"
 
                     baseClass.Create_TDA(.Tables.Add, "ARTCUST1", sql, 0, False, "D")
 
