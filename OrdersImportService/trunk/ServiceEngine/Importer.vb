@@ -536,6 +536,9 @@ Namespace OrdersImport
 
             Catch ex As Exception
                 RecordLogEntry("ProcessSalesOrders: " & ex.Message)
+            Finally
+                ' Clean up any locks if an error occurs
+                ABSolution.ASCMAIN1.MultiTask_Release(, , 1)
             End Try
 
         End Sub
