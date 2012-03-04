@@ -762,6 +762,7 @@ Namespace OrdersImport
 
             Catch ex As Exception
                 RecordLogEntry("ProcessWebServiceSalesOrders: " & ex.Message)
+                emailErrors(ORDR_SOURCE, 1, ex.Message)
             Finally
                 RecordLogEntry(salesOrdersProcessed & " " & webConnection.ConnectionDescription & " Sales Orders imported")
             End Try
@@ -784,12 +785,16 @@ Namespace OrdersImport
             Dim rowSOTORDRX As DataRow = Nothing
             Dim rowSOTSVIAF As DataRow = Nothing
 
+            Dim ORDR_NO As String = String.Empty
             Dim CUST_CODE As String = String.Empty
             Dim CUST_SHIP_TO_NO As String = String.Empty
             Dim ORDR_LR As String = String.Empty
             Dim custShip As String = String.Empty
             Dim salesOrdersProcessed As Integer = 0
             Dim ITEM_DESC2 As String = String.Empty
+
+            Dim orderNumber As New Hashtable
+            Dim fileNumber As Integer = 0
 
             If testMode Then
                 RecordLogEntry("ProcessEyeFinAquitySalesOrders LocalInDir: " & ftpConnection.LocalInDir)
@@ -847,6 +852,7 @@ Namespace OrdersImport
 
             Catch ex As Exception
                 RecordLogEntry("ProcessEyeFinAquitySalesOrders ftp: " & ex.Message)
+                emailErrors(ORDR_SOURCE, 1, ex.Message)
             Finally
                 Ftp1.Logoff()
                 Ftp1.Dispose()
@@ -857,6 +863,7 @@ Namespace OrdersImport
 
                     orderFileName = My.Computer.FileSystem.GetName(orderFile)
                     RecordLogEntry("Importing file: " & orderFileName)
+                    fileNumber += 1
 
                     Using orderReader As New StreamReader(orderFile)
 
@@ -876,6 +883,22 @@ Namespace OrdersImport
                             orderElements = tempStr.Split(",")
 
                             rowSOTORDRX = dst.Tables("SOTORDRX").NewRow
+
+                            ' '' A file contained and Order No TR and Tr. This is a duplicate in Oracle
+                            ' '' Each one had a LNO 1 and 2 causing a duplicate key error.
+                            ' '' To change Order Number in each file to be unique.
+
+                            'If orderElements(0).Length <= 4 Then
+                            '    ORDR_NO = orderElements(0) & "_" & fileNumber.ToString.Trim
+                            'Else
+                            '    ORDR_NO = orderElements(0)
+                            'End If
+
+                            'If Not orderNumber.ContainsKey(ORDR_NO) Then
+                            '    orderNumber.Add(ORDR_NO, ORDR_NO & "_" & orderNumber.Count.ToString.Trim)
+                            'End If
+
+                            'ORDR_NO = orderNumber.Item(ORDR_NO)
 
                             rowSOTORDRX.Item("ORDR_SOURCE") = ORDR_SOURCE
                             rowSOTORDRX.Item("ORDR_NO") = orderElements(0)
@@ -1091,7 +1114,7 @@ Namespace OrdersImport
 
                 ' If DPD then set the LR
                 ORDR_LR = String.Empty
-                Dim ORDR_NO As String = String.Empty
+                ORDR_NO = String.Empty
                 Dim ORDR_CALLER_NAME As String = String.Empty
                 Dim ORDR_SHIP_COMPLETE As String = String.Empty
                 dst.Tables("SOTORDRX").Rows.Clear()
@@ -1144,6 +1167,7 @@ Namespace OrdersImport
                 Next
             Catch ex As Exception
                 RecordLogEntry("ProcessEyeFinAquitySalesOrders Loop Directory: " & ex.Message)
+                emailErrors(ORDR_SOURCE, 1, ex.Message)
             Finally
                 RecordLogEntry(salesOrdersProcessed & " " & ftpConnection.ConnectionDescription & " Sales Orders imported.")
             End Try
@@ -1482,6 +1506,7 @@ Namespace OrdersImport
                 Next
             Catch ex As Exception
                 RecordLogEntry("ProcessEDISalesOrders: " & ex.Message)
+                emailErrors(ORDR_SOURCE, 1, ex.Message)
             Finally
                 RecordLogEntry(salesOrdersProcessed & " " & ediConnection.ConnectionDescription & " Sales Orders imported.")
             End Try
@@ -1756,6 +1781,7 @@ Namespace OrdersImport
                 Next
             Catch ex As Exception
                 RecordLogEntry("ProcessBLScan: " & ex.Message)
+                emailErrors(ORDR_SOURCE, 1, ex.Message)
             Finally
                 RecordLogEntry(salesOrdersProcessed & " " & ftpConnection.ConnectionDescription & " Sales Orders imported.")
 
@@ -2401,6 +2427,7 @@ Namespace OrdersImport
 
             Catch ex As Exception
                 RecordLogEntry("ProcessOptiPort: " & ex.Message)
+                emailErrors(ORDR_SOURCE, 1, ex.Message)
             Finally
                 RecordLogEntry(salesOrdersProcessed & " " & ftpConnection.ConnectionDescription & " Sales Orders imported.")
                 If testMode Then
@@ -3463,6 +3490,7 @@ Namespace OrdersImport
             Catch ex As Exception
                 CreateSalesOrder = False
                 RecordLogEntry("CreateSalesOrder: " & ex.Message)
+                emailErrors(ORDR_SOURCE, 1, ex.Message)
             End Try
 
         End Function
