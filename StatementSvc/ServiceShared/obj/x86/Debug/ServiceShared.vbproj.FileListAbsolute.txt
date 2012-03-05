@@ -43,3 +43,12 @@ C:\VS\StatementsSvc\ServiceShared\obj\x86\Debug\ServiceShared.vbproj.GenerateRes
 C:\VS\StatementsSvc\ServiceShared\obj\x86\Debug\ServiceShared.dll
 C:\VS\StatementsSvc\ServiceShared\obj\x86\Debug\ServiceShared.xml
 C:\VS\StatementsSvc\ServiceShared\obj\x86\Debug\ServiceShared.pdb
+C:\VS\ODG\StatementsSvc\ServiceShared\bin\x86\Debug\ServiceShared.dll
+C:\VS\ODG\StatementsSvc\ServiceShared\bin\x86\Debug\ServiceShared.pdb
+C:\VS\ODG\StatementsSvc\ServiceShared\bin\x86\Debug\ServiceShared.xml
+C:\VS\ODG\StatementsSvc\ServiceShared\obj\x86\Debug\ResolveAssemblyReference.cache
+C:\VS\ODG\StatementsSvc\ServiceShared\obj\x86\Debug\ServiceShared.Resources.resources
+C:\VS\ODG\StatementsSvc\ServiceShared\obj\x86\Debug\ServiceShared.vbproj.GenerateResource.Cache
+C:\VS\ODG\StatementsSvc\ServiceShared\obj\x86\Debug\ServiceShared.dll
+C:\VS\ODG\StatementsSvc\ServiceShared\obj\x86\Debug\ServiceShared.xml
+C:\VS\ODG\StatementsSvc\ServiceShared\obj\x86\Debug\ServiceShared.pdb

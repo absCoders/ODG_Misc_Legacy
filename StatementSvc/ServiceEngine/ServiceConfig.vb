@@ -20,6 +20,10 @@ Public Class ServiceConfig
     Private sCCEmail As String = String.Empty
     Private sLastTimeExecuted As String = String.Empty
 
+    Private _driveLetter As String = String.Empty
+    Private _driveLetterIP As String = String.Empty
+
+
     Public Sub New()
         'Get settings from folder
 
@@ -46,6 +50,10 @@ Public Class ServiceConfig
                                     sCCEmail = xReader.ReadElementContentAsString()
                                 Case "LastTimeExecuted"
                                     sLastTimeExecuted = xReader.ReadElementContentAsString()
+                                Case "DriveLetter"
+                                    _driveLetter = xReader.ReadElementContentAsString()
+                                Case "DriveLetterIP"
+                                    _driveLetterIP = xReader.ReadElementContentAsString()
                             End Select
                     End Select
                 Loop
@@ -152,6 +160,24 @@ Public Class ServiceConfig
         End Get
         Set(ByVal value As String)
             sLastTimeExecuted = value
+        End Set
+    End Property
+
+    Public Property DriveLetter()
+        Get
+            Return _driveLetter
+        End Get
+        Set(ByVal value)
+            _driveLetter = value
+        End Set
+    End Property
+
+    Public Property DriveLetterIP()
+        Get
+            Return _driveLetterIP
+        End Get
+        Set(ByVal value)
+            _driveLetterIP = value
         End Set
     End Property
 

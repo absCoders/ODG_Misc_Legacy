@@ -66,3 +66,17 @@ C:\VS\StatementsSvc\ServiceEngine\obj\x86\Debug\ServiceEngine.vbproj.GenerateRes
 C:\VS\StatementsSvc\ServiceEngine\obj\x86\Debug\StatementsEmail.dll
 C:\VS\StatementsSvc\ServiceEngine\obj\x86\Debug\StatementsEmail.xml
 C:\VS\StatementsSvc\ServiceEngine\obj\x86\Debug\StatementsEmail.pdb
+C:\VS\ODG\StatementsSvc\ServiceEngine\bin\x86\Debug\StatementsEmail.dll
+C:\VS\ODG\StatementsSvc\ServiceEngine\bin\x86\Debug\StatementsEmail.pdb
+C:\VS\ODG\StatementsSvc\ServiceEngine\bin\x86\Debug\StatementsEmail.xml
+C:\VS\ODG\StatementsSvc\ServiceEngine\bin\x86\Debug\ABS.exe
+C:\VS\ODG\StatementsSvc\ServiceEngine\bin\x86\Debug\TAC.dll
+C:\VS\ODG\StatementsSvc\ServiceEngine\bin\x86\Debug\ABSX.dll
+C:\VS\ODG\StatementsSvc\ServiceEngine\bin\x86\Debug\ABSCS.dll
+C:\VS\ODG\StatementsSvc\ServiceEngine\bin\x86\Debug\TAC.XmlSerializers.dll
+C:\VS\ODG\StatementsSvc\ServiceEngine\obj\x86\Debug\ResolveAssemblyReference.cache
+C:\VS\ODG\StatementsSvc\ServiceEngine\obj\x86\Debug\StatementsEmail.Resources.resources
+C:\VS\ODG\StatementsSvc\ServiceEngine\obj\x86\Debug\ServiceEngine.vbproj.GenerateResource.Cache
+C:\VS\ODG\StatementsSvc\ServiceEngine\obj\x86\Debug\StatementsEmail.dll
+C:\VS\ODG\StatementsSvc\ServiceEngine\obj\x86\Debug\StatementsEmail.xml
+C:\VS\ODG\StatementsSvc\ServiceEngine\obj\x86\Debug\StatementsEmail.pdb

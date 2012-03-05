@@ -225,6 +225,11 @@ Namespace StatementEmail
                 logFilename = String.Empty
                 filefolder = String.Empty
 
+                Dim svcConfig As New ServiceConfig
+                Dim DriveLetter As String = svcConfig.DriveLetter.ToString.ToUpper
+                Dim DriveLetterIP As String = svcConfig.DriveLetterIP.ToString.ToUpper
+                Dim convert As Boolean = DriveLetter.Length > 0 AndAlso DriveLetterIP.Length > 0
+
                 dst = New DataSet
 
                 rowTATMAIL1 = ABSolution.ASCDATA1.GetDataRow("SELECT * FROM TATMAIL1 WHERE EMAIL_KEY = 'SO'")
@@ -355,6 +360,12 @@ Namespace StatementEmail
 
                 ABSolution.ASCMAIN1.Folders("Images") = "S:\ODG\Images\"
 
+                For Each field As String In New String() {"Images"}
+                    If convert And ABSolution.ASCMAIN1.Folders(field).StartsWith(DriveLetter) Then
+                        ABSolution.ASCMAIN1.Folders(field) = ABSolution.ASCMAIN1.Folders(field).Replace(DriveLetter, DriveLetterIP)
+                    End If
+                Next
+
                 If testMode Then RecordLogEntry("Exit InitializeSettings.")
 
                 Return True
@@ -429,6 +440,10 @@ Namespace StatementEmail
                 Dim svcConfig As New ServiceConfig
                 Dim CCemail As String = (svcConfig.CCEmail & String.Empty).ToUpper.Trim
 
+                Dim DriveLetter As String = svcConfig.DriveLetter.ToString.ToUpper
+                Dim DriveLetterIP As String = svcConfig.DriveLetterIP.ToString.ToUpper
+                Dim convert As Boolean = DriveLetter.Length > 0 AndAlso DriveLetterIP.Length > 0
+
                 currentPeriod = ABSolution.ASCMAIN1.Period_Calc(ABSolution.ASCMAIN1.CYP, -1)
 
                 ' Process email statements by customer
@@ -451,6 +466,10 @@ Namespace StatementEmail
                     Dim statementFilename As String = "S:\OSG\" & currentPeriod & "\PDF\" & statementNumber & ".PDF"
                     Dim emailSubject As String = "Statement for " & Mid(currentPeriod, 5, 2) & "/" & Mid(currentPeriod, 1, 4) & _
                             " (Acct# " & CUST_CODE & " " & customerName & ")"
+
+                    If convert And statementFilename.StartsWith(DriveLetter) Then
+                        statementFilename = statementFilename.Replace(DriveLetter, DriveLetterIP)
+                    End If
 
                     If Not My.Computer.FileSystem.FileExists(statementFilename) Then
                         RecordLogEntry("The statement '" & statementFilename & "' for customer (" & CUST_CODE & ")  " & customerName & " cannot be found.")

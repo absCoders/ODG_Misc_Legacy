@@ -7,4 +7,6 @@
   <StatementDay>SUN</StatementDay>
   <CCEmail></CCEmail>
   <LastTimeExecuted>2/27/2012 10:54:07 AM</LastTimeExecuted>
+	<DriveLetter>s:</DriveLetter>
+	<DriveLetterIP>\\192.168.130.201\Shared</DriveLetterIP>
 </SvcConfig>

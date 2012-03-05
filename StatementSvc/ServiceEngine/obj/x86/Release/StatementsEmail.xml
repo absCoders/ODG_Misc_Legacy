@@ -13,11 +13,6 @@ StatementsEmail
 	<value></value>
 	<returns></returns>
 	<remarks></remarks>
-</member><member name="M:StatementsEmail.StatementEmail.StatementEmailer.EmailDocument(System.String,System.String,System.String,System.String,System.String,System.String@,System.String)">
-	<summary>
- Sends an email
- </summary>
-	<remarks></remarks>
 </member><member name="P:StatementsEmail.My.Resources.Resources.ResourceManager">
 	<summary>
   Returns the cached ResourceManager instance used by this class.
@@ -31,6 +26,11 @@ StatementsEmail
 	<summary>
   A strongly-typed resource class, for looking up localized strings, etc.
 </summary>
+</member><member name="M:StatementsEmail.StatementEmail.StatementEmailer.EmailDocument(System.String,System.String,System.String,System.String,System.String,System.String@,System.String)">
+	<summary>
+ Sends an email
+ </summary>
+	<remarks></remarks>
 </member>
 </members>
 </doc>
