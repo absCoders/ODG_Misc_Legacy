@@ -660,7 +660,7 @@ Namespace InvoiceEmail
                 CR_RPT = New CrystalDecisions.CrystalReports.Engine.ReportDocument
                 If My.Computer.FileSystem.FileExists(ReportsFolder & "SORINVC1.rpt") Then
                     CR_RPT.Load(ReportsFolder & "SORINVC1.rpt")
-                    CR_RPT.SetDataSource(baseClass.dst)
+                    CR_RPT.SetDataSource(rptSORINVC1.dst)
 
                     SetStandardReportParameters(CR_RPT, "SORINVC1")
                     SetParameterValue(CR_RPT, "PRE_PRINTED_FORM", "0")
@@ -670,7 +670,7 @@ Namespace InvoiceEmail
                     CR_RPT.Close()
                     CR_RPT.Dispose()
 
-                    outputFilenames &= generatedReport
+                    outputFilenames &= ";" & generatedReport
                 End If
 
                 rptSORINVC1.Close()
