@@ -884,24 +884,21 @@ Namespace OrdersImport
 
                             rowSOTORDRX = dst.Tables("SOTORDRX").NewRow
 
+                            ORDR_NO = orderElements(0) & String.Empty
+
                             ' '' A file contained and Order No TR and Tr. This is a duplicate in Oracle
                             ' '' Each one had a LNO 1 and 2 causing a duplicate key error.
                             ' '' To change Order Number in each file to be unique.
-
-                            'If orderElements(0).Length <= 4 Then
-                            '    ORDR_NO = orderElements(0) & "_" & fileNumber.ToString.Trim
-                            'Else
-                            '    ORDR_NO = orderElements(0)
-                            'End If
-
-                            'If Not orderNumber.ContainsKey(ORDR_NO) Then
-                            '    orderNumber.Add(ORDR_NO, ORDR_NO & "_" & orderNumber.Count.ToString.Trim)
-                            'End If
-
-                            'ORDR_NO = orderNumber.Item(ORDR_NO)
+                            If ORDR_NO.Length <= 4 Then
+                                ORDR_NO = orderElements(0) & "_" & fileNumber.ToString.Trim
+                                If Not orderNumber.ContainsKey(ORDR_NO) Then
+                                    orderNumber.Add(ORDR_NO, ORDR_NO & "_" & orderNumber.Count.ToString.Trim)
+                                End If
+                                ORDR_NO = orderNumber.Item(ORDR_NO)
+                            End If
 
                             rowSOTORDRX.Item("ORDR_SOURCE") = ORDR_SOURCE
-                            rowSOTORDRX.Item("ORDR_NO") = orderElements(0)
+                            rowSOTORDRX.Item("ORDR_NO") = ORDR_NO
                             rowSOTORDRX.Item("ORDR_LNO") = orderElements(1)
                             rowSOTORDRX.Item("EDI_CUST_REF_NO") = TruncateField(orderElements(0), "SOTORDR1", "EDI_CUST_REF_NO")
                             rowSOTORDRX.Item("ORDR_LINE_SOURCE") = ORDR_SOURCE
