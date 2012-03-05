@@ -360,7 +360,7 @@ Namespace StatementEmail
 
                 ABSolution.ASCMAIN1.Folders("Images") = "S:\ODG\Images\"
 
-                For Each field As String In New String() {"Images"}
+                For Each field As String In New String() {"Images", "Archive"}
                     If convert And ABSolution.ASCMAIN1.Folders(field).StartsWith(DriveLetter) Then
                         ABSolution.ASCMAIN1.Folders(field) = ABSolution.ASCMAIN1.Folders(field).Replace(DriveLetter, DriveLetterIP)
                     End If
