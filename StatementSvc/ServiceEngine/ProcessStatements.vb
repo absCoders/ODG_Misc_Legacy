@@ -803,6 +803,7 @@ Namespace StatementEmail
                         & " and ARTCUST6.CUST_CODE = ARTSTMT1.CUST_CODE" _
                         & " and (NVL(ARTSTMT1.TOTAL_DUE, 0) > 0 OR NVL(ARTSTMT1.TYP_ECP, 0) <> 0) " _
                         & " and ARTSTMT1.CUST_STMT_SEND IN ('F','E') and ARTSTMT1.CUST_STMT_SENT IS NULL" _
+                        & " and ARTCUST1.CUST_CLASS_CODE <> 'B2C'" _
                         & " and ARTSTMT1.SREP_CODE = SOTSREP1.SREP_CODE" _
                         & " and SOTSREP1.SREP_CODE IS NOT NULL"
 
