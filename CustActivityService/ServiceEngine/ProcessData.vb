@@ -23,6 +23,11 @@ Namespace CustomerActivity
         Private rowSOTPARM1 As DataRow = Nothing
         Private rowASTUSER1_EMAIL_FROM As DataRow = Nothing
 
+        Private DriveLetter As String = String.Empty
+        Private DriveLetterIP As String = String.Empty
+        Private convert As Boolean = False
+
+
 #End Region
 
 #Region "Instaniate Service"
@@ -55,6 +60,10 @@ Namespace CustomerActivity
                 Dim milTime As String = svcConfig.EmailStartTime
                 Dim emailDay As String = (svcConfig.EmailDay & String.Empty).ToUpper.Trim
                 Dim sLastTimeExecuted As String = (svcConfig.LastTimeExecuted & String.Empty).ToUpper.Trim
+
+                DriveLetter = svcConfig.DriveLetter.ToString.ToUpper
+                DriveLetterIP = svcConfig.DriveLetterIP.ToString.ToUpper
+                convert = DriveLetter.Length > 0 AndAlso DriveLetterIP.Length > 0
 
                 Dim emailStats As Boolean = True
 
@@ -339,7 +348,18 @@ Namespace CustomerActivity
 
                 ABSolution.ASCMAIN1.ActiveForm = baseClass
 
+
+                If Not ABSolution.ASCMAIN1.Folders("Archive").EndsWith("\") Then
+                    ABSolution.ASCMAIN1.Folders("Archive") &= "\"
+                End If
+
                 ABSolution.ASCMAIN1.Folders("Images") = "S:\ODG\Images\"
+
+                For Each field As String In New String() {"Images", "Archive"}
+                    If convert And ABSolution.ASCMAIN1.Folders(field).StartsWith(DriveLetter) Then
+                        ABSolution.ASCMAIN1.Folders(field) = ABSolution.ASCMAIN1.Folders(field).Replace(DriveLetter, DriveLetterIP)
+                    End If
+                Next
 
                 If testMode Then RecordLogEntry("Exit InitializeSettings.")
 
@@ -476,21 +496,26 @@ Namespace CustomerActivity
 
             htmlHeader = "<html>" & Environment.NewLine
             htmlHeader &= "<body>" & Environment.NewLine
-            htmlHeader &= "<style> th { text-align:left; } </style>"
-            htmlHeader &= "<style> td { text-align:left; } </style>"
+            htmlHeader &= "<style> body {font-size:8pt;} </style>" & Environment.NewLine
+            htmlHeader &= "<style> th {text-align:left;white-space:nowrap;border:1px solid black;vertical-align:middle; height:10px; padding:0px 3px 0px 3px;} </style>"
+            htmlHeader &= "<style> td {text-align:left;white-space:nowrap;border:1px solid black;vertical-align:middle; height:10px; padding:0px 3px 0px 3px;} </style>"
+            htmlHeader &= "<style> .first{border-top:none;border-left:none;border-bottom:none;}</style>"
+            htmlHeader &= "<style> .last{border-top:none;border-right:none;border-bottom:none;}</style>"
 
-            htmlHeader &= "<table cellpadding=""5"" cellspacing=""0"" border=""0"">" & Environment.NewLine
+            htmlHeader &= "<table cellpadding=""0"" cellspacing=""0"" style=""border:1px solid black; border-collapse:collapse;"">" & Environment.NewLine
             htmlHeader &= "<tr>" & Environment.NewLine
+            htmlHeader &= "<th class=""first""></th>" & Environment.NewLine
             htmlHeader &= "<th>Customer</th>" & Environment.NewLine
             htmlHeader &= "<th>Name</th>" & Environment.NewLine
-            htmlHeader &= "<th>Order No</th>" & Environment.NewLine
-            htmlHeader &= "<th>Order Date</th>" & Environment.NewLine
-            htmlHeader &= "<th>Order Total</th>" & Environment.NewLine
-            htmlHeader &= "<th>Job No</th>" & Environment.NewLine
-            htmlHeader &= "<th>Job Date</th>" & Environment.NewLine
-            htmlHeader &= "<th>Job Total</th>" & Environment.NewLine
-            htmlHeader &= "<th>MTD Sales</th>" & Environment.NewLine
-            htmlHeader &= "<th>YTD Sales</th>" & Environment.NewLine
+            htmlHeader &= "<th>Order&nbsp;No</th>" & Environment.NewLine
+            htmlHeader &= "<th>Order&nbsp;Date</th>" & Environment.NewLine
+            htmlHeader &= "<th>Order&nbsp;Total</th>" & Environment.NewLine
+            htmlHeader &= "<th>Job&nbsp;No</th>" & Environment.NewLine
+            htmlHeader &= "<th>Job&nbsp;Date</th>" & Environment.NewLine
+            htmlHeader &= "<th>Job&nbsp;Total</th>" & Environment.NewLine
+            htmlHeader &= "<th>MTD&nbsp;Sales</th>" & Environment.NewLine
+            htmlHeader &= "<th>YTD&nbsp;Sales</th>" & Environment.NewLine
+            htmlHeader &= "<th class=""last""></th>" & Environment.NewLine
             htmlHeader &= "</tr>" & Environment.NewLine
 
             Return htmlHeader
@@ -503,7 +528,19 @@ Namespace CustomerActivity
                                          ByVal mtdSales As String, ByVal ytdSales As String) As String
             Dim htmlDetail As String
 
+            If customerCode.Length = 0 Then customerCode = Space(1)
+            If customerName.Length = 0 Then customerName = Space(1)
+            If orderNumber.Length = 0 Then orderNumber = Space(1)
+            If orderdate.Length = 0 Then orderdate = Space(1)
+            If orderTotal.Length = 0 Then orderTotal = Space(1)
+            If JobNumber.Length = 0 Then JobNumber = Space(1)
+            If Jobdate.Length = 0 Then Jobdate = Space(1)
+            If JobTotal.Length = 0 Then JobTotal = Space(1)
+            If mtdSales.Length = 0 Then mtdSales = Space(1)
+            If ytdSales.Length = 0 Then ytdSales = Space(1)
+
             htmlDetail = "<tr>" & Environment.NewLine
+            htmlDetail &= "<td class=""first""></td>" & Environment.NewLine
             htmlDetail &= "<td>" & customerCode & "</td>" & Environment.NewLine
             htmlDetail &= "<td>" & customerName & "</td>" & Environment.NewLine
 
@@ -517,12 +554,12 @@ Namespace CustomerActivity
 
             htmlDetail &= "<td style=""text-align:right"">" & mtdSales & "</td>" & Environment.NewLine
             htmlDetail &= "<td style=""text-align:right"">" & ytdSales & "</td>" & Environment.NewLine
+            htmlDetail &= "<td class=""last""></td>" & Environment.NewLine
             htmlDetail &= "</tr>" & Environment.NewLine
 
             Return htmlDetail
 
         End Function
-
 
         Private Function CreateHtmlFooter() As String
 
@@ -624,7 +661,7 @@ Namespace CustomerActivity
                     smtp.Send(mail)
 
                 Catch ex As Exception
-
+                    RecordLogEntry("Email Non Activity: " & ex.Message)
                 End Try
             End Using
 
