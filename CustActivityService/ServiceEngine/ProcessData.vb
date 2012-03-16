@@ -711,8 +711,12 @@ Namespace CustomerActivity
                         & " and ARTCUST1.SREP_CODE IS NOT NULL" _
                         & " and SOTSREP1.SREP_EMAIL IS NOT NULL" _
                         & " and SOTSREP1.SREP_STATUS = 'A'" _
-                        & " and ( NVL(ARTCUST6.CUST_LAST_ORDR_DATE, SYSDATE) < :PARM1" _
-                        & " or NVL(ARTCUST6.CUST_LAST_JOB_DATE, SYSDATE) < :PARM1 )"
+                        & " AND (" _
+                        & " (NVL(ARTCUST6.CUST_LAST_ORDR_DATE, SYSDATE) < :PARM1 AND NVL(ARTCUST6.CUST_LAST_ORDR_DATE, SYSDATE) > add_months(SYSDATE, -1))" _
+                        & " or " _
+                        & " (NVL(ARTCUST6.CUST_LAST_JOB_DATE, SYSDATE) < :PARM1 AND NVL(ARTCUST6.CUST_LAST_JOB_DATE, SYSDATE) > add_months(SYSDATE, -1))" _
+                        & " )"
+
 
                     baseClass.Create_TDA(.Tables.Add, "ARTCUST1", sql, 0, False, "D")
 
