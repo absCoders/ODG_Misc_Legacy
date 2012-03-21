@@ -499,12 +499,30 @@ Namespace OrdersImport
                     ' Make sure there is an Entry in ASTNOTE1 for each Ordr Source
                     ' *****************************************************************************
                     Select Case ORDR_SOURCE
-                        Case "X", "Y", "D" ' Web Service - (X) 800 Anylens, (Y) Eyeconic, (D) DBVision
+                        Case "Y"  ' (Y) Eyeconic
                             ProcessWebServiceSalesOrders(ORDR_SOURCE)
+
+                        Case "X" ' AnyLens (A), DBVISION (D), 
+                            '   do not grab Y for eyeconic. There order source is 'Y' it is a differnt import
+                            '   do not grab O for OptiPort. There order source is 'O' it is a differnt import
+                            For Each row As DataRow In ABSolution.ASCDATA1.GetDataTable("SELECT ORDR_LINE_SOURCE FROM XMTXREF1 WHERE ORDR_SOURCE = 'X' AND ORDR_LINE_SOURCE NOT IN ('Y, 'O')").Rows
+                                ProcessWebServiceSalesOrders(row.Item("ORDR_LINE_SOURCE") & String.Empty)
+
+                                If ImportErrorNotification.Keys.Count > 0 Then
+                                    For Each Item As DictionaryEntry In ImportErrorNotification
+                                        emailErrors(Item.Key, Item.Value)
+                                    Next
+                                End If
+
+                                ImportErrorNotification.Clear()
+                            Next
+
                         Case "U", "F" ' (U) AcuityLogic, (F) eyeFinity - Replaces SOFORDRF
                             ProcessEyeFinAquitySalesOrders(ORDR_SOURCE)
+
                         Case "E" 'EDI - (S) Spectera
                             ProcessEDISalesOrders(ORDR_SOURCE)
+
                         Case "B" ' US Vision Care Scan
                             ProcessBLScan(ORDR_SOURCE)
                             ' The sales order has an E as the order source
@@ -512,10 +530,12 @@ Namespace OrdersImport
                                 ImportErrorNotification.Add("B", ImportErrorNotification.Item("E"))
                                 ImportErrorNotification.Remove("E")
                             End If
+
                         Case "V" 'Vision Web
                             ProcessVisionWebSalesOrders(ORDR_SOURCE)
                             System.Threading.Thread.Sleep(2000)
                             ExportVisionWebStatus()
+
                         Case "O" ' Optiport
                             ProcessOptiportSalesOrders(ORDR_SOURCE)
                     End Select
@@ -559,7 +579,7 @@ Namespace OrdersImport
             End Try
         End Sub
 
-        Private Sub ProcessWebServiceSalesOrders(ByVal ORDR_SOURCE As String)
+        Private Sub ProcessWebServiceSalesOrders(ByVal sqlOrdrLineSource As String)
 
             Dim rowSOTORDRX As DataRow = Nothing
             Dim salesOrdersProcessed As Int16 = 0
@@ -574,15 +594,13 @@ Namespace OrdersImport
             Dim CALLER_NAME As String = String.Empty
             Dim ORDR_SHIP_COMPLETE As String = String.Empty
             Dim sql As String = String.Empty
-            Dim webConnection As New Connection(ORDR_SOURCE)
-            Dim sqlOrdrLineSource As String = String.Empty
+            Dim webConnection As New Connection(sqlOrdrLineSource)
+
+            ' Always X in this module. The Order Line Source determines the customer
+            Dim ORDR_SOURCE As String = "X"
 
             Try
                 If testMode Then RecordLogEntry("Enter ProcessWebServiceSalesOrders.")
-
-                ' Need to convert Any Lens (X) in SOTPARMP to an (A) for XMTXREF1
-                sqlOrdrLineSource = ORDR_SOURCE
-                If ORDR_SOURCE = "X" Then sqlOrdrLineSource = "A"
 
                 sql = "SELECT * FROM XSTORDR1 WHERE NVL(PROCESS_IND, '0') = '0'"
                 sql &= " AND ORDR_SOURCE = (SELECT XML_ORDR_SOURCE FROM XMTXREF1 WHERE ORDR_LINE_SOURCE = '" & sqlOrdrLineSource & "')"
@@ -599,7 +617,6 @@ Namespace OrdersImport
                     ORDR_LNO = 0
                     XML_ORDR_SOURCE = rowXSTORDR1.Item("ORDR_SOURCE") & String.Empty
 
-                    ' rowXSTORDR1.Item("ORDR_SOURCE") examples: VSP, AnyLens
                     If dst.Tables("XMTXREF1").Select("XML_ORDR_SOURCE = '" & XML_ORDR_SOURCE & "'", "").Length = 0 Then
                         RecordLogEntry("ORDR_SOURCE not found in XMTXREF1 for XS_DOC_SEQ_NO: " & rowXSTORDR1.Item("XS_DOC_SEQ_NO"))
                         rowXSTORDR1.Item("PROCESS_IND") = "E"
