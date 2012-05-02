@@ -795,7 +795,7 @@ Namespace StatementEmail
                 With dst
 
                     sql = "Select ARTSTMT1.*, ARTCUST1.CUST_NAME, SOTSREP1.SREP_EMAIL" _
-                        & ", ARTCUST1.CUST_CONTACT, ARTCUST1.CUST_EMAIL, ARTCUST1.CUST_PHONE, ARTCUST1.CUST_FAX" _
+                        & ", ARTCUST1.CUST_CONTACT, NVL(ARTCUST1.CUST_STMT_EMAIL, ARTCUST1.CUST_EMAIL) CUST_EMAIL, ARTCUST1.CUST_PHONE, ARTCUST1.CUST_FAX" _
                         & ", ARTCUST6.CUST_LAST_PMT_REF, ARTCUST6.CUST_LAST_PMT_DATE, ARTCUST6.CUST_LAST_PMT_AMT" _
                         & " from ARTSTMT1, ARTCUST1, ARTCUST6, SOTSREP1 " _
                         & " where ARTSTMT1.OPS_YYYYPP = :PARM1" _
