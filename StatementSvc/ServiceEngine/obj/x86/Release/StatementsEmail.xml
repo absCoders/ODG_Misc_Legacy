@@ -31,6 +31,11 @@ StatementsEmail
  Sends an email
  </summary>
 	<remarks></remarks>
+</member><member name="M:StatementsEmail.StatementEmail.StatementEmailer.ACHBillingStatements">
+	<summary>
+ Create Monthly Statement ACH Auto Pay Entries
+ </summary>
+	<remarks></remarks>
 </member>
 </members>
 </doc>
