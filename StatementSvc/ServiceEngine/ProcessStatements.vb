@@ -136,6 +136,28 @@ Namespace StatementEmail
                 emailInProcess = False
             End Try
 
+            ' Create ACH Auto Payments
+            Try
+                Dim rowARTPARMA As DataRow = ABSolution.ASCDATA1.GetDataRow("Select * from ARTPARMA where AR_PARM_KEY = 'Z'")
+                If rowARTPARMA IsNot Nothing AndAlso rowARTPARMA.Item("AR_PARM_LAST_OPS_YYYYPP") & String.Empty <> String.Empty Then
+                    Dim AR_PARM_LAST_OPS_YYYYPP As String = rowARTPARMA.Item("AR_PARM_LAST_OPS_YYYYPP") & String.Empty
+
+                    If AR_PARM_LAST_OPS_YYYYPP.Length = 0 Then
+                        RecordLogEntry("ACH Last Processing Period not setup in ARTPARMA")
+                    ElseIf Val(AR_PARM_LAST_OPS_YYYYPP) >= Val(ABSolution.ASCMAIN1.CYP) Then
+                        RecordLogEntry("Statement ACH processing was previously completed for the current period.")
+                    Else
+                        ' Start Processing Monthly ACH Statement Billings
+                        ACHBillingStatements()
+                    End If
+                Else
+                    RecordLogEntry("ACH Last Processing Period not setup in ARTPARMA")
+                End If
+
+            Catch ex As Exception
+                RecordLogEntry("MainProcess (Call to ACH Processing): " & ex.Message)
+            End Try
+
         End Sub
 
         Public Sub LogIn()
@@ -758,6 +780,112 @@ Namespace StatementEmail
             End Try
 
         End Function
+
+        ''' <summary>
+        ''' Create Monthly Statement ACH Auto Pay Entries
+        ''' </summary>
+        ''' <remarks></remarks>
+        Private Sub ACHBillingStatements()
+
+            Dim ictr As Int16 = 0
+            Dim sqlserverConnection As Boolean = False
+            Dim clsASCSQLS1 As ABSolution.ASCSQLS1 = New ABSolution.ASCSQLS1
+
+            Try
+
+                Dim sql As String = String.Empty
+                Dim connectionString As String = String.Empty
+                Dim siteConnectionString As String = String.Empty
+                Dim rowWBTPARM1 As DataRow = ABSolution.ASCDATA1.GetDataRow("SELECT * FROM WBTPARM1")
+                Dim rowARTPARMA As DataRow = ABSolution.ASCDATA1.GetDataRow("SELECT * FROM ARTPARMA")
+
+                Dim AR_PARM_ACH_PYMT_DAY As Int16 = Val(rowARTPARMA.Item("AR_PARM_ACH_PYMT_DAY") & String.Empty)
+                Dim PYMT_DATE As Date = DateTime.Now
+
+                If AR_PARM_ACH_PYMT_DAY <= 0 Then AR_PARM_ACH_PYMT_DAY = 7
+
+                sql = "SELECT PRD_END_DATE FROM GLTPARM2 WHERE OPS_YYYYPP = '" & ABSolution.ASCMAIN1.CYP & "'"
+                Dim rowGLTPARM2 As DataRow = ABSolution.ASCDATA1.GetDataRow(sql)
+                If rowGLTPARM2 Is Nothing Then
+                    RecordLogEntry("ACHBillingStatements: Could not find GLTAPRM2 entry for period: " & ABSolution.ASCMAIN1.CYP & " .")
+                    Exit Sub
+                End If
+
+                Dim PRD_END_DATE As Date = CDate(rowGLTPARM2.Item("PRD_END_DATE"))
+                Dim PRD_END_DATE_str = PRD_END_DATE.ToString("MM") & "/" & AR_PARM_ACH_PYMT_DAY & "/" & PRD_END_DATE.ToString("yyyy")
+
+                sql = " SELECT '0' SELECTED, 'A' PYMT_TYPE, 'P' PYMT_STATUS, ARTCUSPA.ACH_ACCT_ID,"
+                sql = sql & " ARTCUST1.CUST_CODE,  ARTCUST1.CUST_NAME, ARTCUST1.SREP_CODE,"
+                sql = sql & " ARTSTMT1.TOTAL_DUE PYMT_AMT, ARTCUSPA.WEB_IND, ARTCUSPA.ACH_ACCT_TYPE_ID"
+                sql = sql & " FROM ARTSTMT1, ARTCUST1, ARTCUSPA"
+                sql = sql & " WHERE ARTSTMT1.CUST_CODE = ARTCUST1.CUST_CODE"
+                sql = sql & " AND ARTCUSPA.CUST_CODE = ARTCUST1.CUST_CODE"
+                sql = sql & " AND ARTSTMT1.OPS_YYYYPP = :PARM1"
+                sql = sql & " AND ARTCUST1.CUST_AUTO_CCPA = '3'"
+                sql = sql & " AND ARTCUSPA.ACH_AUTO_PAY_IND = '1'"
+                sql = sql & " AND ARTCUSPA.ACH_ACCT_TYPE_ID IN ('1', '2')"
+                sql = sql & " AND ARTCUSPA.ACH_ACCT_STATUS = 'A'"
+
+                Dim tblARTPYMTW As DataTable = ABSolution.ASCDATA1.GetDataTable(sql, "", "V", New Object() {ABSolution.ASCMAIN1.CYP})
+
+                If tblARTPYMTW Is Nothing OrElse tblARTPYMTW.Rows.Count = 0 Then
+                    Exit Sub
+                End If
+
+                connectionString = "Server=" & rowWBTPARM1.Item("WB_PARM_WEB_IP_ADDRESS") & ";" & _
+                    "Initial Catalog=" & rowWBTPARM1.Item("WB_PARM_WEB_INITIAL_CATALOG") & ";" & _
+                    "User Id=" & rowWBTPARM1.Item("WB_PARM_WEB_UID") & ";Password=" & rowWBTPARM1.Item("WB_PARM_WEB_PWD")
+                clsASCSQLS1.sqlServerConnection = New SqlClient.SqlConnection(connectionString)
+                clsASCSQLS1.sqlServerConnection.Open()
+
+                If clsASCSQLS1.sqlServerConnection.State <> ConnectionState.Open Then
+                    RecordLogEntry("ACHBillingStatements: Error connecting to SQL Server: Could not open connection.")
+                    Exit Sub
+                End If
+
+                sqlserverConnection = True
+                baseClass.BeginTrans()
+                clsASCSQLS1.sqlServerBeginTrans()
+
+                For Each rowARTPYMTW As DataRow In tblARTPYMTW.Rows
+
+                    Dim PYMT_TYPE As String = rowARTPYMTW.Item("PYMT_TYPE") & String.Empty
+                    Dim ACH_ACCT_ID As String = rowARTPYMTW.Item("ACH_ACCT_ID") & String.Empty
+                    Dim PYMT_AMT As Decimal = Val(rowARTPYMTW.Item("PYMT_AMT") & String.Empty)
+
+                    sql = "Insert Into abs_ARTPYMTW"
+                    sql &= " (PYMT_TYPE, ACH_ACCT_ID, CC_ACCT_ID, PYMT_DATE, PYMT_STATUS, PYMT_AMT)"
+                    sql &= " Values"
+                    sql &= " ("
+                    sql &= "'" & PYMT_TYPE & "',"
+                    sql &= ACH_ACCT_ID & ","
+                    sql &= " NULL,"
+                    sql &= "'" & PRD_END_DATE_str & "',"
+                    sql &= "'" & ABSolution.ASCMAIN1.GetEnumChar(ABSolution.ASCMAIN1.ACH_Statuses.Pending) & "',"
+                    sql &= PYMT_AMT
+                    sql &= " )"
+                    clsASCSQLS1.sqlSvrExecuteSQL(sql)
+                    ictr += 1
+                Next
+
+                ' Update Oracle first to prevent double processing if sqlServer bombs out
+                baseClass.CommitTrans()
+                clsASCSQLS1.sqlServerCommitTrans()
+
+            Catch ex As Exception
+
+                If sqlserverConnection Then
+                    baseClass.Rollback()
+                    clsASCSQLS1.sqlServerRollback()
+                End If
+                RecordLogEntry("ACHBillingStatements: " & ex.Message)
+
+            Finally
+                RecordLogEntry("ACHBillingStatements: " & ictr & " entries created for ACH Monthly Statement Processing.")
+
+            End Try
+
+        End Sub
 
 #End Region
 
