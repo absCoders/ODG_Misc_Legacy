@@ -131,9 +131,6 @@ Namespace StatementEmail
                 RecordLogEntry("MainProcess: " & ex.Message)
 
             Finally
-                RecordLogEntry("Closing Log file.")
-                CloseLog()
-                emailInProcess = False
             End Try
 
             ' Create ACH Auto Payments
@@ -156,6 +153,15 @@ Namespace StatementEmail
 
             Catch ex As Exception
                 RecordLogEntry("MainProcess (Call to ACH Processing): " & ex.Message)
+            End Try
+
+            Try
+                RecordLogEntry("Closing Log file.")
+                CloseLog()
+                emailInProcess = False
+
+            Catch ex As Exception
+
             End Try
 
         End Sub
@@ -826,7 +832,8 @@ Namespace StatementEmail
                 sql = sql & " AND ARTCUSPA.ACH_ACCT_TYPE_ID IN ('1', '2')"
                 sql = sql & " AND ARTCUSPA.ACH_ACCT_STATUS = 'A'"
 
-                Dim tblARTPYMTW As DataTable = ABSolution.ASCDATA1.GetDataTable(sql, "", "V", New Object() {ABSolution.ASCMAIN1.CYP})
+                Dim OPS_YYYYPP As String = ABSolution.ASCMAIN1.Period_Calc(ABSolution.ASCMAIN1.CYP, -1)
+                Dim tblARTPYMTW As DataTable = ABSolution.ASCDATA1.GetDataTable(sql, "", "V", New Object() {OPS_YYYYPP})
 
                 If tblARTPYMTW Is Nothing OrElse tblARTPYMTW.Rows.Count = 0 Then
                     Exit Sub
@@ -854,7 +861,7 @@ Namespace StatementEmail
                     Dim PYMT_AMT As Decimal = Val(rowARTPYMTW.Item("PYMT_AMT") & String.Empty)
 
                     sql = "Insert Into abs_ARTPYMTW"
-                    sql &= " (PYMT_TYPE, ACH_ACCT_ID, CC_ACCT_ID, PYMT_DATE, PYMT_STATUS, PYMT_AMT)"
+                    sql &= " (PYMT_TYPE, ACH_ACCT_ID, CC_ACCT_ID, PYMT_DATE, PYMT_STATUS, PYMT_AMT, AUTO_PAY)"
                     sql &= " Values"
                     sql &= " ("
                     sql &= "'" & PYMT_TYPE & "',"
@@ -863,12 +870,13 @@ Namespace StatementEmail
                     sql &= "'" & PRD_END_DATE_str & "',"
                     sql &= "'" & ABSolution.ASCMAIN1.GetEnumChar(ABSolution.ASCMAIN1.ACH_Statuses.Pending) & "',"
                     sql &= PYMT_AMT
-                    sql &= " )"
+                    sql &= ", '1')"
                     clsASCSQLS1.sqlSvrExecuteSQL(sql)
                     ictr += 1
                 Next
 
                 ' Update Oracle first to prevent double processing if sqlServer bombs out
+                ABSolution.ASCDATA1.ExecuteSQL("UPDATE ARTPARMA SET AR_PARM_LAST_OPS_YYYYPP = '" & ABSolution.ASCMAIN1.CYP & "'")
                 baseClass.CommitTrans()
                 clsASCSQLS1.sqlServerCommitTrans()
 
