@@ -24,6 +24,9 @@ Namespace StatementEmail
         Private rowGLTPARM1 As DataRow = Nothing
         Private currentPeriod As String = String.Empty
 
+        Private sqlServerKey As String = "TestKey"
+        Private sqlServerKeyPassword As String = "password"
+
 #End Region
 
 #Region "Instaniate Service"
@@ -156,12 +159,17 @@ Namespace StatementEmail
             End Try
 
             Try
+                CreateSqlServerCreditCardStatementPayments()
+            Catch ex As Exception
+                RecordLogEntry("MainProcess (Call to CC Processing): " & ex.Message)
+            End Try
+
+            Try
                 RecordLogEntry("Closing Log file.")
                 CloseLog()
                 emailInProcess = False
-
             Catch ex As Exception
-
+                ' Nothing
             End Try
 
         End Sub
@@ -821,16 +829,17 @@ Namespace StatementEmail
                 Dim PRD_END_DATE_str = PRD_END_DATE.ToString("MM") & "/" & AR_PARM_ACH_PYMT_DAY & "/" & PRD_END_DATE.ToString("yyyy")
 
                 sql = " SELECT '0' SELECTED, 'A' PYMT_TYPE, 'P' PYMT_STATUS, ARTCUSPA.ACH_ACCT_ID,"
-                sql = sql & " ARTCUST1.CUST_CODE,  ARTCUST1.CUST_NAME, ARTCUST1.SREP_CODE,"
-                sql = sql & " ARTSTMT1.TOTAL_DUE PYMT_AMT, ARTCUSPA.WEB_IND, ARTCUSPA.ACH_ACCT_TYPE_ID"
-                sql = sql & " FROM ARTSTMT1, ARTCUST1, ARTCUSPA"
-                sql = sql & " WHERE ARTSTMT1.CUST_CODE = ARTCUST1.CUST_CODE"
-                sql = sql & " AND ARTCUSPA.CUST_CODE = ARTCUST1.CUST_CODE"
-                sql = sql & " AND ARTSTMT1.OPS_YYYYPP = :PARM1"
-                sql = sql & " AND ARTCUST1.CUST_AUTO_CCPA = '3'"
-                sql = sql & " AND ARTCUSPA.ACH_AUTO_PAY_IND = '1'"
-                sql = sql & " AND ARTCUSPA.ACH_ACCT_TYPE_ID IN ('1', '2')"
-                sql = sql & " AND ARTCUSPA.ACH_ACCT_STATUS = 'A'"
+                sql &= " ARTCUST1.CUST_CODE,  ARTCUST1.CUST_NAME, ARTCUST1.SREP_CODE,"
+                sql &= " ARTSTMT1.TOTAL_DUE PYMT_AMT, ARTCUSPA.WEB_IND, ARTCUSPA.ACH_ACCT_TYPE_ID"
+                sql &= " FROM ARTSTMT1, ARTCUST1, ARTCUSPA"
+                sql &= " WHERE ARTSTMT1.CUST_CODE = ARTCUST1.CUST_CODE"
+                sql &= " AND ARTCUSPA.CUST_CODE = ARTCUST1.CUST_CODE"
+                sql &= " AND ARTSTMT1.OPS_YYYYPP = :PARM1"
+                sql &= " AND ARTCUST1.CUST_AUTO_CCPA = '3'"
+                sql &= " AND ARTCUSPA.ACH_AUTO_PAY_IND = '1'"
+                sql &= " AND ARTCUSPA.ACH_ACCT_TYPE_ID IN ('1', '2')"
+                sql &= " AND ARTCUSPA.ACH_ACCT_STATUS = 'A'"
+                sql &= " AND NVL(ARTSTMT1.TOTAL_DUE, 0) > 0"
 
                 Dim OPS_YYYYPP As String = ABSolution.ASCMAIN1.Period_Calc(ABSolution.ASCMAIN1.CYP, -1)
                 Dim tblARTPYMTW As DataTable = ABSolution.ASCDATA1.GetDataTable(sql, "", "V", New Object() {OPS_YYYYPP})
@@ -861,7 +870,7 @@ Namespace StatementEmail
                     Dim PYMT_AMT As Decimal = Val(rowARTPYMTW.Item("PYMT_AMT") & String.Empty)
 
                     sql = "Insert Into abs_ARTPYMTW"
-                    sql &= " (PYMT_TYPE, ACH_ACCT_ID, CC_ACCT_ID, PYMT_DATE, PYMT_STATUS, PYMT_AMT, AUTO_PAY)"
+                    sql &= " (PYMT_TYPE, ACH_ACCT_ID, CC_ACCT_ID, PYMT_DATE, PYMT_STATUS, PYMT_AMT, AUTO_PAY, OPS_YYYYPP)"
                     sql &= " Values"
                     sql &= " ("
                     sql &= "'" & PYMT_TYPE & "',"
@@ -870,7 +879,9 @@ Namespace StatementEmail
                     sql &= "'" & PRD_END_DATE_str & "',"
                     sql &= "'" & ABSolution.ASCMAIN1.GetEnumChar(ABSolution.ASCMAIN1.ACH_Statuses.Pending) & "',"
                     sql &= PYMT_AMT
-                    sql &= ", '1')"
+                    sql &= ", '1',"
+                    sql &= "'" & OPS_YYYYPP & "'"
+                    sql &= ")"
                     clsASCSQLS1.sqlSvrExecuteSQL(sql)
                     ictr += 1
                 Next
@@ -895,6 +906,266 @@ Namespace StatementEmail
 
         End Sub
 
+        ''' <summary>
+        ''' Create abs_ARTPYMTW, ARTPTYTM, ARTCCPA*
+        ''' </summary>
+        ''' <remarks></remarks>
+        Private Sub CreateSqlServerCreditCardStatementPayments()
+
+            Dim ictr As Int16 = 0
+            Dim sqlserverTransaction As Boolean = False
+            Dim oracleTransaction As Boolean = False
+            Dim clsASCSQLS1 As ABSolution.ASCSQLS1 = New ABSolution.ASCSQLS1
+            Dim decrypt As New TAC.ASCSCRTY
+
+            Dim rowARTPYMTW As DataRow = Nothing
+            Dim rowARTCUST1 As DataRow = Nothing
+            Dim CUST_CREDIT_CARD_LAST4 As String = String.Empty
+
+            Try
+
+                Dim sql As String = String.Empty
+                Dim connectionString As String = String.Empty
+                Dim siteConnectionString As String = String.Empty
+                Dim rowWBTPARM1 As DataRow = ABSolution.ASCDATA1.GetDataRow("SELECT * FROM WBTPARM1")
+                Dim rowARTPARMA As DataRow = ABSolution.ASCDATA1.GetDataRow("SELECT * FROM ARTPARMA")
+
+                Dim AR_PARM_ACH_PYMT_DAY As Int16 = Val(rowARTPARMA.Item("AR_PARM_ACH_PYMT_DAY") & String.Empty)
+                Dim PYMT_DATE As Date = DateTime.Now
+
+                If AR_PARM_ACH_PYMT_DAY <= 0 Then AR_PARM_ACH_PYMT_DAY = 7
+
+                sql = "SELECT PRD_END_DATE FROM GLTPARM2 WHERE OPS_YYYYPP = '" & ABSolution.ASCMAIN1.CYP & "'"
+                Dim rowGLTPARM2 As DataRow = ABSolution.ASCDATA1.GetDataRow(sql)
+                If rowGLTPARM2 Is Nothing Then
+                    RecordLogEntry("CreateCreditCardStatementPayments: Could not find GLTAPRM2 entry for period: " & ABSolution.ASCMAIN1.CYP & " .")
+                    Exit Sub
+                End If
+
+                Dim PRD_END_DATE As Date = CDate(rowGLTPARM2.Item("PRD_END_DATE"))
+                Dim PRD_END_DATE_str = PRD_END_DATE.ToString("MM") & "/" & AR_PARM_ACH_PYMT_DAY & "/" & PRD_END_DATE.ToString("yyyy")
+
+                sql = "  SELECT '0' PROCESSED, 'C' PYMT_TYPE, 'P' PYMT_STATUS,"
+                sql &= " ARTCUST1.CUST_CODE,  ARTCUST1.CUST_NAME, ARTCUST1.SREP_CODE,"
+                sql &= " ARTSTMT1.TOTAL_DUE PYMT_AMT, ARTCUSPC.*"
+                sql &= " FROM ARTSTMT1, ARTCUST1, ARTCUSPC"
+                sql &= " WHERE ARTSTMT1.CUST_CODE = ARTCUST1.CUST_CODE"
+                sql &= " AND ARTCUSPC.CUST_CODE = ARTCUST1.CUST_CODE"
+                sql &= " AND ARTSTMT1.OPS_YYYYPP = :PARM1"
+                sql &= " AND ARTCUST1.CUST_AUTO_CCPA = '2'"
+                sql &= " AND ARTCUSPC.CC_AUTO_PAY_IND = '1'"
+                sql &= " AND ARTCUSPC.CC_STATUS = 'A'"
+                sql &= " AND ARTCUSPC.CC_TYPE_ID IN ('1', '2')"
+                sql &= " AND NVL(ARTSTMT1.TOTAL_DUE, 0) > 0"
+
+                Dim OPS_YYYYPP As String = ABSolution.ASCMAIN1.Period_Calc(ABSolution.ASCMAIN1.CYP, -1)
+                Dim tblARTPYMTW As DataTable = ABSolution.ASCDATA1.GetDataTable(sql, "", "V", New Object() {OPS_YYYYPP})
+
+                If tblARTPYMTW Is Nothing OrElse tblARTPYMTW.Rows.Count = 0 Then
+                    RecordLogEntry("CreateCreditCardStatementPayments: No credit card Staement entries.")
+                    Exit Sub
+                End If
+
+                connectionString = "Server=" & rowWBTPARM1.Item("WB_PARM_WEB_IP_ADDRESS") & ";" & _
+                    "Initial Catalog=" & rowWBTPARM1.Item("WB_PARM_WEB_INITIAL_CATALOG") & ";" & _
+                    "User Id=" & rowWBTPARM1.Item("WB_PARM_WEB_UID") & ";Password=" & rowWBTPARM1.Item("WB_PARM_WEB_PWD")
+                clsASCSQLS1.sqlServerConnection = New SqlClient.SqlConnection(connectionString)
+                clsASCSQLS1.sqlServerConnection.Open()
+
+                If clsASCSQLS1.sqlServerConnection.State <> ConnectionState.Open Then
+                    RecordLogEntry("CreateCreditCardStatementPayments: Error connecting to SQL Server: Could not open connection.")
+                    Exit Sub
+                End If
+
+                sqlserverTransaction = True
+                clsASCSQLS1.sqlServerBeginTrans()
+
+                ' Create Entry in Sql Server 
+                Dim PYMT_TYPE As String = String.Empty
+                Dim CC_ACCT_ID As String = String.Empty
+                Dim PYMT_AMT As Decimal = 0
+
+                For Each rowARTPYMTW In tblARTPYMTW.Rows
+                    PYMT_TYPE = rowARTPYMTW.Item("PYMT_TYPE") & String.Empty
+                    CC_ACCT_ID = rowARTPYMTW.Item("CC_ACCT_ID") & String.Empty
+                    PYMT_AMT = Val(rowARTPYMTW.Item("PYMT_AMT") & String.Empty)
+
+                    sql = "Insert Into abs_ARTPYMTW"
+                    sql &= " (PYMT_TYPE, ACH_ACCT_ID, CC_ACCT_ID, PYMT_DATE, PYMT_STATUS, PYMT_AMT, AUTO_PAY, OPS_YYYYPP)"
+                    sql &= " Values"
+                    sql &= " ("
+                    sql &= "'" & PYMT_TYPE & "',"
+                    sql &= " NULL,"
+                    sql &= CC_ACCT_ID & ","
+                    sql &= "'" & PRD_END_DATE_str & "',"
+                    sql &= "'" & ABSolution.ASCMAIN1.GetEnumChar(ABSolution.ASCMAIN1.ACH_Statuses.InProcess) & "',"
+                    sql &= PYMT_AMT
+                    sql &= ", '1',"
+                    sql &= "'" & OPS_YYYYPP & "'"
+                    sql &= ")"
+                    clsASCSQLS1.sqlSvrExecuteSQL(sql)
+                    ictr += 1
+                Next
+
+                ' Commit Entries in Sql Server
+                Try
+                    clsASCSQLS1.sqlServerCommitTrans()
+                    sqlserverTransaction = False
+                Catch ex As Exception
+                    If sqlserverTransaction Then
+                        clsASCSQLS1.sqlServerRollback()
+                    End If
+                Finally
+                    sqlserverTransaction = False
+                End Try
+
+                ' Place the entries in Oracle
+                dst.Tables("ARTPYMTW").Rows.Clear()
+                dst.Tables("ARTCCPA1").Rows.Clear()
+
+                sql = " OPEN SYMMETRIC KEY " & sqlServerKey & " DECRYPTION BY PASSWORD = '" & sqlServerKeyPassword & "';"
+
+                sql &= " SELECT abs_ARTPYMTW.*, abs_ARTCUSPC.CUST_CODE"
+                sql &= " FROM abs_ARTPYMTW, abs_ARTCUSPC"
+                sql &= " WHERE abs_ARTPYMTW.CC_ACCT_ID = abs_ARTCUSPC.CC_ACCT_ID"
+                sql &= " AND abs_ARTPYMTW.PYMT_STATUS = '" & ABSolution.ASCMAIN1.GetEnumChar(ABSolution.ASCMAIN1.ACH_Statuses.InProcess) & "'"
+                sql &= " AND AUTO_PAY = '1'"
+                sql &= " AND OPS_YYYYPP = '" & OPS_YYYYPP & "'"
+                sql &= " AND PYMT_TYPE = 'C';"
+
+                sql &= " CLOSE SYMMETRIC KEY " & sqlServerKey & ";"
+
+                For Each rowAbsArtpymtw As DataRow In clsASCSQLS1.sqlSvrGetDataTable(sql).Rows
+                    CC_ACCT_ID = rowAbsArtpymtw.Item("CC_ACCT_ID") & String.Empty
+
+                    If tblARTPYMTW.Select("CC_ACCT_ID = " & CC_ACCT_ID, String.Empty).Length = 0 Then
+                        RecordLogEntry("CreateCreditCardStatementPayments: Unable to find CC Acct ID: " & CC_ACCT_ID)
+                        Continue For
+                    End If
+
+                    ' Done incase one DR owns may locations
+                    tblARTPYMTW.Columns("PROCESSED").ReadOnly = False
+                    For Each rowARTPYMTWX As DataRow In tblARTPYMTW.Select("CC_ACCT_ID = " & CC_ACCT_ID, String.Empty)
+                        rowARTPYMTWX.Item("PROCESSED") = "1"
+                        ' Create ARTPYMTW
+                        rowARTPYMTW = dst.Tables("ARTPYMTW").NewRow
+                        rowARTPYMTW("PYMT_ID") = rowAbsArtpymtw.Item("PYMT_ID")
+                        rowARTPYMTW("PYMT_TYPE") = "C"
+                        'rowARTPYMTW("ACH_ACCT_ID") = System.DBNull.Value
+                        rowARTPYMTW("CC_ACCT_ID") = CC_ACCT_ID
+                        rowARTPYMTW("PYMT_DATE") = rowAbsArtpymtw.Item("PYMT_DATE")
+                        rowARTPYMTW("PYMT_STATUS") = "P"
+                        rowARTPYMTW("PYMT_AMT") = rowAbsArtpymtw.Item("PYMT_AMT")
+                        rowARTPYMTW("CUST_CODE") = rowARTPYMTWX("CUST_CODE")
+                        'rowARTPYMTW("CUST_SHIP_TO_NO") = System.DBNull.Value
+                        'rowARTPYMTW("ACH_ROUTING_NO") = ""
+                        'rowARTPYMTW("ACH_ACCT_NO") = ""
+                        rowARTPYMTW("CC_NO") = rowARTPYMTWX("CC_NO")
+                        rowARTPYMTW("CC_EXP_DATE") = rowARTPYMTWX("CC_EXP_DATE")
+                        rowARTPYMTW("CC_NAME") = rowARTPYMTWX.Item("CC_NAME") & String.Empty
+                        rowARTPYMTW("WEB_IND") = "1"
+                        'rowARTPYMTW("FILE_CREATION_DATE") = ""
+                        'rowARTPYMTW("FILE_CREATION_TIME") = ""
+                        'rowARTPYMTW("FILE_ID_MODIFIER") = ""
+                        'rowARTPYMTW("PYMT_BATCH_NO") = ""
+                        'rowARTPYMTW("PYMT_BATCH_LNO") = ""
+                        'rowARTPYMTW("REASON_REJECTED") = ""
+                        'rowARTPYMTW("ACH_ACCT_TYPE_ID") = ""
+                        rowARTPYMTW("CC_ADDR1") = rowARTPYMTWX("CC_ADDR1")
+                        rowARTPYMTW("CC_ADDR2") = rowARTPYMTWX("CC_ADDR2")
+                        rowARTPYMTW("CC_CITY") = rowARTPYMTWX("CC_CITY")
+                        rowARTPYMTW("CC_STATE") = rowARTPYMTWX("CC_STATE")
+                        rowARTPYMTW("CC_ZIP_CODE") = rowARTPYMTWX("CC_ZIP_CODE")
+                        'rowARTPYMTW("ACH_ACCT_NAME") = ""
+                        'rowARTPYMTW("BATCH_NO") = ""
+                        'rowARTPYMTW("PYMT_ID_CREDIT") = ""
+                        rowARTPYMTW("INIT_OPER") = ABSolution.ASCMAIN1.USER_ID
+                        rowARTPYMTW("INIT_DATE") = DateTime.Now
+                        rowARTPYMTW("LAST_OPER") = ABSolution.ASCMAIN1.USER_ID
+                        rowARTPYMTW("LAST_DATE") = DateTime.Now
+                        'rowARTPYMTW("PYMT_AMT_REJECTED") = ""
+                        'rowARTPYMTW("PYMT_AMT_APPROVED") = ""
+                        'rowARTPYMTW("PYMT_BATCH_NO_REJECTED") = ""
+                        'rowARTPYMTW("PYMT_BATCH_LNO_REJECTED") = ""
+                        rowARTPYMTW("AUTO_PAY") = "1"
+                        dst.Tables("ARTPYMTW").Rows.Add(rowARTPYMTW)
+                    Next
+                Next
+
+                ' Create Entries in Oracle - ARTCCPA* tables
+                For Each rowARTPYMTW In tblARTPYMTW.Select("PROCESSED = '1'")
+
+                    rowARTCUST1 = ABSolution.ASCDATA1.GetDataRow("SELECT * FROM ARTCUST1 WHERE CUST_CODE = :PARM1", "V", New Object() {rowARTPYMTW.Item("CUST_CODE") & String.Empty})
+
+                    rowARTPYMTW.Item("CC_NO") = decrypt.Decrypt_AES(rowARTPYMTW.Item("CC_NO") & String.Empty)
+                    rowARTPYMTW.Item("CC_EXP_DATE") = decrypt.Decrypt_AES(rowARTPYMTW.Item("CC_EXP_DATE") & String.Empty)
+                    rowARTPYMTW.Item("CC_NAME") = decrypt.Decrypt_AES(rowARTPYMTW.Item("CC_NAME") & String.Empty)
+                    rowARTPYMTW.Item("CC_ADDR1") = decrypt.Decrypt_AES(rowARTPYMTW.Item("CC_ADDR1") & String.Empty)
+                    rowARTPYMTW.Item("CC_ADDR2") = decrypt.Decrypt_AES(rowARTPYMTW.Item("CC_ADDR2") & String.Empty)
+                    rowARTPYMTW.Item("CC_CITY") = decrypt.Decrypt_AES(rowARTPYMTW.Item("CC_CITY") & String.Empty)
+                    rowARTPYMTW.Item("CC_STATE") = decrypt.Decrypt_AES(rowARTPYMTW.Item("CC_STATE") & String.Empty)
+                    rowARTPYMTW.Item("CC_ZIP_CODE") = decrypt.Decrypt_AES(rowARTPYMTW.Item("CC_ZIP_CODE") & String.Empty)
+
+                    rowARTPYMTW.Item("CC_EXP_DATE") = (rowARTPYMTW.Item("CC_EXP_DATE") & String.Empty).ToString.Replace("\", "").Replace("/", "")
+
+                    CUST_CREDIT_CARD_LAST4 = rowARTPYMTW.Item("CC_NO") & String.Empty
+                    If CUST_CREDIT_CARD_LAST4.Length > 4 Then
+                        CUST_CREDIT_CARD_LAST4 = CUST_CREDIT_CARD_LAST4.Substring(CUST_CREDIT_CARD_LAST4.Length - 4)
+                    End If
+
+                    Dim rowARTCCPA1 As DataRow = dst.Tables("ARTCCPA1").NewRow
+                    rowARTCCPA1.Item("CCPA_NO") = ABSolution.ASCMAIN1.Next_Control_No("ARTCCPA1.CCPA_NO")
+                    rowARTCCPA1.Item("CUST_CODE") = rowARTPYMTW.Item("CUST_CODE") & String.Empty
+                    If rowARTCUST1 IsNot Nothing Then
+                        rowARTCCPA1.Item("CCPA_NOTE") = rowARTCUST1.Item("CUST_AUTO_CCPA_NOTE") & String.Empty
+                    End If
+                    rowARTCCPA1.Item("CCPA_STATUS") = "2"
+                    rowARTCCPA1.Item("CCPA_REASON") = "A"
+                    rowARTCCPA1.Item("CCPA_AMT") = Val(rowARTPYMTW.Item("PYMT_AMT") & String.Empty)
+                    rowARTCCPA1.Item("CUST_CREDIT_CARD_NO") = rowARTPYMTW.Item("CC_NO") & String.Empty
+                    rowARTCCPA1.Item("CUST_CREDIT_CARD_EXP_DATE") = rowARTPYMTW.Item("CC_EXP_DATE") & String.Empty
+                    rowARTCCPA1.Item("CUST_CREDIT_CARD_VER_CODE") = String.Empty
+                    rowARTCCPA1.Item("CUST_CREDIT_CARD_NAME") = rowARTPYMTW.Item("CC_NAME") & String.Empty
+                    rowARTCCPA1.Item("CUST_CREDIT_CARD_ADDR1") = rowARTPYMTW.Item("CC_ADDR1") & String.Empty
+                    rowARTCCPA1.Item("CUST_CREDIT_CARD_CITY") = rowARTPYMTW.Item("CC_CITY") & String.Empty
+                    rowARTCCPA1.Item("CUST_CREDIT_CARD_STATE") = rowARTPYMTW.Item("CC_STATE") & String.Empty
+                    rowARTCCPA1.Item("CUST_CREDIT_CARD_ZIP_CODE") = rowARTPYMTW.Item("CC_ZIP_CODE") & String.Empty
+                    rowARTCCPA1.Item("CUST_CREDIT_CARD_LAST4") = CUST_CREDIT_CARD_LAST4
+                    rowARTCCPA1.Item("OPS_YYYYPP") = OPS_YYYYPP
+                    rowARTCCPA1("INIT_OPER") = ABSolution.ASCMAIN1.USER_ID
+                    rowARTCCPA1("INIT_DATE") = DateTime.Now
+                    rowARTCCPA1("LAST_OPER") = ABSolution.ASCMAIN1.USER_ID
+                    rowARTCCPA1("LAST_DATE") = DateTime.Now
+                    dst.Tables("ARTCCPA1").Rows.Add(rowARTCCPA1)
+                Next
+
+                ' Commit Entries in Oracle First so we have the payment stuff.
+                With baseClass
+                    Try
+                        .BeginTrans()
+                        oracleTransaction = True
+                        .clsASCBASE1.Update_Record_TDA("ARTPYMTW")
+                        .clsASCBASE1.Update_Record_TDA("ARTCCPA1")
+                        .CommitTrans()
+                        oracleTransaction = False
+
+                    Catch ex As Exception
+                        RecordLogEntry("CreateCreditCardStatementPayments: " & ex.Message)
+                        If oracleTransaction = True Then .Rollback()
+                    Finally
+                        oracleTransaction = False
+                    End Try
+
+                End With
+
+            Catch ex As Exception
+                RecordLogEntry("CreateCreditCardStatementPayments: " & ex.Message)
+
+            Finally
+                RecordLogEntry("CreateCreditCardStatementPayments: Exit Sub")
+            End Try
+        End Sub
+
 #End Region
 
 #Region "DataSet Functions"
@@ -907,6 +1178,9 @@ Namespace StatementEmail
                 dst.Tables("ARTSTMT1").Clear()
                 dst.Tables("ARTCUSTT").Clear()
                 dst.Tables("TATCONV1").Clear()
+
+                dst.Tables("ARTPYMTW").Clear()
+                dst.Tables("ARTCCPA1").Clear()
 
                 If testMode Then RecordLogEntry("Exit ClearDataSetTables.")
                 Return True
@@ -947,6 +1221,10 @@ Namespace StatementEmail
 
                     baseClass.Create_TDA(.Tables.Add, "ARTCUSTT", "*")
                     baseClass.Create_TDA(.Tables.Add, "TATCONV1", "*")
+
+                    baseClass.Create_TDA(.Tables.Add, "ARTCCPA1", "*")
+                    baseClass.Create_TDA(.Tables.Add, "ARTPYMTW", "*")
+
                 End With
 
                 If testMode Then RecordLogEntry("Exit PrepareDatasetEntries.")
