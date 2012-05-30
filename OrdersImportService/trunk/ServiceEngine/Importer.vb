@@ -4777,7 +4777,7 @@ Namespace OrdersImport
                     rowARTCUST4.Item("PATIENT_ADDR2") = rowSOTORDR5.Item("CUST_ADDR2") & String.Empty
                     rowARTCUST4.Item("PATIENT_CITY") = rowSOTORDR5.Item("CUST_CITY") & String.Empty
                     rowARTCUST4.Item("PATIENT_STATE") = rowSOTORDR5.Item("CUST_STATE") & String.Empty
-                    rowARTCUST4.Item("PATIENT_ZIP_CODE") = rowSOTORDR5.Item("CUST_STATE") & String.Empty
+                    rowARTCUST4.Item("PATIENT_ZIP_CODE") = rowSOTORDR5.Item("CUST_ZIP_CODE") & String.Empty
                     rowARTCUST4.Item("INIT_OPER") = ABSolution.ASCMAIN1.USER_ID
                     rowARTCUST4.Item("INIT_DATE") = DateTime.Now
                     rowARTCUST4.Item("PATIENT_STATUS") = "A"
