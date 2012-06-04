@@ -3601,16 +3601,14 @@ Namespace OrdersImport
                 ElseIf rowARTCUST2 IsNot Nothing AndAlso rowARTCUST1 IsNot Nothing AndAlso CreateShipTo = True AndAlso CUST_SHIP_TO_NO.Length > 0 Then
                     UpdateCustomerShipTo(CUST_CODE, CUST_SHIP_TO_NO, rowSOTORDRX, rowARTCUST2)
                 ElseIf rowARTCUST1 IsNot Nothing AndAlso LocateShipToByTelephone = True Then
-                    If rowARTCUST1.Item("CUST_PHONE") & String.Empty = CUST_SHIP_TO_PHONE Then
+                    sql = "SELECT * From ARTCUST2 WHERE CUST_CODE = :PARM1 AND CUST_SHIP_TO_PHONE = :PARM2"
+                    rowARTCUST2 = ABSolution.ASCDATA1.GetDataRow(sql, "VV", New Object() {CUST_CODE, CUST_SHIP_TO_PHONE})
+                    If rowARTCUST2 IsNot Nothing Then
+                        CUST_SHIP_TO_NO = rowARTCUST2.Item("CUST_SHIP_TO_NO") & String.Empty
+                    ElseIf rowARTCUST1.Item("CUST_PHONE") & String.Empty = CUST_SHIP_TO_PHONE Then
                         CUST_SHIP_TO_NO = String.Empty
                     Else
-                        sql = "SELECT * From ARTCUST2 WHERE CUST_CODE = :PARM1 AND CUST_SHIP_TO_PHONE = :PARM2"
-                        rowARTCUST2 = ABSolution.ASCDATA1.GetDataRow(sql, "VV", New Object() {CUST_CODE, CUST_SHIP_TO_PHONE})
-                        If rowARTCUST2 Is Nothing Then
-                            CUST_SHIP_TO_NO = unKnownShipTo
-                        Else
-                            CUST_SHIP_TO_NO = rowARTCUST2.Item("CUST_SHIP_TO_NO") & String.Empty
-                        End If
+                        CUST_SHIP_TO_NO = unKnownShipTo
                     End If
                 End If
 
