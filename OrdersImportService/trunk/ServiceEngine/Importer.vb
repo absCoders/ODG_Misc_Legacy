@@ -2267,8 +2267,7 @@ Namespace OrdersImport
             End If
 
             Try
-
-                Sql = "SELECT * From XMTORDR1 Where XML_PROCESS_IND IS NULL"
+                sql = "SELECT * From XMTORDR1 Where XML_PROCESS_IND IS NULL"
                 baseClass.clsASCBASE1.Fill_Records("XMTORDR1", String.Empty, False, sql)
 
                 If dst.Tables("XMTXREF1").Select("ORDR_LINE_SOURCE = '" & ORDR_SOURCE & "'", "").Length > 0 Then
@@ -3140,12 +3139,8 @@ Namespace OrdersImport
                         rowDETJOBM1.Item("BIN_NO") = String.Empty
                         rowDETJOBM1.Item("JOB_INSPCT_SUP_DESC") = String.Empty
                         rowDETJOBM1.Item("PROMO_CODE") = String.Empty
-
                     Next
-
                 Next
-
-
             Catch ex As Exception
                 RecordLogEntry("ProcessVisionWebDELOrders: " & ex.Message)
             Finally
@@ -3613,6 +3608,8 @@ Namespace OrdersImport
                         rowARTCUST2 = ABSolution.ASCDATA1.GetDataRow(sql, "VV", New Object() {CUST_CODE, CUST_SHIP_TO_PHONE})
                         If rowARTCUST2 Is Nothing Then
                             CUST_SHIP_TO_NO = unKnownShipTo
+                        Else
+                            CUST_SHIP_TO_NO = rowARTCUST2.Item("CUST_SHIP_TO_NO") & String.Empty
                         End If
                     End If
                 End If
