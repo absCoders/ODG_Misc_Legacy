@@ -28,6 +28,10 @@ Namespace OrdersImport
         Private filefolder As String = String.Empty
         Private logStreamWriter As System.IO.StreamWriter
 
+        Private DriveLetter As String = String.Empty
+        Private DriveLetterIP As String = String.Empty
+        Private convert As Boolean = False
+
         Private rowARTCUST1 As DataRow = Nothing
         Private rowARTCUST2 As DataRow = Nothing
         Private rowARTCUST3 As DataRow = Nothing
@@ -462,6 +466,11 @@ Namespace OrdersImport
                 If testMode Then
                     ProcessVisionWebDELOrders()
                 End If
+
+                Dim svcConfig As New ServiceConfig
+                DriveLetter = svcConfig.DriveLetter.ToString.ToUpper
+                DriveLetterIP = svcConfig.DriveLetterIP.ToString.ToUpper
+                convert = DriveLetter.Length > 0 AndAlso DriveLetterIP.Length > 0
 
                 Dim ORDR_SOURCE As String = String.Empty
 
@@ -4803,6 +4812,7 @@ Namespace OrdersImport
             ValidateDPDAddress = False
 
             Try
+                RecordLogEntry("Enter ValidateDPDAddress")
                 Dim clsSHCUPSC1 As New TAC.SHCUPSC1
                 Dim addressValidations As New List(Of TAC.SHCUPSC1.AddressValidationResponse)
                 Dim errMsg As String = String.Empty
@@ -4821,7 +4831,6 @@ Namespace OrdersImport
                     Return False
                 End If
 
-
                 If dst.Tables("SOTORDR1").Rows(0).Item("ORDR_DPD") & String.Empty = "1" Then
                     CompanyName = String.Empty
                 Else
@@ -4830,6 +4839,21 @@ Namespace OrdersImport
 
                 If PostalCode.Length > 5 Then
                     PostalCode = PostalCode.Substring(0, 5)
+                End If
+
+                clsSHCUPSC1.CarrierRequestXmlDir = clsSHCUPSC1.CarrierRequestXmlDir.ToUpper
+                If convert And clsSHCUPSC1.CarrierRequestXmlDir.StartsWith(DriveLetter) Then
+                    clsSHCUPSC1.CarrierRequestXmlDir = clsSHCUPSC1.CarrierRequestXmlDir.Replace(DriveLetter, DriveLetterIP)
+                End If
+
+                clsSHCUPSC1.CarrierResponseRptDir = clsSHCUPSC1.CarrierResponseRptDir.ToUpper
+                If convert And clsSHCUPSC1.CarrierResponseRptDir.StartsWith(DriveLetter) Then
+                    clsSHCUPSC1.CarrierResponseRptDir = clsSHCUPSC1.CarrierResponseRptDir.Replace(DriveLetter, DriveLetterIP)
+                End If
+
+                clsSHCUPSC1.CarrierResponseXmlDir = clsSHCUPSC1.CarrierResponseXmlDir.ToUpper
+                If convert And clsSHCUPSC1.CarrierResponseXmlDir.StartsWith(DriveLetter) Then
+                    clsSHCUPSC1.CarrierResponseXmlDir = clsSHCUPSC1.CarrierResponseXmlDir.Replace(DriveLetter, DriveLetterIP)
                 End If
 
                 Dim validAddress As Boolean = clsSHCUPSC1.AddressVaildationRequest(AddressLine1, _
@@ -4856,6 +4880,7 @@ Namespace OrdersImport
                             rowSOTORDR5_ST.Item("CUST_CITY") = addressSel.City
                             rowSOTORDR5_ST.Item("CUST_STATE") = addressSel.State
                             rowSOTORDR5_ST.Item("CUST_ZIP_CODE") = addressSel.PostalCode
+                            RecordLogEntry("ValidateDPDAddress: Valid DPD Address")
                             Return True
                         End If
                     Next
@@ -4866,6 +4891,7 @@ Namespace OrdersImport
                 Return False
             End Try
 
+            RecordLogEntry("Exit ValidateDPDAddress")
         End Function
 
 #End Region
