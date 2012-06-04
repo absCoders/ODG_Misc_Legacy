@@ -4155,7 +4155,10 @@ Namespace OrdersImport
                                 rowSOTORDR1.Item("SHIP_VIA_CODE") = rowARTCUST2.Item("CUST_SHIP_TO_SHIP_VIA_CODE_DPD") & String.Empty
                             End If
                         End If
-                    ElseIf rowARTCUST3 IsNot Nothing Then
+                    End If
+
+                    ' If the ship via is not set then look at freight contract
+                    If rowARTCUST3 IsNot Nothing OrElse rowSOTORDR1.Item("SHIP_VIA_CODE") & String.Empty = String.Empty Then
                         If rowSOTORDR1.Item("ORDR_DPD") & String.Empty = "1" Then
                             rowSOTORDR1.Item("SHIP_VIA_CODE") = rowARTCUST3.Item("SHIP_VIA_CODE_DPD") & String.Empty
                             If rowSOTORDR1.Item("SHIP_VIA_CODE") & String.Empty = String.Empty Then
