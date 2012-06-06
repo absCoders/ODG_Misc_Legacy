@@ -45,6 +45,7 @@ Namespace OrdersImport
 
         Private Const testMode As Boolean = False
         Private ImportErrorNotification As Hashtable
+        Private DE_PARM_FOG_FREE_COST As Double = 0
 
         ' Header Errors
         Private Const ShipToOrderBlocked = "A"
@@ -464,7 +465,7 @@ Namespace OrdersImport
                 If testMode Then RecordLogEntry("Enter ProcessSalesOrders.")
 
                 If testMode Then
-                    ProcessVisionWebDELOrders()
+                    'ProcessVisionWebDELOrders()
                 End If
 
                 Dim svcConfig As New ServiceConfig
@@ -2315,10 +2316,13 @@ Namespace OrdersImport
                         ' needed for telephone look up
                         rowSOTORDRX.Item("CUST_SHIP_TO_PHONE") = (rowXMTORDR1.Item("XML_OFFICE_TEL") & String.Empty).ToString.Replace(" ", "")
 
+                        rowSOTORDRX.Item("PATIENT_NAME") = rowXMTORDR2.Item("XML_PATIENT_NAME") & String.Empty
+                        rowSOTORDRX.Item("PATIENT_NAME") = TruncateField(rowSOTORDRX.Item("PATIENT_NAME") & String.Empty, "SOTORDR2", "PATIENT_NAME")
+                        rowSOTORDRX.Item("PATIENT_NAME") = StrConv(rowSOTORDRX.Item("PATIENT_NAME") & String.Empty, VbStrConv.ProperCase)
+
                         If rowXMTORDR1.Item("XML_SHIP_TO_PATIENT") & String.Empty = "Y" Then
                             rowSOTORDRX.Item("ORDR_DPD") = "1"
                             rowSOTORDRX.Item("ORDR_SHIP_COMPLETE") = "1"
-                            rowSOTORDRX.Item("PATIENT_NAME") = rowXMTORDR2.Item("XML_PATIENT_NAME") & String.Empty
 
                             rowSOTORDRX.Item("CUST_NAME") = (rowXMTORDR1.Item("XML_SHIP_TO_NAME") & String.Empty)
                             rowSOTORDRX.Item("CUST_ADDR1") = (rowXMTORDR1.Item("XML_SHIP_TO_ADDRESS1") & String.Empty).ToString.Trim
@@ -2785,13 +2789,17 @@ Namespace OrdersImport
             End Try
         End Sub
 
+#End Region
+
+#Region "Vision Web DEL Processing"
+
         Private Sub ProcessVisionWebDELOrders()
 
             Dim vwConnection As New Connection("V")
             Dim numOrdersProcessed As Int16 = 0
             Dim ImportedFiles As List(Of String) = New List(Of String)
-            Dim jobNumLoop As Int16 = 0
             Dim JOB_NO As String = String.Empty
+            Dim ORDR_NO As String = String.Empty
             Dim creationDate As String = String.Empty
             Dim rowSOTORDR5 As DataRow = Nothing
             Dim rowData As DataRow = Nothing
@@ -2811,6 +2819,12 @@ Namespace OrdersImport
             Dim ACCOUNT_Id As String = String.Empty
             Dim SP_EQUIPMENT_Id As String = String.Empty
             Dim PATIENT_ID As String = String.Empty
+            Dim POSITION_ID As String = String.Empty
+            Dim PRESCRIPTION_ID As String = String.Empty
+            Dim LENS_ID As String = String.Empty
+            Dim TREATMENTS_ID As String = String.Empty
+
+            Dim errorCodes As String = String.Empty
 
             Try
                 ImportedFiles.Clear()
@@ -2861,6 +2875,10 @@ Namespace OrdersImport
                     ACCOUNT_Id = String.Empty
                     SP_EQUIPMENT_Id = String.Empty
                     PATIENT_ID = String.Empty
+                    POSITION_ID = String.Empty
+                    PRESCRIPTION_ID = String.Empty
+                    LENS_ID = String.Empty
+                    TREATMENTS_ID = String.Empty
 
                     For Each rowRX_SPECTACLE As DataRow In vwXmlDataset.Tables("RX_SPECTACLE").Rows
 
@@ -2872,12 +2890,16 @@ Namespace OrdersImport
                         ACCOUNT_Id = String.Empty
                         SP_EQUIPMENT_Id = String.Empty
                         PATIENT_ID = String.Empty
+                        POSITION_ID = String.Empty
+                        PRESCRIPTION_ID = String.Empty
+                        LENS_ID = String.Empty
+                        TREATMENTS_ID = String.Empty
 
-                        jobNumLoop += 1
-
-                        JOB_NO = rowRX_SPECTACLE.Item("Id") & jobNumLoop.ToString
-                        If JOB_NO.Length > 10 Then JOB_NO = JOB_NO.Substring(0, 10).Trim
+                        JOB_NO = ABSolution.ASCMAIN1.Next_Control_No("DETJOBM1.JOB_NO", 1)
+                        ORDR_NO = ABSolution.ASCMAIN1.Next_Control_No("SOTORDR1.ORDR_NO", 1)
                         rowDETJOBM1.Item("JOB_NO") = JOB_NO
+                        rowDETJOBM1.Item("ORDR_NO") = ORDR_NO
+                        dst.Tables("DETJOBM1").Rows.Add(rowDETJOBM1)
 
                         creationDate = (rowRX_SPECTACLE.Item("Creation_date") & String.Empty).ToString.Replace("T", Space(1))
                         If IsDate(creationDate) Then
@@ -2910,7 +2932,7 @@ Namespace OrdersImport
                                                     rowData = vwXmlDataset.Tables("ADDRESS").Select("ACCOUNT_Id = " & ACCOUNT_Id)(0)
 
                                                     rowSOTORDR5 = dst.Tables("SOTORDR5").NewRow
-                                                    rowSOTORDR5.Item("ORDR_NO") = JOB_NO
+                                                    rowSOTORDR5.Item("ORDR_NO") = ORDR_NO
                                                     rowSOTORDR5.Item("CUST_ADDR_TYPE") = "BT"
                                                     dst.Tables("SOTORDR5").Rows.Add(rowSOTORDR5)
 
@@ -2976,23 +2998,146 @@ Namespace OrdersImport
                                     SP_EQUIPMENT_Id = rowSP_EQUIPMENT.Item("SP_EQUIPMENT_Id") & String.Empty
 
                                     If vwXmlDataset.Tables("PATIENT").Select("SP_EQUIPMENT_Id = " & SP_EQUIPMENT_Id).Length > 0 Then
-                                        Dim rowPATIENT As DataRow = vwXmlDataset.Tables("PATIENT").Select("SP_EQUIPMENT_Id = " & SP_EQUIPMENT_Id)(0)
-                                        tempString = rowPATIENT.Item("LASTNAME") & "," & rowPATIENT.Item("FIRSTNAME") & String.Empty
-                                        tempString = tempString.Trim
-                                        rowDETJOBM1.Item("PATIENT_NAME") = TruncateField(CUST_SHIP_TO_NO, "DETJOBM1", "PATIENT_NAME")
-                                        PATIENT_ID = rowPATIENT.Item("PATIENT_ID") & String.Empty
+                                        rowData = vwXmlDataset.Tables("PATIENT").Select("SP_EQUIPMENT_Id = " & SP_EQUIPMENT_Id)(0)
+                                        tempString = rowData.Item("LASTNAME") & ", " & rowData.Item("FIRSTNAME") & String.Empty
+                                        tempString = tempString.Trim.ToUpper
+                                        rowDETJOBM1.Item("PATIENT_NAME") = TruncateField(tempString, "DETJOBM1", "PATIENT_NAME")
+                                        PATIENT_ID = rowData.Item("PATIENT_ID") & String.Empty
                                     End If
 
-                                    If vwXmlDataset.Tables("FRAME").Select("RX_SPECTACLE_Id = " & RX_SPECTACLE_Id).Length > 0 Then
-                                        Dim rowFrame As DataRow = vwXmlDataset.Tables("FRAME").Select("RX_SPECTACLE_Id = " & RX_SPECTACLE_Id)(0)
+                                    If vwXmlDataset.Tables("FRAME").Select("SP_EQUIPMENT_Id = " & SP_EQUIPMENT_Id).Length > 0 Then
+                                        Dim rowFrame As DataRow = vwXmlDataset.Tables("FRAME").Select("SP_EQUIPMENT_Id = " & SP_EQUIPMENT_Id)(0)
+                                        Dim FRAME_TYPE_CODE As String = rowFrame.Item("CONVERT") & String.Empty
+
+                                        Dim rowDETFRAM1 As DataRow = ABSolution.ASCDATA1.GetDataRow("Select *  from DETFRAM1 where FRAME_TYPE_DESC = :PARM1", "V", New Object() {FRAME_TYPE_CODE})
+                                        If rowDETFRAM1 IsNot Nothing Then
+                                            rowDETJOBM1.Item("FRAME_TYPE_CODE") = FRAME_TYPE_CODE
+                                        Else
+                                            errorCodes &= "F"
+                                        End If
+
+                                        Dim FRAME_STATUS As String = rowFrame.Item("ACTION") & String.Empty
+                                        Select Case FRAME_STATUS
+                                            Case "TC"
+                                                rowDETJOBM1.Item("FRAME_STATUS") = "C"
+                                            Case "ESF"
+                                                rowDETJOBM1.Item("FRAME_STATUS") = "S"
+                                            Case Else
+                                                rowDETJOBM1.Item("FRAME_STATUS") = "N"
+                                        End Select
+
+                                        rowDETJOBM1.Item("FRAME_A_WIDTH") = Val(rowFrame.Item("A") & String.Empty)
+                                        rowDETJOBM1.Item("FRAME_B_HEIGHT") = Val(rowFrame.Item("B") & String.Empty)
+                                        rowDETJOBM1.Item("FRAME_DBL_BRIDGE") = Val(rowFrame.Item("DBL") & String.Empty)
+                                        rowDETJOBM1.Item("FRAME_ED_DIAGONAL") = Val(rowFrame.Item("ED") & String.Empty)
+
+                                        rowDETJOBM1.Item("FRAME_MFG") = Val(rowFrame.Item("BRAND") & String.Empty)
+                                        rowDETJOBM1.Item("FRAME_MODEL_NO") = Val(rowFrame.Item("MODEL") & String.Empty)
+                                        rowDETJOBM1.Item("FRAME_SIZE") = String.Empty 'Val(rowFrame.Item("ED") & String.Empty)
+                                        rowDETJOBM1.Item("FRAME_COLOR") = Val(rowFrame.Item("COLOR") & String.Empty)
 
                                     End If
+
+                                    For Each rowPOSITION As DataRow In vwXmlDataset.Tables("POSITION").Select("SP_EQUIPMENT_Id = " & SP_EQUIPMENT_Id)
+                                        POSITION_ID = rowPOSITION.Item("POSITION_ID") & String.Empty
+                                        PRESCRIPTION_ID = String.Empty
+                                        LENS_ID = String.Empty
+                                        TREATMENTS_ID = String.Empty
+
+                                        Dim rowDETJOBM3 As DataRow = dst.Tables("DETJOBM3").NewRow
+                                        rowDETJOBM3.Item("JOB_NO") = JOB_NO
+                                        rowDETJOBM3.Item("RL") = rowPOSITION.Item("EYE") & String.Empty
+                                        rowDETJOBM3.Item("MONO_PD") = Val(rowPOSITION.Item("FAR_HALF_PD") & String.Empty)
+                                        rowDETJOBM3.Item("FITTING_HEIGHT") = Val(rowPOSITION.Item("BOXING_HEIGHT") & String.Empty)
+                                        dst.Tables("DETJOBM3").Rows.Add(rowDETJOBM3)
+
+                                        If vwXmlDataset.Tables("PRESCRIPTION").Select("POSITION_ID = " & POSITION_ID).Length > 0 Then
+                                            rowData = vwXmlDataset.Tables("PRESCRIPTION").Select("POSITION_ID = " & POSITION_ID)(0)
+                                            PRESCRIPTION_ID = rowData.Item("PRESCRIPTION_ID") & String.Empty
+                                            rowDETJOBM3.Item("SPHERE") = Val(rowData.Item("SPHERE") & String.Empty)
+                                        End If
+
+                                        If vwXmlDataset.Tables("CYLINDER").Select("PRESCRIPTION_ID = " & PRESCRIPTION_ID).Length > 0 Then
+                                            rowData = vwXmlDataset.Tables("CYLINDER").Select("PRESCRIPTION_ID = " & PRESCRIPTION_ID)(0)
+                                            rowDETJOBM3.Item("CYLINDER") = Val(rowData.Item("VALUE") & String.Empty)
+                                            rowDETJOBM3.Item("AXIS") = Val(rowData.Item("AXIS") & String.Empty)
+                                        End If
+
+                                        If vwXmlDataset.Tables("ADDITION").Select("PRESCRIPTION_ID = " & PRESCRIPTION_ID).Length > 0 Then
+                                            rowData = vwXmlDataset.Tables("ADDITION").Select("PRESCRIPTION_ID = " & PRESCRIPTION_ID)(0)
+                                            rowDETJOBM3.Item("ADD_POWER") = Val(rowData.Item("VALUE") & String.Empty)
+                                        End If
+
+                                        If vwXmlDataset.Tables("LENS").Select("POSITION_ID = " & POSITION_ID).Length > 0 Then
+                                            rowData = vwXmlDataset.Tables("LENS").Select("POSITION_ID = " & POSITION_ID)(0)
+                                            LENS_ID = rowData.Item("LENS_ID") & String.Empty
+
+                                            If vwXmlDataset.Tables("DESIGN").Select("LENS_ID = " & LENS_ID).Length > 0 Then
+                                                rowData = vwXmlDataset.Tables("DESIGN").Select("LENS_ID = " & LENS_ID)(0)
+                                                rowDETJOBM1.Item("LENS_DESIGN_CODE") = rowData.Item("CONVERT") & String.Empty
+                                            End If
+
+                                            If vwXmlDataset.Tables("MATERIAL").Select("LENS_ID = " & LENS_ID).Length > 0 Then
+                                                rowData = vwXmlDataset.Tables("MATERIAL").Select("LENS_ID = " & LENS_ID)(0)
+                                                tempString = rowData.Item("CONVERT") & String.Empty
+                                                If tempString.Split(":").Length >= 2 Then
+                                                    rowDETJOBM1.Item("MATL_CODE") = tempString.Split(":")(0)
+                                                    rowDETJOBM1.Item("COLOR_CODE") = tempString.Split(":")(1)
+                                                Else
+                                                    rowDETJOBM1.Item("MATL_CODE") = tempString
+                                                End If
+                                            End If
+
+                                            If vwXmlDataset.Tables("TREATMENTS").Select("LENS_ID = " & LENS_ID).Length > 0 Then
+                                                rowData = vwXmlDataset.Tables("TREATMENTS").Select("LENS_ID = " & LENS_ID)(0)
+                                                TREATMENTS_ID = rowData.Item("TREATMENTS_ID") & String.Empty
+
+                                                For Each rowTREATMENT As DataRow In vwXmlDataset.Tables("TREATMENT").Select("TREATMENTS_ID = " & TREATMENTS_ID)
+                                                    tempString = rowTREATMENT.Item("CONVERT") & String.Empty
+
+                                                    Dim rowDETJOBVW As DataRow = ABSolution.ASCDATA1.GetDataRow("SELECT * FROM DETJOBVW WHERE ACTION_CODE = :PARM1 AND ACTION_TYPE = :PARM2", _
+                                                                                                                "VV", New Object() {tempString, "TREATMENT"})
+                                                    If rowDETJOBVW IsNot Nothing Then
+                                                        If rowDETJOBVW.Item("AR_COATING") & String.Empty = "1" Then
+                                                            rowDETJOBM1.Item("AR_COATING") = "1"
+                                                        End If
+                                                        If rowDETJOBVW.Item("AR_BACKSIDE_ONLY") & String.Empty = "1" Then
+                                                            rowDETJOBM1.Item("AR_BACKSIDE_ONLY") = "1"
+                                                        End If
+
+                                                        For Each field As String In New String() {"COLOR_CODE", "COLOR_TYPE", "FINISHED", "FOG_FREE", _
+                                                                                                  "FRAME_STATUS", "FRAME_TYPE_CODE", "LENS_DESIGN_CODE", _
+                                                                                                  "LENS_DESIGNER_CODE", "MATL_CODE", "MIRROR_COATING", _
+                                                                                                  "POLISHING", "TINT_CODE", "TINT_COLOR", "WRAP_EDGE", _
+                                                                                                  "MIRROR_COATING_COLOR"}
+                                                            If rowDETJOBVW.Item(field) & String.Empty <> String.Empty Then
+                                                                rowDETJOBM1.Item(field) = rowDETJOBVW.Item(field) & String.Empty
+                                                            End If
+
+                                                        Next
+                                                    End If
+                                                Next
+                                            End If
+                                        End If
+                                    Next
                                 Next
                             Next
                         Next
 
                         rowARTCUST1 = baseClass.LookUp("ARTCUST1", CUST_CODE)
                         rowARTCUST2 = baseClass.LookUp("ARTCUST2", New String() {CUST_CODE, CUST_SHIP_TO_NO})
+
+                        tempString = "Select * from ARTCUST3 where CUST_CODE = '" & CUST_CODE & "' and FRT_CONT_NO in (Select Max (FRT_CONT_NO) from ARTCUST3 where CUST_CODE = '" & CUST_CODE & "')"
+                        Dim rowARTCUST3 As DataRow = ABSolution.ASCDATA1.GetDataRow(tempString)
+                        If rowARTCUST3 IsNot Nothing Then
+                            rowDETJOBM1.Item("SHIP_VIA_CODE") = rowARTCUST3.Item("SHIP_VIA_CODE")
+
+                            If CUST_SHIP_TO_NO <> String.Empty Then
+                                If rowARTCUST2.Item("CUST_SHIP_TO_SHIP_VIA_CODE") & "" <> "" Then
+                                    rowDETJOBM1.Item("SHIP_VIA_CODE") = rowARTCUST2.Item("CUST_SHIP_TO_SHIP_VIA_CODE")
+                                End If
+                            End If
+                        End If
 
                         rowDETJOBM1.Item("CUST_CODE") = CUST_CODE
                         If rowARTCUST1 IsNot Nothing Then
@@ -3004,150 +3149,47 @@ Namespace OrdersImport
                             rowDETJOBM1.Item("CUST_NAME") = rowARTCUST2.Item("CUST_SHIP_TO_NAME") & String.Empty
                         End If
 
-                        rowDETJOBM1.Item("SHIP_VIA_CODE") = String.Empty
-                        rowDETJOBM1.Item("LENS_DESIGN_CODE") = String.Empty
-                        rowDETJOBM1.Item("MATL_CODE") = String.Empty
-                        rowDETJOBM1.Item("COLOR_CODE") = String.Empty
-                        rowDETJOBM1.Item("CORRIDOR_LENGTH") = String.Empty
-                        rowDETJOBM1.Item("AR_COATING") = String.Empty
-                        rowDETJOBM1.Item("LENS_ORDER") = String.Empty
-                        rowDETJOBM1.Item("FINISHED") = String.Empty
-                        rowDETJOBM1.Item("FRAME_TYPE_CODE") = String.Empty
-                        rowDETJOBM1.Item("FRAME_STATUS") = String.Empty
-                        rowDETJOBM1.Item("TINT_CODE") = String.Empty
-                        rowDETJOBM1.Item("TINT_COLOR") = String.Empty
-                        rowDETJOBM1.Item("TINT_PCT") = String.Empty
-                        rowDETJOBM1.Item("FRAME_A_WIDTH") = String.Empty
-                        rowDETJOBM1.Item("FRAME_B_HEIGHT") = String.Empty
-                        rowDETJOBM1.Item("FRAME_DBL_BRIDGE") = String.Empty
-                        rowDETJOBM1.Item("FRAME_ED_DIAGONAL") = String.Empty
-                        rowDETJOBM1.Item("FRAME_MFG") = String.Empty
-                        rowDETJOBM1.Item("FRAME_MODEL_NO") = String.Empty
-                        rowDETJOBM1.Item("FRAME_COLOR") = String.Empty
-                        rowDETJOBM1.Item("FRAME_SIZE") = String.Empty
-                        rowDETJOBM1.Item("JOB_STATUS") = String.Empty
-                        rowDETJOBM1.Item("INIT_OPER") = String.Empty
-                        rowDETJOBM1.Item("INIT_DATE") = String.Empty
-                        rowDETJOBM1.Item("LAST_OPER") = String.Empty
-                        rowDETJOBM1.Item("LAST_DATE") = String.Empty
-                        rowDETJOBM1.Item("JOB_TYPE_CODE") = String.Empty
-                        rowDETJOBM1.Item("JOB_NO_ORIG") = String.Empty
-                        rowDETJOBM1.Item("LENS_DESIGNER_CODE") = String.Empty
-                        rowDETJOBM1.Item("LIST_PRICE") = String.Empty
-                        rowDETJOBM1.Item("COMMENT_LAB") = String.Empty
-                        rowDETJOBM1.Item("COMMENT_INV") = String.Empty
-                        rowDETJOBM1.Item("POLISHING") = String.Empty
+                        ' Validate the Job
 
-                        rowDETJOBM1.Item("RX_PRISM") = String.Empty
-                        rowDETJOBM1.Item("TRACKING_NUMBER") = String.Empty
-                        rowDETJOBM1.Item("COLOR_TYPE") = String.Empty
-                        rowDETJOBM1.Item("ORDR_NO") = String.Empty
-                        rowDETJOBM1.Item("ORDR_MESSAGE_LAB") = String.Empty
-                        rowDETJOBM1.Item("JOB_CANCELLED_REASON") = String.Empty
-                        rowDETJOBM1.Item("TRACE_FROM") = String.Empty
-                        rowDETJOBM1.Item("FPC") = String.Empty
-                        rowDETJOBM1.Item("TRC_IND") = String.Empty
-                        rowDETJOBM1.Item("TRC_QUEUED") = String.Empty
-                        rowDETJOBM1.Item("TRC_COMPLETED") = String.Empty
-                        rowDETJOBM1.Item("LDS_IND") = String.Empty
-                        rowDETJOBM1.Item("LDS_QUEUED") = String.Empty
-                        rowDETJOBM1.Item("LDS_COMPLETED") = String.Empty
-                        rowDETJOBM1.Item("LMS_IND") = String.Empty
-                        rowDETJOBM1.Item("LMS_QUEUED") = String.Empty
-                        rowDETJOBM1.Item("LMS_COMPLETED") = String.Empty
-                        rowDETJOBM1.Item("TKT_IND") = String.Empty
-                        rowDETJOBM1.Item("TKT_QUEUED") = String.Empty
-                        rowDETJOBM1.Item("TKT_COMPLETED") = String.Empty
-                        rowDETJOBM1.Item("RUSH_ORDER") = String.Empty
-                        rowDETJOBM1.Item("USE_THINNING_PRISM") = String.Empty
-                        rowDETJOBM1.Item("JOB_SCAN_VERIFIED") = String.Empty
-                        rowDETJOBM1.Item("BALANCE_LENS") = String.Empty
-                        rowDETJOBM1.Item("BLANK_SELECTION") = String.Empty
-                        rowDETJOBM1.Item("SUPPRESS_CRIB") = String.Empty
-                        rowDETJOBM1.Item("EDGING") = String.Empty
-                        rowDETJOBM1.Item("NO_FREIGHT") = String.Empty
-                        rowDETJOBM1.Item("JOB_ERROR") = String.Empty
-                        rowDETJOBM1.Item("INV_NO") = String.Empty
-                        rowDETJOBM1.Item("INV_DATE") = String.Empty
-                        rowDETJOBM1.Item("JOB_NO_REPL_FROM") = String.Empty
-                        rowDETJOBM1.Item("INV_FREIGHT") = String.Empty
-                        rowDETJOBM1.Item("INV_MISC_CHG") = String.Empty
-                        rowDETJOBM1.Item("INV_STAX") = String.Empty
-                        rowDETJOBM1.Item("INV_TOTAL_AMOUNT") = String.Empty
-                        rowDETJOBM1.Item("OPS_YYYYPP") = String.Empty
-                        rowDETJOBM1.Item("STAX_CODE") = String.Empty
-                        rowDETJOBM1.Item("TERM_CODE") = String.Empty
-                        rowDETJOBM1.Item("USE_DISC_PCT") = String.Empty
-                        rowDETJOBM1.Item("INV_DISC_PCT") = String.Empty
-                        rowDETJOBM1.Item("MIRROR_COATING") = String.Empty
-                        rowDETJOBM1.Item("AR_BACKSIDE_ONLY") = String.Empty
-                        rowDETJOBM1.Item("TKT_PRINT_COUNT") = String.Empty
-                        rowDETJOBM1.Item("INV_SALES") = String.Empty
-                        rowDETJOBM1.Item("JOB_NO_TRACE_FROM") = String.Empty
-                        rowDETJOBM1.Item("REASON_CODE_CANC") = String.Empty
-                        rowDETJOBM1.Item("REASON_CODE_REDO") = String.Empty
-                        rowDETJOBM1.Item("REASON_CODE_DISC") = String.Empty
-                        rowDETJOBM1.Item("NWD") = String.Empty
-                        rowDETJOBM1.Item("FWD") = String.Empty
-                        rowDETJOBM1.Item("NWA") = String.Empty
-                        rowDETJOBM1.Item("FWA") = String.Empty
-                        rowDETJOBM1.Item("FITTING_VERTEX") = String.Empty
-                        rowDETJOBM1.Item("REFRACTIVE_VERTEX") = String.Empty
-                        rowDETJOBM1.Item("PANTOSCOPIC_TILT") = String.Empty
-                        rowDETJOBM1.Item("PANORAMIC_ANGLE") = String.Empty
-                        rowDETJOBM1.Item("JOB_MUST_SHIP_TODAY") = String.Empty
-                        rowDETJOBM1.Item("WORKING_DISTANCE") = String.Empty
-                        rowDETJOBM1.Item("VIEWING_ANGLE") = String.Empty
-                        rowDETJOBM1.Item("ACTIVITY") = String.Empty
-                        rowDETJOBM1.Item("LAB_HOLD") = String.Empty
-                        rowDETJOBM1.Item("JOB_HOLD_LAB") = String.Empty
-                        rowDETJOBM1.Item("JOB_HOLD_LAB_REASON") = String.Empty
-                        rowDETJOBM1.Item("JOB_HOLD_INV") = String.Empty
-                        rowDETJOBM1.Item("JOB_HOLD_INV_REASON") = String.Empty
-                        rowDETJOBM1.Item("BIN_NO_DEL") = String.Empty
-                        rowDETJOBM1.Item("JOB_SCAN_VERIFIED_EXC") = String.Empty
-                        rowDETJOBM1.Item("OPC_CODE_SV_R") = String.Empty
-                        rowDETJOBM1.Item("OPC_CODE_SV_L") = String.Empty
-                        rowDETJOBM1.Item("JOB_CHECKED") = String.Empty
-                        rowDETJOBM1.Item("JOB_CHECKED_OPER") = String.Empty
-                        rowDETJOBM1.Item("JOB_CHECKED_DATE") = String.Empty
-                        rowDETJOBM1.Item("JOB_IN_QUEUE") = String.Empty
-                        rowDETJOBM1.Item("JOB_REQUIRES_REVIEW") = String.Empty
-                        rowDETJOBM1.Item("JOB_QUEUED_DATE") = String.Empty
-                        rowDETJOBM1.Item("COUPON_CODE") = String.Empty
-                        rowDETJOBM1.Item("JOB_INSPCT_SUP") = String.Empty
-                        rowDETJOBM1.Item("JOB_REPORTED_IND") = String.Empty
-                        rowDETJOBM1.Item("JOB_REPORTED_XNO") = String.Empty
-                        rowDETJOBM1.Item("NOD") = String.Empty
-                        rowDETJOBM1.Item("JOB_REPORTED_DATE") = String.Empty
-                        rowDETJOBM1.Item("WRAP_EDGE") = String.Empty
-                        rowDETJOBM1.Item("CUSTOM_FRAME_FILE") = String.Empty
-                        rowDETJOBM1.Item("CUSTOM_FRAME_NEW") = String.Empty
-                        rowDETJOBM1.Item("PATTERN_NO") = String.Empty
-                        rowDETJOBM1.Item("CUSTOM_FRAME_NO") = String.Empty
-                        rowDETJOBM1.Item("DATABASE_TRACE_EXECUTED") = String.Empty
-                        rowDETJOBM1.Item("JOB_PT_PRINTED") = String.Empty
-                        rowDETJOBM1.Item("MIRROR_COATING_COLOR") = String.Empty
-                        rowDETJOBM1.Item("PATIENT_ID_WEB") = String.Empty
-                        rowDETJOBM1.Item("PATIENT_FIRST_NAME") = String.Empty
-                        rowDETJOBM1.Item("PATIENT_LAST_NAME") = String.Empty
-                        rowDETJOBM1.Item("TRAY") = String.Empty
-                        rowDETJOBM1.Item("SHAPE_PATTERN") = String.Empty
-                        rowDETJOBM1.Item("REQ_EDGE_THICKNESS") = String.Empty
-                        rowDETJOBM1.Item("REQ_BASE_CURVE") = String.Empty
-                        rowDETJOBM1.Item("CUST_CLINIT") = String.Empty
-                        rowDETJOBM1.Item("WRAP_EDGE_SPORT") = String.Empty
-                        rowDETJOBM1.Item("JOB_LOCK_PRICING") = String.Empty
-                        rowDETJOBM1.Item("SHAPE_TO_BE_MODIFIED") = String.Empty
-                        rowDETJOBM1.Item("FOG_FREE") = String.Empty
-                        rowDETJOBM1.Item("LENS_DESIGN_RNDSEG_BLND") = String.Empty
-                        rowDETJOBM1.Item("UNCUT_TINTABLE") = String.Empty
-                        rowDETJOBM1.Item("JOB_NO_BACKSIDE_COAT") = String.Empty
-                        rowDETJOBM1.Item("JOB_CASE_HELD") = String.Empty
-                        rowDETJOBM1.Item("JOB_FRAME_HELD") = String.Empty
-                        rowDETJOBM1.Item("BIN_NO") = String.Empty
-                        rowDETJOBM1.Item("JOB_INSPCT_SUP_DESC") = String.Empty
-                        rowDETJOBM1.Item("PROMO_CODE") = String.Empty
+
+                        Dim rowSOTORDR1 As DataRow = dst.Tables("SOTORDR1").NewRow
+                        rowSOTORDR1.Item("ORDR_NO") = ORDR_NO
+                        rowSOTORDR1.ITEM("ORDR_DATE") = String.Empty
+                        rowSOTORDR1.Item("CUST_CODE") = CUST_CODE
+                        rowSOTORDR1.Item("CUST_NAME") = rowDETJOBM1.Item("CUST_NAME") & String.Empty
+                        rowSOTORDR1.Item("CUST_SHIP_TO_NO") = rowDETJOBM1.Item("CUST_SHIP_TO_NO") & String.Empty
+                        rowSOTORDR1.Item("CUST_SHIP_TO_NAME") = rowDETJOBM1.Item("CUST_SHIP_TO_NAME") & String.Empty
+                        rowSOTORDR1.Item("ORDR_CUST_PO") = rowDETJOBM1.Item("ORDR_CUST_PO") & String.Empty
+                        rowSOTORDR1.Item("ORDR_STATUS") = "O"
+                        rowSOTORDR1.Item("ORDR_SOURCE") = "V"
+                        rowSOTORDR1.Item("SHIP_VIA_CODE") = rowDETJOBM1.Item("SHIP_VIA_CODE") & String.Empty
+                        dst.Tables("SOTORDR1").Rows.Add(rowSOTORDR1)
+
+                        Dim errorCode As String = String.Empty
+                        SetBillToAttributes(CUST_CODE, CUST_CODE, rowSOTORDR1, errorCode)
+                        CreateSalesOrderTax(ORDR_NO)
+
+                        'If rowARTCUST1 IsNot Nothing Then
+                        '    rowSOTORDR1.Item("POST_CODE") = rowARTCUST1.Item("POST_CODE") & String.Empty
+                        '    rowSOTORDR1.Item("TERM_CODE") = rowARTCUST1.Item("TERM_CODE") & String.Empty
+                        '    rowSOTORDR1.Item("SREP_CODE") = rowARTCUST1.Item("SREP_CODE") & String.Empty
+                        'End If
+                        'rowSOTORDR1.ITEM("STAX_EXEMPT") = String.Empty
+                        'rowSOTORDR1.ITEM("CUST_SHIP_TO_STATE") = String.Empty
+                        'rowSOTORDR1.Item("CUST_CHIP_TO_ZIP_TAX") = String.Empty
+
+                        rowSOTORDR1.Item("WHSE_CODE") = "003"
+                        rowSOTORDR1.Item("INIT_OPER") = ABSolution.ASCMAIN1.USER_ID
+                        rowSOTORDR1.Item("LAST_OPER") = ABSolution.ASCMAIN1.USER_ID
+                        rowSOTORDR1.Item("INIT_DATE") = DateTime.Now
+                        rowSOTORDR1.Item("LAST_DATE") = DateTime.Now
+                        rowSOTORDR1.Item("ORDR_TYPE_CODE") = "REG"
+                        rowSOTORDR1.Item("ORDR_CALLER_NAME") = "VW Import"
+                        rowSOTORDR1.Item("ORDR_DPD") = "0"
+                        rowSOTORDR1.Item("BRANCH_CODE") = "NY"
+                        rowSOTORDR1.Item("DIVISION_CODE") = "DEL"
+                        rowSOTORDR1.Item("ORDR_TOTAL_AMT") = 0
+                        rowSOTORDR1.Item("ORDR_SALES") = 0
                     Next
                 Next
             Catch ex As Exception
@@ -3157,6 +3199,626 @@ Namespace OrdersImport
 
                 ' Archive processed XML files
             End Try
+        End Sub
+
+        Private Sub PriceDelJob(ByVal JOB_NO As String)
+
+            'MAKE EACH CALL A BOOLEAN AND RECORD AN ERROR CODE IF ERROR PRICING
+            Try
+                LoadPricingLines(JOB_NO)
+                Charge_Lens(JOB_NO)
+                Charge_Balance_Lens(JOB_NO)
+                Charge_Fog_Free(JOB_NO)
+                Charge_Coating(JOB_NO)
+                Charge_Mirror_Coating(JOB_NO)
+                Charge_WrapEdge(JOB_NO)
+                Charge_Tinting(JOB_NO)
+                Charge_Edging(JOB_NO)
+                Charge_Polishing(JOB_NO)
+
+            Catch ex As Exception
+                RecordLogEntry("PriceDelJob: (" & JOB_NO & ") - " & ex.Message)
+            End Try
+
+        End Sub
+
+        Private Sub LoadPricingLines(ByVal JOB_NO As String)
+
+            Try
+                'Create price line in detjomb2
+                If dst.Tables("DETJOBM2").Rows.Find(New Object() {JOB_NO, 11}) Is Nothing Then
+                    dst.Tables("DETJOBM2").Rows.Add(New Object() {JOB_NO, 11, "L", "R", 0, 0, 0})
+                End If
+
+                If dst.Tables("DETJOBM2").Rows.Find(New Object() {JOB_NO, 12}) Is Nothing Then
+                    dst.Tables("DETJOBM2").Rows.Add(New Object() {JOB_NO, 12, "L", "L", 0, 0, 0})
+                End If
+
+                If dst.Tables("DETJOBM2").Rows.Find(New Object() {JOB_NO, 20}) Is Nothing Then
+                    dst.Tables("DETJOBM2").Rows.Add(New Object() {JOB_NO, 20, "C", "", 0, 0, 0})
+                End If
+                If dst.Tables("DETJOBM2").Rows.Find(New Object() {JOB_NO, 22}) Is Nothing Then
+                    dst.Tables("DETJOBM2").Rows.Add(New Object() {JOB_NO, 22, "M", "", 0, 0, 0})
+                End If
+
+                If dst.Tables("DETJOBM2").Rows.Find(New Object() {JOB_NO, 30}) Is Nothing Then
+                    dst.Tables("DETJOBM2").Rows.Add(New Object() {JOB_NO, 30, "T", "", 0, 0, 0})
+                End If
+
+                If dst.Tables("DETJOBM2").Rows.Find(New Object() {JOB_NO, 40}) Is Nothing Then
+                    dst.Tables("DETJOBM2").Rows.Add(New Object() {JOB_NO, 40, "E", "", 0, 0, 0})
+                End If
+
+                If dst.Tables("DETJOBM2").Rows.Find(New Object() {JOB_NO, 50}) Is Nothing Then
+                    dst.Tables("DETJOBM2").Rows.Add(New Object() {JOB_NO, 50, "P", "", 0, 0, 0})
+                End If
+
+                If dst.Tables("DETJOBM2").Rows.Find(New Object() {JOB_NO, 60}) Is Nothing Then
+                    dst.Tables("DETJOBM2").Rows.Add(New Object() {JOB_NO, 60, "B", "", 0, 0, 0})
+                End If
+
+                If dst.Tables("DETJOBM2").Rows.Find(New Object() {JOB_NO, 70}) Is Nothing Then
+                    dst.Tables("DETJOBM2").Rows.Add(New Object() {JOB_NO, 70, "W", "", 0, 0, 0})
+                End If
+
+                If dst.Tables("DETJOBM2").Rows.Find(New Object() {JOB_NO, 80}) Is Nothing Then
+                    dst.Tables("DETJOBM2").Rows.Add(New Object() {JOB_NO, 80, "F", "", 0, 0, 0})
+                End If
+
+            Catch ex As Exception
+                RecordLogEntry("LoadPricingLines: " & ex.Message)
+            End Try
+        End Sub
+
+        Private Sub Charge_Coating(ByVal JOB_NO As String)
+
+            Try
+
+                If dst.Tables("DETJOBM1").Select("JOB_NO = '" & JOB_NO & "'").Length = 0 Then
+                    Exit Sub
+                End If
+
+                If dst.Tables("DETJOBM2").Select("JOB_NO = '" & JOB_NO & "'").Length = 0 Then
+                    Exit Sub
+                End If
+
+                If dst.Tables("DETJOBM2").Select("JOB_NO = '" & JOB_NO & "' AND JOB_CHARGE_TYPE = 'C'", "").Length = 0 Then
+                    Exit Sub
+                End If
+
+                Dim rowDETJOBM1 As DataRow = dst.Tables("DETJOBM1").Select("JOB_NO = '" & JOB_NO & "'")(0)
+                Dim rowDETJOBM2 As DataRow = dst.Tables("DETJOBM2").Select("JOB_NO = '" & JOB_NO & "' AND JOB_CHARGE_TYPE = 'C'", "")(0)
+
+                If rowDETJOBM1.Item("AR_COATING") & String.Empty = "1" Then
+                    rowDETJOBM2("JOB_QTY") = IIf(rowDETJOBM1.Item("LENS_ORDER") & String.Empty = "B" Or rowDETJOBM1.Item("BALANCE_LENS") & String.Empty = "1", 2, 1)
+                Else
+                    rowDETJOBM2("JOB_QTY") = 0
+                End If
+
+                Dim LIST_PRICE As Decimal = Val(dst.Tables("DETPARM1").Rows(0).Item("DE_PARM_COATING") & String.Empty) / 2
+                Dim CUST_PRICE As Decimal = LIST_PRICE
+
+                ' See if the customer has special pricing.
+                Dim sql As String = String.Empty
+                sql = "SELECT * FROM DETDSGND WHERE CUST_CODE = :PARM1 AND LENS_DESIGN_CODE = :PARM2 AND SERVICE_CODE = 'C'"
+                Dim rowDETDSGND As DataRow = ABSolution.ASCDATA1.GetDataRow(sql, "VV", New Object() {rowDETJOBM1.Item("CUST_CODE") & String.Empty, rowDETJOBM1.Item("LENS_DESIGN_CODE") & String.Empty})
+
+                sql = "SELECT * FROM DETCUSTP WHERE CUST_CODE = :PARM1"
+                Dim rowDETCUSTP As DataRow = ABSolution.ASCDATA1.GetDataRow(sql, "V", New Object() {rowDETJOBM1.Item("CUST_CODE") & String.Empty})
+
+                If rowDETDSGND IsNot Nothing Then
+                    CUST_PRICE = Val(rowDETDSGND.Item("CUST_PRICE") & String.Empty) / 2
+                ElseIf rowDETCUSTP IsNot Nothing AndAlso rowDETCUSTP.Item("CUST_COATING_OVERRIDE") & String.Empty = "1" Then
+                    CUST_PRICE = Val(rowDETCUSTP.Item("CUST_COATING_PRICE") & String.Empty) / 2
+                End If
+
+                rowDETJOBM2("LIST_PRICE") = LIST_PRICE
+
+                Dim INV_DISC_PCT As Decimal = 0
+                Dim JOB_PRICE As Decimal = CUST_PRICE * (100 - INV_DISC_PCT) / 100
+                rowDETJOBM2("JOB_PRICE") = JOB_PRICE
+                rowDETJOBM2("CUST_PRICE") = CUST_PRICE
+
+            Catch ex As Exception
+                RecordLogEntry("Charge_Coating: (" & JOB_NO & ") - " & ex.Message)
+            End Try
+
+        End Sub
+
+        Private Sub Charge_Edging(ByVal JOB_NO As String)
+
+            Try
+                If dst.Tables("DETJOBM1").Select("JOB_NO = '" & JOB_NO & "'").Length = 0 Then
+                    Exit Sub
+                End If
+
+                If dst.Tables("DETJOBM2").Select("JOB_NO = '" & JOB_NO & "'").Length = 0 Then
+                    Exit Sub
+                End If
+
+                If dst.Tables("DETJOBM2").Select("JOB_NO = '" & JOB_NO & "' AND JOB_CHARGE_TYPE = 'E'", "").Length = 0 Then
+                    Exit Sub
+                End If
+
+                Dim rowDETJOBM1 As DataRow = dst.Tables("DETJOBM1").Select("JOB_NO = '" & JOB_NO & "'")(0)
+                Dim rowDETJOBM2 As DataRow = dst.Tables("DETJOBM2").Select("JOB_NO = '" & JOB_NO & "' AND JOB_CHARGE_TYPE = 'E'", "")(0)
+
+
+                If rowDETJOBM1.Item("FINISHED") & String.Empty <> "U" And rowDETJOBM1.Item("EDGING") & String.Empty = "1" Then
+                    rowDETJOBM2("JOB_QTY") = IIf(rowDETJOBM1.Item("LENS_ORDER") & String.Empty = "B" Or rowDETJOBM1.Item("BALANCE_LENS") & String.Empty = "1", 2, 1)
+                Else
+                    rowDETJOBM2("JOB_QTY") = 0
+                End If
+
+
+                Dim LIST_PRICE As Decimal = 0
+                Dim CUST_PRICE As Decimal = 0
+
+                Dim sql As String = "Select EDGING_SVC_PRICE from DETFRAM2 " _
+                    & " where FRAME_TYPE_CODE = :PARM1" _
+                    & " and MATL_LMATTYPE = (Select MATL_LMATTYPE from DETMATL1 where MATL_CODE = :PARM2)"
+
+                ' Validate that Edging is a valid charge
+                Dim rowValue As DataRow = ABSolution.ASCDATA1.GetDataRow(sql, "VV", New Object() {rowDETJOBM1.Item("FRAME_TYPE_CODE") & String.Empty, rowDETJOBM1.Item("MATL_CODE") & String.Empty})
+
+                ' See if the customer has special pricing.
+                If rowValue IsNot Nothing Then
+                    LIST_PRICE = Val(rowValue.Item("EDGING_SVC_PRICE") & String.Empty) / 2
+                    CUST_PRICE = LIST_PRICE
+
+                    sql = "SELECT * FROM DETDSGND WHERE CUST_CODE = :PARM1 AND LENS_DESIGN_CODE = :PARM2 AND SERVICE_CODE = 'E'"
+                    Dim rowDETDSGND As DataRow = ABSolution.ASCDATA1.GetDataRow(sql, "VV", New Object() {rowDETJOBM1.Item("CUST_CODE") & String.Empty, rowDETJOBM1.Item("LENS_DESIGN_CODE") & String.Empty})
+
+                    sql = "SELECT * FROM DETCUSTP WHERE CUST_CODE = :PARM1"
+                    Dim rowDETCUSTP As DataRow = ABSolution.ASCDATA1.GetDataRow(sql, "V", New Object() {rowDETJOBM1.Item("CUST_CODE") & String.Empty})
+
+                    If rowDETDSGND IsNot Nothing Then
+                        CUST_PRICE = Val(rowDETDSGND.Item("CUST_PRICE") & String.Empty) / 2
+                    ElseIf rowDETCUSTP IsNot Nothing AndAlso rowDETCUSTP.Item("CUST_EDGING_OVERRIDE") & String.Empty = "1" Then
+                        CUST_PRICE = Val(rowDETCUSTP.Item("CUST_EDGING_PRICE") & String.Empty) / 2
+                    End If
+                End If
+
+                rowDETJOBM2("LIST_PRICE") = LIST_PRICE
+
+                Dim INV_DISC_PCT As Decimal = 0
+                Dim JOB_PRICE As Decimal = CUST_PRICE * (100 - INV_DISC_PCT) / 100
+                rowDETJOBM2("JOB_PRICE") = JOB_PRICE
+                rowDETJOBM2("CUST_PRICE") = CUST_PRICE
+
+            Catch ex As Exception
+                RecordLogEntry("Charge_Edging: (" & JOB_NO & ") - " & ex.Message)
+            End Try
+        End Sub
+
+        Private Sub Charge_Lens(ByVal JOB_NO As String)
+
+            Try
+                If dst.Tables("DETJOBM1").Select("JOB_NO = '" & JOB_NO & "'").Length = 0 Then
+                    Exit Sub
+                End If
+
+                If dst.Tables("DETJOBM2").Select("JOB_NO = '" & JOB_NO & "'").Length = 0 Then
+                    Exit Sub
+                End If
+
+                Dim rowDETJOBM1 As DataRow = dst.Tables("DETJOBM1").Select("JOB_NO = '" & JOB_NO & "'")(0)
+                Dim rowDETJOBM2 As DataRow = dst.Tables("DETJOBM2").Select("JOB_NO = '" & JOB_NO & "'")(0)
+                Dim rowDETJOBM2_R As DataRow = dst.Tables("DETJOBM2").Select("JOB_NO = '" & JOB_NO & "' AND JOB_CHARGE_TYPE = 'L' and JOB_CHARGE_EYE = 'R'", "")(0)
+                Dim rowDETJOBM2_L As DataRow = dst.Tables("DETJOBM2").Select("JOB_NO = '" & JOB_NO & "' AND JOB_CHARGE_TYPE = 'L' and JOB_CHARGE_EYE = 'L'", "")(0)
+
+                Dim LENS_ORDER As String = rowDETJOBM2.Item("LENS_ORDER") & String.Empty
+                Dim FINISHED As String = rowDETJOBM2.Item("FINISHED") & String.Empty
+
+                rowDETJOBM2_R("JOB_QTY") = IIf(LENS_ORDER = "L" Or FINISHED = "O", 0, 1)
+                rowDETJOBM2_L("JOB_QTY") = IIf(LENS_ORDER = "R" Or FINISHED = "O", 0, 1)
+
+
+                Dim LIST_PRICE As Decimal = 0
+                Dim sql As String = "Select LIST_PRICE from DETDSGN3 " _
+                    & " where LENS_DESIGN_CODE = '" & rowDETJOBM1.Item("LENS_DESIGN_CODE") & "'" _
+                    & " and MATL_CODE = '" & rowDETJOBM1.Item("MATL_CODE") & "'" _
+                    & " and COLOR_CODE = '" & rowDETJOBM1.Item("COLOR_CODE") & "'"
+                LIST_PRICE = Val(ABSolution.ASCDATA1.GetDataValue(sql)) / 2
+
+                Dim CUST_PRICE As Decimal = LIST_PRICE
+
+                ' See if the customer has special pricing.
+                sql = "SELECT * FROM DETDSGNP WHERE CUST_CODE = :PARM1 AND LENS_DESIGN_CODE = :PARM2 AND MATL_CODE = :PARM3 AND COLOR_CODE = :PARM4"
+                Dim rowDETDSGNP As DataRow = ABSolution.ASCDATA1.GetDataRow(sql, "VVVV", New String() _
+                    {rowDETJOBM1.Item("CUST_CODE"), rowDETJOBM1.Item("LENS_DESIGN_CODE"), rowDETJOBM1.Item("MATL_CODE"), rowDETJOBM1.Item("COLOR_CODE")})
+
+                If rowDETDSGNP IsNot Nothing AndAlso rowDETDSGNP.Item("CUST_PRICE_OVERRIDE") & String.Empty = "1" Then
+                    CUST_PRICE = Val(rowDETDSGNP.Item("CUST_PRICE") & String.Empty) / 2
+                End If
+
+                Dim INV_DISC_PCT As Decimal = 0
+                Dim JOB_PRICE As Decimal = CUST_PRICE * (100 - INV_DISC_PCT) / 100
+
+                rowDETJOBM2_R("CUST_PRICE") = CUST_PRICE
+                rowDETJOBM2_L("CUST_PRICE") = CUST_PRICE
+
+                rowDETJOBM2_R("LIST_PRICE") = LIST_PRICE
+                rowDETJOBM2_R("JOB_PRICE") = JOB_PRICE
+
+                rowDETJOBM2_L("LIST_PRICE") = LIST_PRICE
+                rowDETJOBM2_L("JOB_PRICE") = JOB_PRICE
+
+            Catch ex As Exception
+                RecordLogEntry("Charge_Lens" & ex.Message)
+            End Try
+
+        End Sub
+
+        Private Sub Charge_Balance_Lens(ByVal JOB_NO As String)
+
+            Dim sql As String = String.Empty
+
+            Try
+                If dst.Tables("DETJOBM1").Select("JOB_NO = '" & JOB_NO & "'").Length = 0 Then
+                    Exit Sub
+                End If
+
+                If dst.Tables("DETJOBM2").Select("JOB_NO = '" & JOB_NO & "'").Length = 0 Then
+                    Exit Sub
+                End If
+
+                Dim rowDETJOBM1 As DataRow = dst.Tables("DETJOBM1").Select("JOB_NO = '" & JOB_NO & "'")(0)
+                Dim rowDETJOBM2 As DataRow = dst.Tables("DETJOBM2").Select("JOB_NO = '" & JOB_NO & "' AND JOB_CHARGE_TYPE = 'B'")(0)
+                Dim BALANCE_LENS As String = rowDETJOBM1.Item("BALANCE_LENS") & String.Empty
+
+                If Val(BALANCE_LENS) = 1 Then
+                    rowDETJOBM2("JOB_QTY") = 1
+                    rowDETJOBM2("JOB_CHARGE_EYE") = IIf(rowDETJOBM1.Item("LENS_ORDER") & String.Empty = "R", "L", "R")
+                Else
+                    rowDETJOBM2("JOB_QTY") = 0
+                    rowDETJOBM2("JOB_CHARGE_EYE") = ""
+                End If
+
+                If BALANCE_LENS = "1" OrElse Val(rowDETJOBM2("LIST_PRICE") & "") = 0 Then
+
+                    sql = "SELECT * FROM DETDSGN3 WHERE LENS_DESIGN_CODE = :PARM1 AND MATL_CODE = :PARM2 AND COLOR_CODE = :PARM3"
+                    Dim rowDETDSGN3 As DataRow = ABSolution.ASCDATA1.GetDataRow(sql, "VVV", New Object() {rowDETJOBM1.Item("LENS_DESIGN_CODE") & String.Empty, _
+                                                                                                          rowDETJOBM1.Item("MATL_CODE") & String.Empty, _
+                                                                                                          rowDETJOBM1.Item("COLOR_CODE") & String.Empty})
+
+                    Dim LIST_PRICE As Decimal = 0
+                    If rowDETDSGN3 IsNot Nothing Then
+                        LIST_PRICE = Val(rowDETDSGN3.Item("BALANCE_PRICE") & String.Empty)
+                    End If
+                    Dim CUST_PRICE As Decimal = LIST_PRICE
+
+                    ' See if the customer has special pricing.
+                    sql = "SELECT * FROM DETDSGNP WHERE CUST_CODE = :PARM1 AND LENS_DESIGN_CODE = :PARM2 AND MATL_CODE = :PARM3 AND COLOR_CODE = :PARM4"
+                    Dim rowDETDSGNP As DataRow = ABSolution.ASCDATA1.GetDataRow(sql, "VVVV", New Object() {rowDETJOBM1.Item("CUST_CODE") & String.Empty, _
+                                                                                                           rowDETJOBM1.Item("LENS_DESIGN_CODE") & String.Empty, _
+                                                                                                           rowDETJOBM1.Item("MATL_CODE") & String.Empty, _
+                                                                                                           rowDETJOBM1.Item("COLOR_CODE") & String.Empty})
+
+                    If rowDETDSGNP IsNot Nothing AndAlso rowDETDSGNP.Item("CUST_BALANCE_PRICE_OVERRIDE") & String.Empty = "1" Then
+                        CUST_PRICE = Val(rowDETDSGNP.Item("CUST_BALANCE_PRICE") & String.Empty)
+                    End If
+
+                    rowDETJOBM2("LIST_PRICE") = LIST_PRICE
+
+                    Dim INV_DISC_PCT As Decimal = 0
+                    Dim JOB_PRICE As Decimal = CUST_PRICE * (100 - INV_DISC_PCT) / 100
+                    rowDETJOBM2("JOB_PRICE") = JOB_PRICE
+                    rowDETJOBM2("CUST_PRICE") = CUST_PRICE
+                End If
+
+            Catch ex As Exception
+                RecordLogEntry("Charge_Balance_Lens: (" & JOB_NO & ") - " & ex.Message)
+            End Try
+
+        End Sub
+
+        Private Sub Charge_Fog_Free(ByVal JOB_NO As String)
+
+            Try
+
+                If dst.Tables("DETJOBM1").Select("JOB_NO = '" & JOB_NO & "'").Length = 0 Then
+                    Exit Sub
+                End If
+
+                If dst.Tables("DETJOBM2").Select("JOB_NO = '" & JOB_NO & "'").Length = 0 Then
+                    Exit Sub
+                End If
+
+                If dst.Tables("DETJOBM2").Select("JOB_NO = '" & JOB_NO & "' AND JOB_CHARGE_TYPE = 'F'", "").Length = 0 Then
+                    Exit Sub
+                End If
+
+                Dim rowDETJOBM1 As DataRow = dst.Tables("DETJOBM1").Select("JOB_NO = '" & JOB_NO & "'")(0)
+                Dim rowDETJOBM2 As DataRow = dst.Tables("DETJOBM2").Select("JOB_NO = '" & JOB_NO & "' AND JOB_CHARGE_TYPE = 'F'", "")(0)
+
+                Dim INV_DISC_PCT As Decimal = 0
+                Dim JOB_PRICE As Decimal = (DE_PARM_FOG_FREE_COST / 2) * (100 - INV_DISC_PCT) / 100
+
+                Select Case rowDETJOBM1.Item("LENS_ORDER") & String.Empty
+                    Case "B"
+
+                    Case Else
+                        If Not rowDETJOBM1.Item("BALANCE_LENS") & String.Empty = "1" Then
+                            JOB_PRICE = JOB_PRICE / 2
+                        End If
+                End Select
+
+                JOB_PRICE = JOB_PRICE * (100 - INV_DISC_PCT) / 100
+
+                rowDETJOBM2("CUST_PRICE") = (DE_PARM_FOG_FREE_COST / 2)
+
+                If rowDETJOBM1.Item("FOG_FREE") & String.Empty <> "1" Then
+                    rowDETJOBM2.Item("JOB_PRICE") = 0
+                    rowDETJOBM2("JOB_QTY") = 0
+                Else
+                    rowDETJOBM2.Item("JOB_PRICE") = JOB_PRICE
+                    rowDETJOBM2("JOB_QTY") = 1
+                End If
+
+                If rowDETJOBM1.Item("FOG_FREE") & String.Empty = "1" And Not rowDETJOBM1.Item("MIRROR_COATING") & String.Empty = "1" Then
+                    rowDETJOBM1.Item("MIRROR_COATING") = "1"
+                    If rowDETJOBM1.Item("MIRROR_COATING_COLOR") & String.Empty = String.Empty Then
+                        rowDETJOBM1.Item("MIRROR_COATING_COLOR") = "Fog Free"
+                    End If
+                End If
+            Catch ex As Exception
+
+            End Try
+
+        End Sub
+
+        Private Sub Charge_Mirror_Coating(ByVal JOB_NO As String)
+
+            Try
+
+                If dst.Tables("DETJOBM1").Select("JOB_NO = '" & JOB_NO & "'").Length = 0 Then
+                    Exit Sub
+                End If
+
+                If dst.Tables("DETJOBM2").Select("JOB_NO = '" & JOB_NO & "'").Length = 0 Then
+                    Exit Sub
+                End If
+
+                If dst.Tables("DETJOBM2").Select("JOB_NO = '" & JOB_NO & "' AND JOB_CHARGE_TYPE = 'M'", "").Length = 0 Then
+                    Exit Sub
+                End If
+
+                Dim rowDETJOBM1 As DataRow = dst.Tables("DETJOBM1").Select("JOB_NO = '" & JOB_NO & "'")(0)
+                Dim rowDETJOBM2 As DataRow = dst.Tables("DETJOBM2").Select("JOB_NO = '" & JOB_NO & "' AND JOB_CHARGE_TYPE = 'M'", "")(0)
+
+                If rowDETJOBM1.Item("chkMIRROR_COATING") & String.Empty = "1" Then
+                    rowDETJOBM2("JOB_QTY") = IIf(rowDETJOBM1.Item("LENS_ORDER") & String.Empty = "B" Or rowDETJOBM1.Item("BALANCE_LENS") & String.Empty = "1", 2, 1)
+                Else
+                    rowDETJOBM2("JOB_QTY") = 0
+                End If
+
+                Dim LIST_PRICE As Decimal = Val(dst.Tables("DETPARM1").Rows(0).Item("DE_PARM_MIRROR_COATING") & String.Empty) / 2
+                Dim CUST_PRICE As Decimal = LIST_PRICE
+
+                ' See if the customer has special pricing.
+
+                Dim sql As String = String.Empty
+                sql = "SELECT * FROM DETDSGND WHERE CUST_CODE = :PARM1 AND LENS_DESIGN_CODE = :PARM2 AND SERVICE_CODE = 'M'"
+                Dim rowDETDSGND As DataRow = ABSolution.ASCDATA1.GetDataRow(sql, "VV", New Object() {rowDETJOBM1.Item("CUST_CODE") & String.Empty, rowDETJOBM1.Item("LENS_DESIGN_CODE") & String.Empty})
+
+                sql = "SELECT * FROM DETCUSTP WHERE CUST_CODE = :PARM1"
+                Dim rowDETCUSTP As DataRow = ABSolution.ASCDATA1.GetDataRow(sql, "V", New Object() {rowDETJOBM1.Item("CUST_CODE") & String.Empty})
+
+                If rowDETDSGND IsNot Nothing Then
+                    CUST_PRICE = Val(rowDETDSGND.Item("CUST_PRICE") & String.Empty) / 2
+                ElseIf rowDETCUSTP IsNot Nothing AndAlso rowDETCUSTP.Item("CUST_MIRROR_COATING_OVERRIDE") & String.Empty = "1" Then
+                    CUST_PRICE = Val(rowDETCUSTP.Item("CUST_MIRROR_COATING_PRICE") & String.Empty) / 2
+                End If
+
+                'See if there is a price override for this mirror coating
+                Dim MIRROR_COATING_COLOR As String = rowDETJOBM1.Item("MIRROR_COATING_COLOR") & String.Empty
+                If MIRROR_COATING_COLOR.Length > 0 Then
+                    If dst.Tables("DETCOLMC").Select("MIRROR_COATING_COLOR = '" & MIRROR_COATING_COLOR & "'").Length > 0 Then
+                        Dim rowDETCOLMC As DataRow = dst.Tables("DETCOLMC").Select("MIRROR_COATING_COLOR = '" & MIRROR_COATING_COLOR & "'")(0)
+                        If rowDETCOLMC IsNot Nothing AndAlso Val(rowDETCOLMC.Item("MIRROR_PRICE_OVERRIDE") & String.Empty) > 0 Then
+                            CUST_PRICE = Val(rowDETCOLMC.Item("MIRROR_PRICE_OVERRIDE") & String.Empty) / 2
+                        End If
+                    End If
+                End If
+
+                rowDETJOBM2("LIST_PRICE") = LIST_PRICE
+
+                Dim INV_DISC_PCT As Decimal = 0
+                Dim JOB_PRICE As Decimal = CUST_PRICE * (100 - INV_DISC_PCT) / 100
+                rowDETJOBM2("JOB_PRICE") = JOB_PRICE
+                rowDETJOBM2("CUST_PRICE") = CUST_PRICE
+
+            Catch ex As Exception
+                RecordLogEntry("Charge_Mirror_Coating: (" & JOB_NO & ") - " & ex.Message)
+            End Try
+
+        End Sub
+
+        Private Sub Charge_Polishing(ByVal JOB_NO As String)
+
+            Try
+
+                If dst.Tables("DETJOBM1").Select("JOB_NO = '" & JOB_NO & "'").Length = 0 Then
+                    Exit Sub
+                End If
+
+                If dst.Tables("DETJOBM2").Select("JOB_NO = '" & JOB_NO & "'").Length = 0 Then
+                    Exit Sub
+                End If
+
+                If dst.Tables("DETJOBM2").Select("JOB_NO = '" & JOB_NO & "' AND JOB_CHARGE_TYPE = 'P'", "").Length = 0 Then
+                    Exit Sub
+                End If
+
+                Dim rowDETJOBM1 As DataRow = dst.Tables("DETJOBM1").Select("JOB_NO = '" & JOB_NO & "'")(0)
+                Dim rowDETJOBM2 As DataRow = dst.Tables("DETJOBM2").Select("JOB_NO = '" & JOB_NO & "' AND JOB_CHARGE_TYPE = 'P'", "")(0)
+
+
+                If rowDETJOBM1.Item("POLISHING") & String.Empty <> "0" Then
+                    rowDETJOBM2("JOB_QTY") = IIf(rowDETJOBM1.Item("LENS_ORDER") & String.Empty = "B" Or rowDETJOBM1.Item("BALANCE_LENS") & String.Empty = "1", 2, 1)
+                Else
+                    rowDETJOBM2("JOB_QTY") = 0
+                End If
+
+
+                Dim LIST_PRICE As Decimal = 0
+                Dim CUST_PRICE As Decimal = 0
+
+                ' Validate that Polishing is a valid charge
+                Dim sql As String = "Select MATL_POLISHING from DETMATL1 where MATL_CODE = :PARM1"
+                Dim rowValue As DataRow = ABSolution.ASCDATA1.GetDataRow(sql, "V", New Object() {rowDETJOBM1.Item("MATL_CODE") & String.Empty})
+
+                If rowValue IsNot Nothing Then
+                    LIST_PRICE = Val(rowValue.Item("MATL_POLISHING") & String.Empty) / 2
+                    CUST_PRICE = LIST_PRICE
+
+                    ' See if the customer has special pricing.
+                    sql = "SELECT * FROM DETDSGND WHERE CUST_CODE = :PARM1 AND LENS_DESIGN_CODE = :PARM2 AND SERVICE_CODE = 'P'"
+                    Dim rowDETDSGND As DataRow = ABSolution.ASCDATA1.GetDataRow(sql, "VV", New Object() {rowDETJOBM1.Item("CUST_CODE") & String.Empty, rowDETJOBM1.Item("LENS_DESIGN_CODE") & String.Empty})
+
+                    sql = "SELECT * FROM DETCUSTP WHERE CUST_CODE = :PARM1"
+                    Dim rowDETCUSTP As DataRow = ABSolution.ASCDATA1.GetDataRow(sql, "V", New Object() {rowDETJOBM1.Item("CUST_CODE") & String.Empty})
+
+                    If rowDETDSGND IsNot Nothing Then
+                        CUST_PRICE = Val(rowDETDSGND.Item("CUST_PRICE") & String.Empty) / 2
+                    ElseIf rowDETCUSTP IsNot Nothing AndAlso rowDETCUSTP.Item("CUST_POLISHING_OVERRIDE") & String.Empty = "1" Then
+                        CUST_PRICE = Val(rowDETCUSTP.Item("CUST_POLISHING_PRICE") & String.Empty) / 2
+                    End If
+                End If
+
+                rowDETJOBM2("LIST_PRICE") = LIST_PRICE
+
+                Dim INV_DISC_PCT As Decimal = 0
+                Dim JOB_PRICE As Decimal = CUST_PRICE * (100 - INV_DISC_PCT) / 100
+                rowDETJOBM2("JOB_PRICE") = JOB_PRICE
+                rowDETJOBM2("CUST_PRICE") = CUST_PRICE
+
+            Catch ex As Exception
+                RecordLogEntry("Charge_Polishing: (" & JOB_NO & ") - " & ex.Message)
+            End Try
+
+
+        End Sub
+
+        Private Sub Charge_Tinting(ByVal JOB_NO As String)
+
+            Try
+
+                If dst.Tables("DETJOBM1").Select("JOB_NO = '" & JOB_NO & "'").Length = 0 Then
+                    Exit Sub
+                End If
+
+                If dst.Tables("DETJOBM2").Select("JOB_NO = '" & JOB_NO & "'").Length = 0 Then
+                    Exit Sub
+                End If
+
+                If dst.Tables("DETJOBM2").Select("JOB_NO = '" & JOB_NO & "' AND JOB_CHARGE_TYPE = 'T'", "").Length = 0 Then
+                    Exit Sub
+                End If
+
+                Dim rowDETJOBM1 As DataRow = dst.Tables("DETJOBM1").Select("JOB_NO = '" & JOB_NO & "'")(0)
+                Dim rowDETJOBM2 As DataRow = dst.Tables("DETJOBM2").Select("JOB_NO = '" & JOB_NO & "' AND JOB_CHARGE_TYPE = 'T'", "")(0)
+
+
+                If rowDETJOBM1.Item("TINT_CODE") & String.Empty <> "NONE" Then
+                    rowDETJOBM2("JOB_QTY") = IIf(rowDETJOBM1.Item("LENS_ORDER") & String.Empty = "B" Or rowDETJOBM1.Item("BALANCE_LENS") & String.Empty = "1", 2, 1)
+                Else
+                    rowDETJOBM2("JOB_QTY") = 0
+                End If
+
+                Dim LIST_PRICE As Decimal = 0
+                Dim CUST_PRICE As Decimal = 0
+
+                ' Validate that Tinting is a valid charge
+                Dim sql As String = "Select TINT_PRICE from DETTINT1 where TINT_CODE = :PARM1"
+                Dim rowValue As DataRow = ABSolution.ASCDATA1.GetDataRow(sql, "V", New Object() {rowDETJOBM1.Item("TINT_CODE") & String.Empty})
+
+                If rowValue IsNot Nothing Then
+
+                    LIST_PRICE = Val(rowValue.Item("TINT_PRICE") & String.Empty) / 2
+                    CUST_PRICE = LIST_PRICE
+
+                    ' See if the customer has special pricing.
+                    sql = "SELECT * FROM DETDSGND WHERE CUST_CODE = :PARM1 AND LENS_DESIGN_CODE = :PARM2 AND SERVICE_CODE = 'T'"
+                    Dim rowDETDSGND As DataRow = ABSolution.ASCDATA1.GetDataRow(sql, "VV", New Object() {rowDETJOBM1.Item("CUST_CODE") & String.Empty, rowDETJOBM1.Item("LENS_DESIGN_CODE") & String.Empty})
+
+                    sql = "SELECT * FROM DETCUSTP WHERE CUST_CODE = :PARM1"
+                    Dim rowDETCUSTP As DataRow = ABSolution.ASCDATA1.GetDataRow(sql, "V", New Object() {rowDETJOBM1.Item("CUST_CODE") & String.Empty})
+
+                    If rowDETDSGND IsNot Nothing Then
+                        CUST_PRICE = Val(rowDETDSGND.Item("CUST_PRICE") & String.Empty) / 2
+                    ElseIf rowDETCUSTP IsNot Nothing AndAlso rowDETCUSTP.Item("CUST_TINT_OVERRIDE") & String.Empty = "1" Then
+                        CUST_PRICE = Val(rowDETCUSTP.Item("CUST_TINT_PRICE") & String.Empty) / 2
+                    End If
+                End If
+
+                rowDETJOBM2("LIST_PRICE") = LIST_PRICE
+
+                Dim INV_DISC_PCT As Decimal = 0
+                Dim JOB_PRICE As Decimal = CUST_PRICE * (100 - INV_DISC_PCT) / 100
+                rowDETJOBM2("JOB_PRICE") = JOB_PRICE
+                rowDETJOBM2("CUST_PRICE") = CUST_PRICE
+
+            Catch ex As Exception
+                RecordLogEntry("Charge_Tinting: (" & JOB_NO & ") - " & ex.Message)
+            End Try
+
+        End Sub
+
+        Private Sub Charge_WrapEdge(ByVal JOB_NO As String)
+
+            Try
+
+                If dst.Tables("DETJOBM1").Select("JOB_NO = '" & JOB_NO & "'").Length = 0 Then
+                    Exit Sub
+                End If
+
+                If dst.Tables("DETJOBM2").Select("JOB_NO = '" & JOB_NO & "'").Length = 0 Then
+                    Exit Sub
+                End If
+
+                If dst.Tables("DETJOBM2").Select("JOB_NO = '" & JOB_NO & "' AND JOB_CHARGE_TYPE = 'W'", "").Length = 0 Then
+                    Exit Sub
+                End If
+
+                Dim rowDETJOBM1 As DataRow = dst.Tables("DETJOBM1").Select("JOB_NO = '" & JOB_NO & "'")(0)
+                Dim rowDETJOBM2 As DataRow = dst.Tables("DETJOBM2").Select("JOB_NO = '" & JOB_NO & "' AND JOB_CHARGE_TYPE = 'W'", "")(0)
+
+                If rowDETJOBM1.Item("FINISHED") & String.Empty <> "U" And rowDETJOBM1.Item("WRAP_EDGE") & String.Empty = "1" Then
+                    rowDETJOBM2("JOB_QTY") = IIf(rowDETJOBM1.Item("LENS_ORDER") & String.Empty = "B" Or rowDETJOBM1.Item("BALANCE_LENS") & String.Empty = "1", 2, 1)
+                Else
+                    rowDETJOBM2("JOB_QTY") = 0
+                End If
+
+                Dim LIST_PRICE As Decimal = Val(dst.Tables("DETPARM1").Rows(0).Item("DE_PARM_WRAP_EDGE") & "") / 2
+                Dim CUST_PRICE As Decimal = LIST_PRICE
+
+                ' See if the customer has special pricing.
+                Dim sql As String = String.Empty
+                sql = "SELECT * FROM DETDSGND WHERE CUST_CODE = :PARM1 AND LENS_DESIGN_CODE = :PARM2 AND SERVICE_CODE = 'W'"
+                Dim rowDETDSGND As DataRow = ABSolution.ASCDATA1.GetDataRow(sql, "VV", New Object() {rowDETJOBM1.Item("CUST_CODE") & String.Empty, rowDETJOBM1.Item("LENS_DESIGN_CODE") & String.Empty})
+
+                sql = "SELECT * FROM DETCUSTP WHERE CUST_CODE = :PARM1"
+                Dim rowDETCUSTP As DataRow = ABSolution.ASCDATA1.GetDataRow(sql, "V", New Object() {rowDETJOBM1.Item("CUST_CODE") & String.Empty})
+
+                If rowDETDSGND IsNot Nothing Then
+                    CUST_PRICE = Val(rowDETDSGND.Item("CUST_PRICE") & String.Empty) / 2
+                ElseIf rowDETCUSTP IsNot Nothing AndAlso rowDETCUSTP.Item("CUST_WRAP_EDGE_OVERRIDE") & String.Empty = "1" Then
+                    CUST_PRICE = Val(rowDETCUSTP.Item("CUST_WRAP_EDGE_PRICE") & String.Empty) / 2
+                End If
+
+                rowDETJOBM2("LIST_PRICE") = LIST_PRICE
+
+                Dim INV_DISC_PCT As Decimal = 0
+                Dim JOB_PRICE As Decimal = CUST_PRICE * (100 - INV_DISC_PCT) / 100
+                rowDETJOBM2("JOB_PRICE") = JOB_PRICE
+                rowDETJOBM2("CUST_PRICE") = CUST_PRICE
+
+            Catch ex As Exception
+                RecordLogEntry("Charge_WrapEdge: (" & JOB_NO & ") - " & ex.Message)
+            End Try
+
         End Sub
 
 #End Region
@@ -4811,6 +5473,8 @@ Namespace OrdersImport
 
             ValidateDPDAddress = False
 
+            If 1 = 1 Then Return True
+
             Try
                 RecordLogEntry("Enter ValidateDPDAddress")
                 Dim clsSHCUPSC1 As New TAC.SHCUPSC1
@@ -4889,9 +5553,10 @@ Namespace OrdersImport
             Catch ex As Exception
                 RecordLogEntry("ValidateDPDAddress :" & ex.Message)
                 Return False
+            Finally
+                RecordLogEntry("Exit ValidateDPDAddress")
             End Try
 
-            RecordLogEntry("Exit ValidateDPDAddress")
         End Function
 
 #End Region
@@ -5102,9 +5767,21 @@ Namespace OrdersImport
                     baseClass.Create_TDA(.Tables.Add, "SOTPARMB", "*")
                     baseClass.clsASCBASE1.Fill_Records("SOTPARMB", "Z")
 
+                    baseClass.Create_TDA(.Tables.Add, "DETPARM1", "*")
+                    baseClass.clsASCBASE1.Fill_Records("DETPARM1", "Z")
+
+                    baseClass.Create_TDA(.Tables.Add, "DETCOLMC", "*")
+                    baseClass.clsASCBASE1.Fill_Records("DETCOLMC", "", True, "SELECT * FROM DETCOLMC")
+
                     SO_PARM_SHIP_ND = (dst.Tables("SOTPARMB").Rows(0).Item("SO_PARM_SHIP_ND") & String.Empty).ToString.Trim
                     SO_PARM_SHIP_ND_DPD = (dst.Tables("SOTPARMB").Rows(0).Item("SO_PARM_SHIP_ND_DPD") & String.Empty).ToString.Trim
                     SO_PARM_SHIP_ND_COD = (dst.Tables("SOTPARMB").Rows(0).Item("SO_PARM_SHIP_ND_COD") & String.Empty).ToString.Trim
+
+                    If dst.Tables("DETPARM1") IsNot Nothing AndAlso dst.Tables("DETPARM1").Rows.Count > 0 Then
+                        DE_PARM_FOG_FREE_COST = Val(dst.Tables("DETPARM1").Rows(0).Item("DE_PARM_FOG_FREE_COST") & String.Empty)
+                    Else
+                        DE_PARM_FOG_FREE_COST = 45
+                    End If
 
                     If dst.Tables("SOTPARM1") IsNot Nothing AndAlso dst.Tables("SOTPARM1").Rows.Count > 0 Then
                         DpdDefaultShipViaCode = (dst.Tables("SOTPARM1").Rows(0).Item("SO_PARM_SHIP_VIA_CODE_DPD") & String.Empty).ToString.Trim
