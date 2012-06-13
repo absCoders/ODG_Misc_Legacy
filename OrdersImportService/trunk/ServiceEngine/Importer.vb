@@ -5473,8 +5473,6 @@ Namespace OrdersImport
 
             ValidateDPDAddress = False
 
-            If 1 = 1 Then Return True
-
             Try
                 RecordLogEntry("Enter ValidateDPDAddress")
                 Dim clsSHCUPSC1 As New TAC.SHCUPSC1
