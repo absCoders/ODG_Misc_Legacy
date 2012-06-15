@@ -131,8 +131,8 @@ Namespace OrdersImport
                 Dim rowSOTPARMP As DataRow = ABSolution.ASCDATA1.GetDataRow("Select * From SOTPARMP WHERE SO_PARM_KEY = :PARM1", "V", New Object() {OrderSource})
 
                 Dim svcConfig As New ServiceConfig
-                Dim DriveLetter As String = svcConfig.DriveLetter.ToString.ToUpper
-                Dim DriveLetterIP As String = svcConfig.DriveLetterIP.ToString.ToUpper
+                Dim DriveLetter As String = svcConfig.DriveLetter.ToString.ToUpper.Trim
+                Dim DriveLetterIP As String = svcConfig.DriveLetterIP.ToString.ToUpper.Trim
                 Dim convert As Boolean = DriveLetter.Length > 0 AndAlso DriveLetterIP.Length > 0
 
                 If rowSOTPARMP IsNot Nothing Then
@@ -473,6 +473,10 @@ Namespace OrdersImport
                 DriveLetterIP = svcConfig.DriveLetterIP.ToString.ToUpper
                 convert = DriveLetter.Length > 0 AndAlso DriveLetterIP.Length > 0
 
+                RecordLogEntry("DriveLetter: " & DriveLetter)
+                RecordLogEntry("DriveLetterIP: " & DriveLetterIP)
+                RecordLogEntry("convert: " & convert)
+
                 Dim ORDR_SOURCE As String = String.Empty
 
                 ABSolution.ASCMAIN1.SESSION_NO = ABSolution.ASCMAIN1.Next_Control_No("ASTLOGS1.SESSION_NO", 1)
@@ -578,22 +582,6 @@ Namespace OrdersImport
 
         End Sub
 
-        Private Sub ProcessShellSalesOrders(ByVal ORDER_SOURCE_CODE As String)
-
-            Try
-                If testMode Then RecordLogEntry("Enter ProcessShellSalesOrders.")
-
-                ' Place loop here to process the sales orders
-
-                If testMode Then RecordLogEntry("Exit ProcessShellSalesOrders.")
-
-                RecordLogEntry("0 Sales Orders to process")
-
-            Catch ex As Exception
-                RecordLogEntry("ProcessShellSalesOrders: " & ex.Message)
-            End Try
-        End Sub
-
         Private Sub ProcessWebServiceSalesOrders(ByVal sqlOrdrLineSource As String)
 
             Dim rowSOTORDRX As DataRow = Nothing
@@ -621,7 +609,6 @@ Namespace OrdersImport
                 sql &= " AND ORDR_SOURCE = (SELECT XML_ORDR_SOURCE FROM XMTXREF1 WHERE ORDR_LINE_SOURCE = '" & sqlOrdrLineSource & "')"
 
                 baseClass.clsASCBASE1.Fill_Records("XSTORDR1", String.Empty, True, sql)
-                RecordLogEntry(dst.Tables("XSTORDR1").Rows.Count & " " & webConnection.ConnectionDescription & " Sales Orders to process.")
 
                 If dst.Tables("XSTORDR1").Rows.Count = 0 Then
                     Exit Sub
@@ -796,7 +783,7 @@ Namespace OrdersImport
                 RecordLogEntry("ProcessWebServiceSalesOrders: " & ex.Message)
                 emailErrors(ORDR_SOURCE, 1, ex.Message)
             Finally
-                RecordLogEntry(salesOrdersProcessed & " " & webConnection.ConnectionDescription & " Sales Orders imported")
+                RecordLogEntry(salesOrdersProcessed & " " & IIf(webConnection.ConnectionDescription.Length = 0, "Web Service (" & sqlOrdrLineSource & ")", webConnection.ConnectionDescription) & " Sales Orders to process.")
             End Try
 
         End Sub
@@ -1024,19 +1011,37 @@ Namespace OrdersImport
                                 End If
 
                             ElseIf orderElements(32).Trim.ToUpper = "STANDARD" Then
-                                Dim rowARTCUST3 As DataRow = baseClass.LookUp("ARTCUST3", CUST_CODE)
-                                If rowARTCUST3 IsNot Nothing Then
-                                    If rowSOTORDRX.Item("ORDR_DPD") = "1" Then
-                                        rowSOTORDRX.Item("SHIP_VIA_CODE") = rowARTCUST3.Item("SHIP_VIA_CODE_DPD")
-                                    Else
-                                        rowSOTORDRX.Item("SHIP_VIA_CODE") = rowARTCUST3.Item("SHIP_VIA_CODE")
-                                    End If
-                                End If
+                                ' Do nothing, the conversion to Sales Order will grab the ship via from the master tables.
+
+                                'Dim rowARTCUST3 As DataRow = baseClass.LookUp("ARTCUST3", CUST_CODE)
+                                'If rowARTCUST3 IsNot Nothing Then
+                                '    If rowSOTORDRX.Item("ORDR_DPD") = "1" Then
+                                '        rowSOTORDRX.Item("SHIP_VIA_CODE") = rowARTCUST3.Item("SHIP_VIA_CODE_DPD")
+                                '    Else
+                                '        rowSOTORDRX.Item("SHIP_VIA_CODE") = rowARTCUST3.Item("SHIP_VIA_CODE")
+                                '    End If
+                                'End If
+
+                                '' If ship to the use the ship to Ship Via
+                                'rowARTCUST2 = baseClass.LookUp("ARTCUST2", New String() {CUST_CODE, CUST_SHIP_TO_NO})
+
+                                'If rowARTCUST2 IsNot Nothing AndAlso rowARTCUST2.Item("CUST_SHIP_TO_SHIP_VIA_CODE") & String.Empty <> String.Empty Then
+                                '    If rowSOTORDRX.Item("ORDR_DPD") = "1" Then
+                                '        If rowARTCUST2.Item("CUST_SHIP_TO_SHIP_VIA_CODE_DPD") & String.Empty <> String.Empty Then
+                                '            rowSOTORDRX.Item("SHIP_VIA_CODE") = rowARTCUST2.Item("CUST_SHIP_TO_SHIP_VIA_CODE_DPD") & String.Empty
+                                '        End If
+                                '    Else
+                                '        If rowARTCUST2.Item("CUST_SHIP_TO_SHIP_VIA_CODE") & String.Empty <> String.Empty Then
+                                '            rowSOTORDRX.Item("SHIP_VIA_CODE") = rowARTCUST2.Item("CUST_SHIP_TO_SHIP_VIA_CODE") & String.Empty
+                                '        End If
+                                '    End If
+
+                                'End If
                             End If
 
-                            If rowSOTORDRX.Item("SHIP_VIA_CODE") & String.Empty = String.Empty Then
-                                rowSOTORDRX.Item("SHIP_VIA_CODE") = "SD"
-                            End If
+                            'If rowSOTORDRX.Item("SHIP_VIA_CODE") & String.Empty = String.Empty Then
+                            '    rowSOTORDRX.Item("SHIP_VIA_CODE") = "SD"
+                            'End If
 
                             ' Second part of Else - As per Maria if DPD the ship complete
                             If rowSOTORDRX.Item("ORDR_DPD") = "1" Then
@@ -5479,6 +5484,7 @@ Namespace OrdersImport
                 Dim addressValidations As New List(Of TAC.SHCUPSC1.AddressValidationResponse)
                 Dim errMsg As String = String.Empty
 
+                RecordLogEntry("Enter ValidateDPDAddress 4")
                 Dim AddressLine1 As String = rowSOTORDR5_ST.Item("CUST_ADDR1") & String.Empty
                 Dim AddressLine2 As String = rowSOTORDR5_ST.Item("CUST_ADDR2") & String.Empty
                 Dim AddressLine3 As String = rowSOTORDR5_ST.Item("CUST_ADDR3") & String.Empty
@@ -5503,20 +5509,64 @@ Namespace OrdersImport
                     PostalCode = PostalCode.Substring(0, 5)
                 End If
 
-                clsSHCUPSC1.CarrierRequestXmlDir = clsSHCUPSC1.CarrierRequestXmlDir.ToUpper
-                If convert And clsSHCUPSC1.CarrierRequestXmlDir.StartsWith(DriveLetter) Then
+                ' Needed since service cannot access S drive
+                Dim subDirectory As String = DateTime.Now.ToString("yyyyMMdd") & "\"
+                Dim rowSOTPARM2 As DataRow = ABSolution.ASCDATA1.GetDataRow("Select * From SOTPARM2 Where SO_PARM_KEY = 'Z'", False)
+
+                Dim overrideCarrierRequestXmlDir As String = String.Empty
+                Dim overrideCarrierResponseXmlDir As String = String.Empty
+                Dim overrideCarrierResponseRptDir As String = String.Empty
+
+                If rowSOTPARM2 IsNot Nothing Then
+                    overrideCarrierRequestXmlDir = rowSOTPARM2.Item("SO_PARM_REQ_XML_DIR") & String.Empty
+                    overrideCarrierResponseXmlDir = rowSOTPARM2.Item("SO_PARM_RESP_XML_DIR") & String.Empty
+                    overrideCarrierResponseRptDir = rowSOTPARM2.Item("SO_PARM_RESP_RPT_DIR") & String.Empty
+
+                    overrideCarrierRequestXmlDir = overrideCarrierRequestXmlDir.Trim.ToUpper
+                    If Not overrideCarrierRequestXmlDir.EndsWith("\") Then overrideCarrierRequestXmlDir &= "\"
+
+                    overrideCarrierResponseXmlDir = overrideCarrierResponseXmlDir.Trim.ToUpper
+                    If Not overrideCarrierResponseXmlDir.EndsWith("\") Then overrideCarrierResponseXmlDir &= "\"
+
+                    overrideCarrierResponseRptDir = overrideCarrierResponseRptDir.Trim.ToUpper
+                    If Not overrideCarrierResponseRptDir.EndsWith("\") Then overrideCarrierResponseRptDir &= "\"
+
+                    overrideCarrierRequestXmlDir &= subDirectory
+                    overrideCarrierResponseXmlDir &= subDirectory
+                    overrideCarrierResponseRptDir &= subDirectory
+                End If
+
+                For Each Path As String In New String() {overrideCarrierRequestXmlDir, overrideCarrierResponseXmlDir, overrideCarrierResponseRptDir}
+                    Try
+                        If Not My.Computer.FileSystem.DirectoryExists(Path) Then
+                            My.Computer.FileSystem.CreateDirectory(Path)
+                        End If
+                    Catch ex As Exception
+
+                    End Try
+                Next
+
+                If convert AndAlso overrideCarrierRequestXmlDir.StartsWith(DriveLetter) Then
+                    clsSHCUPSC1.CarrierRequestXmlDir = overrideCarrierRequestXmlDir
+                    RecordLogEntry("convert clsSHCUPSC1.CarrierRequestXmlDir: ")
                     clsSHCUPSC1.CarrierRequestXmlDir = clsSHCUPSC1.CarrierRequestXmlDir.Replace(DriveLetter, DriveLetterIP)
                 End If
 
-                clsSHCUPSC1.CarrierResponseRptDir = clsSHCUPSC1.CarrierResponseRptDir.ToUpper
-                If convert And clsSHCUPSC1.CarrierResponseRptDir.StartsWith(DriveLetter) Then
+                If convert AndAlso overrideCarrierResponseRptDir.StartsWith(DriveLetter) Then
+                    clsSHCUPSC1.CarrierResponseRptDir = overrideCarrierResponseRptDir
+                    RecordLogEntry("convert clsSHCUPSC1.CarrierResponseRptDir: ")
                     clsSHCUPSC1.CarrierResponseRptDir = clsSHCUPSC1.CarrierResponseRptDir.Replace(DriveLetter, DriveLetterIP)
                 End If
 
-                clsSHCUPSC1.CarrierResponseXmlDir = clsSHCUPSC1.CarrierResponseXmlDir.ToUpper
-                If convert And clsSHCUPSC1.CarrierResponseXmlDir.StartsWith(DriveLetter) Then
+                If convert AndAlso overrideCarrierResponseXmlDir.StartsWith(DriveLetter) Then
+                    clsSHCUPSC1.CarrierResponseXmlDir = overrideCarrierResponseXmlDir
+                    RecordLogEntry("convert clsSHCUPSC1.CarrierResponseXmlDir: ")
                     clsSHCUPSC1.CarrierResponseXmlDir = clsSHCUPSC1.CarrierResponseXmlDir.Replace(DriveLetter, DriveLetterIP)
                 End If
+
+                RecordLogEntry("clsSHCUPSC1.CarrierRequestXmlDir: " & clsSHCUPSC1.CarrierRequestXmlDir)
+                RecordLogEntry("clsSHCUPSC1.CarrierResponseRptDir: " & clsSHCUPSC1.CarrierResponseRptDir)
+                RecordLogEntry("clsSHCUPSC1.CarrierResponseXmlDir: " & clsSHCUPSC1.CarrierResponseXmlDir)
 
                 Dim validAddress As Boolean = clsSHCUPSC1.AddressVaildationRequest(AddressLine1, _
                                                                                    AddressLine2, _
