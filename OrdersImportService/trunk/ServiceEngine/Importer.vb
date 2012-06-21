@@ -2299,6 +2299,20 @@ Namespace OrdersImport
 
                 For Each rowXMTORDR1 As DataRow In dst.Tables("XMTORDR1").Select("", "XML_DOC_SEQ_NO")
                     ClearDataSetTables(False)
+
+                    ' Done so if the record causes an error on the import it will be skipped.
+                    ' An email with the error will be sent.
+                    rowXMTORDR1.Item("XML_PROCESS_IND") = "X"
+                    With baseClass
+                        Try
+                            .BeginTrans()
+                            .clsASCBASE1.Update_Record_TDA("XMTORDR1")
+                            .CommitTrans()
+                        Catch ex As Exception
+                            ' nothing at this time
+                        End Try
+                    End With
+
                     rowXMTORDR1.Item("XML_PROCESS_IND") = "1"
                     XML_DOC_SEQ_NO = rowXMTORDR1.Item("XML_DOC_SEQ_NO") & String.Empty
                     CUST_CODE = (rowXMTORDR1.Item("XML_CUSTOMER_ID") & String.Empty).ToString.ToUpper.Trim
@@ -2395,8 +2409,10 @@ Namespace OrdersImport
                             rowSOTORDRX.Item("ITEM_CYLINDER") = Val(rowXMTORDR2.Item("XML_ITEM_CYLINDER") & String.Empty)
                             rowSOTORDRX.Item("ITEM_AXIS") = Val(rowXMTORDR2.Item("XML_ITEM_AXIS") & String.Empty)
                             rowSOTORDRX.Item("ITEM_ADD_POWER") = Val(rowXMTORDR2.Item("XML_ITEM_ADD_POWER") & String.Empty)
-                            rowSOTORDRX.Item("ITEM_COLOR") = rowXMTORDR2.Item("XML_ITEM_COLOR") & String.Empty
-                            rowSOTORDRX.Item("ITEM_MULTIFOCAL") = rowXMTORDR2.Item("XML_ITEM_MULTIFOCAL") & String.Empty
+
+                            rowSOTORDRX.Item("ITEM_COLOR") = TruncateField(rowXMTORDR2.Item("XML_ITEM_COLOR") & String.Empty, "SOTORDRX", "ITEM_COLOR")
+                            rowSOTORDRX.Item("ITEM_MULTIFOCAL") = TruncateField(rowXMTORDR2.Item("XML_ITEM_MULTIFOCAL") & String.Empty, "SOTORDRX", "ITEM_MULTIFOCAL")
+
 
                             ITEM_DESC2 = rowXMTORDR2.Item("XML_PRODUCT_KEY") & String.Empty & "/" & _
                                rowXMTORDR2.Item("XML_ITEM_BASE_CURVE") & String.Empty & "/" & _
@@ -2463,7 +2479,7 @@ Namespace OrdersImport
 
             Catch ex As Exception
                 RecordLogEntry("ProcessOptiPort: " & ex.Message)
-                emailErrors(ORDR_SOURCE, 1, ex.Message)
+                emailErrors("X", 1, ex.Message)
             Finally
                 RecordLogEntry(salesOrdersProcessed & " " & ftpConnection.ConnectionDescription & " Sales Orders imported.")
                 If testMode Then
