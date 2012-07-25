@@ -93,6 +93,7 @@
     <Import Include="System.Linq" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DECVALID.vb" />
     <Compile Include="Importer.vb" />
     <Compile Include="ServiceEngine.vb" />
     <Compile Include="EventArgs.vb" />
