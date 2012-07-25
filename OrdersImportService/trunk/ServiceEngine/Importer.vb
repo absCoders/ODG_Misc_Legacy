@@ -204,6 +204,9 @@ Namespace OrdersImport
             End Sub
         End Class
 
+        Private prevent_blank_selection As Boolean = False
+        Private RL_ISSUES As New Dictionary(Of String, String)
+
 #End Region
 
 #Region "Instaniate Service"
@@ -241,6 +244,7 @@ Namespace OrdersImport
                             If Not importInProcess Then
                                 importInProcess = True
                                 ProcessSalesOrders()
+                                'ProcessVisionWebDELOrders
                                 importInProcess = False
                             End If
                         End If
@@ -463,10 +467,6 @@ Namespace OrdersImport
             Try
 
                 If testMode Then RecordLogEntry("Enter ProcessSalesOrders.")
-
-                If testMode Then
-                    'ProcessVisionWebDELOrders()
-                End If
 
                 Dim svcConfig As New ServiceConfig
                 DriveLetter = svcConfig.DriveLetter.ToString.ToUpper
@@ -2816,6 +2816,8 @@ Namespace OrdersImport
 
         Private Sub ProcessVisionWebDELOrders()
 
+            If 1 = 1 Then Exit Sub
+
             Dim vwConnection As New Connection("V")
             Dim numOrdersProcessed As Int16 = 0
             Dim ImportedFiles As List(Of String) = New List(Of String)
@@ -2845,7 +2847,7 @@ Namespace OrdersImport
             Dim LENS_ID As String = String.Empty
             Dim TREATMENTS_ID As String = String.Empty
 
-            Dim errorCodes As String = String.Empty
+            Dim ErrorCodes As List(Of String) = New List(Of String)
 
             Try
                 ImportedFiles.Clear()
@@ -2877,6 +2879,8 @@ Namespace OrdersImport
                         .Tables("SOTORDR1").Clear()
                         .Tables("SOTORDR5").Clear()
                     End With
+
+                    RL_ISSUES.Clear()
 
                     For Each tbl As DataTable In vwXmlDataset.Tables
                         tbl.Rows.Clear()
@@ -2921,6 +2925,25 @@ Namespace OrdersImport
                         rowDETJOBM1.Item("JOB_NO") = JOB_NO
                         rowDETJOBM1.Item("ORDR_NO") = ORDR_NO
                         dst.Tables("DETJOBM1").Rows.Add(rowDETJOBM1)
+
+                        ' default values taken from DETJOBM1
+                        rowDETJOBM1.Item("JOB_STATUS") = "O"
+                        rowDETJOBM1.Item("ORDR_SOURCE") = "K"
+                        rowDETJOBM1.Item("JOB_TYPE_CODE") = "O" ' OriginaL
+                        rowDETJOBM1.Item("ORDR_DATE") = DateTime.Now.ToString("MM/dd/yyyy")
+                        rowDETJOBM1.Item("ORDR_CUST_PO") = "DEL/" & "SVC" & "/" & JOB_NO
+                        rowDETJOBM1.Item("COMMENT_LAB") = String.Empty
+                        rowDETJOBM1.Item("JOB_STATUS") = "O"
+                        rowDETJOBM1.Item("INIT_DATE") = DateTime.Now
+                        rowDETJOBM1.Item("INIT_OPER") = ABSolution.ASCMAIN1.USER_ID
+                        rowDETJOBM1.Item("LENS_ORDER") = "B"
+                        rowDETJOBM1.Item("FINISHED") = "U"
+                        rowDETJOBM1.Item("FRAME_STATUS") = "N"
+                        rowDETJOBM1.Item("TINT_CODE") = "NONE"
+                        rowDETJOBM1.Item("TRACE_FROM") = "N"
+                        rowDETJOBM1.Item("POLISHING") = "0"
+                        rowDETJOBM1.Item("ORDR_CALLER_NAME") = "Service"
+                        rowDETJOBM1.Item("USE_THINNING_PRISM") = "1"
 
                         creationDate = (rowRX_SPECTACLE.Item("Creation_date") & String.Empty).ToString.Replace("T", Space(1))
                         If IsDate(creationDate) Then
@@ -3033,8 +3056,6 @@ Namespace OrdersImport
                                         Dim rowDETFRAM1 As DataRow = ABSolution.ASCDATA1.GetDataRow("Select *  from DETFRAM1 where FRAME_TYPE_DESC = :PARM1", "V", New Object() {FRAME_TYPE_CODE})
                                         If rowDETFRAM1 IsNot Nothing Then
                                             rowDETJOBM1.Item("FRAME_TYPE_CODE") = FRAME_TYPE_CODE
-                                        Else
-                                            errorCodes &= "F"
                                         End If
 
                                         Dim FRAME_STATUS As String = rowFrame.Item("ACTION") & String.Empty
@@ -3163,6 +3184,8 @@ Namespace OrdersImport
                         rowDETJOBM1.Item("CUST_CODE") = CUST_CODE
                         If rowARTCUST1 IsNot Nothing Then
                             rowDETJOBM1.Item("CUST_NAME") = rowARTCUST1.Item("CUST_NAME") & String.Empty
+                        ElseIf CUST_CODE = "014211" Then 'FOR NOW WE USE THINNING PRISM FOR EVERYONE EXCEPT FOR DR BEN NAYOR
+                            rowDETJOBM1.Item("USE_THINNING_PRISM") = "0"
                         End If
 
                         rowDETJOBM1.Item("CUST_SHIP_TO_NO") = CUST_SHIP_TO_NO
@@ -3170,12 +3193,15 @@ Namespace OrdersImport
                             rowDETJOBM1.Item("CUST_NAME") = rowARTCUST2.Item("CUST_SHIP_TO_NAME") & String.Empty
                         End If
 
-                        ' Validate the Job
-
+                        ' Validate the Job - Rules taken from DEFJOBM1
+                        ErrorCodes.Clear()
+                        Dim vData As New DECVALID(dst)
+                        vData.ValidateJobData(JOB_NO, False)
+                        Dim errorList As Hashtable = vData.GetErrors
 
                         Dim rowSOTORDR1 As DataRow = dst.Tables("SOTORDR1").NewRow
                         rowSOTORDR1.Item("ORDR_NO") = ORDR_NO
-                        rowSOTORDR1.ITEM("ORDR_DATE") = String.Empty
+                        rowSOTORDR1.Item("ORDR_DATE") = String.Empty
                         rowSOTORDR1.Item("CUST_CODE") = CUST_CODE
                         rowSOTORDR1.Item("CUST_NAME") = rowDETJOBM1.Item("CUST_NAME") & String.Empty
                         rowSOTORDR1.Item("CUST_SHIP_TO_NO") = rowDETJOBM1.Item("CUST_SHIP_TO_NO") & String.Empty
@@ -3189,15 +3215,6 @@ Namespace OrdersImport
                         Dim errorCode As String = String.Empty
                         SetBillToAttributes(CUST_CODE, CUST_CODE, rowSOTORDR1, errorCode)
                         CreateSalesOrderTax(ORDR_NO)
-
-                        'If rowARTCUST1 IsNot Nothing Then
-                        '    rowSOTORDR1.Item("POST_CODE") = rowARTCUST1.Item("POST_CODE") & String.Empty
-                        '    rowSOTORDR1.Item("TERM_CODE") = rowARTCUST1.Item("TERM_CODE") & String.Empty
-                        '    rowSOTORDR1.Item("SREP_CODE") = rowARTCUST1.Item("SREP_CODE") & String.Empty
-                        'End If
-                        'rowSOTORDR1.ITEM("STAX_EXEMPT") = String.Empty
-                        'rowSOTORDR1.ITEM("CUST_SHIP_TO_STATE") = String.Empty
-                        'rowSOTORDR1.Item("CUST_CHIP_TO_ZIP_TAX") = String.Empty
 
                         rowSOTORDR1.Item("WHSE_CODE") = "003"
                         rowSOTORDR1.Item("INIT_OPER") = ABSolution.ASCMAIN1.USER_ID
@@ -3428,8 +3445,8 @@ Namespace OrdersImport
                 Dim rowDETJOBM2_R As DataRow = dst.Tables("DETJOBM2").Select("JOB_NO = '" & JOB_NO & "' AND JOB_CHARGE_TYPE = 'L' and JOB_CHARGE_EYE = 'R'", "")(0)
                 Dim rowDETJOBM2_L As DataRow = dst.Tables("DETJOBM2").Select("JOB_NO = '" & JOB_NO & "' AND JOB_CHARGE_TYPE = 'L' and JOB_CHARGE_EYE = 'L'", "")(0)
 
-                Dim LENS_ORDER As String = rowDETJOBM2.Item("LENS_ORDER") & String.Empty
-                Dim FINISHED As String = rowDETJOBM2.Item("FINISHED") & String.Empty
+                Dim LENS_ORDER As String = rowDETJOBM1.Item("LENS_ORDER") & String.Empty
+                Dim FINISHED As String = rowDETJOBM1.Item("FINISHED") & String.Empty
 
                 rowDETJOBM2_R("JOB_QTY") = IIf(LENS_ORDER = "L" Or FINISHED = "O", 0, 1)
                 rowDETJOBM2_L("JOB_QTY") = IIf(LENS_ORDER = "R" Or FINISHED = "O", 0, 1)
@@ -3841,6 +3858,169 @@ Namespace OrdersImport
             End Try
 
         End Sub
+
+        Private Function BlankSelections(ByVal JOB_NO As String, ByVal clear_special_fields_if_necessary As Boolean) As Boolean
+
+            Dim SPHERE_R As Double = 0
+            Dim BASE_CURVE_R As Double = 0
+            Dim OPC_CODE_R As String = ""
+
+            Dim SPHERE_L As Double = 0
+            Dim BASE_CURVE_L As Double = 0
+            Dim OPC_CODE_L As String = ""
+
+            Dim sql As String = String.Empty
+            BlankSelections = True
+
+            Try
+                Dim rowDETJOBM1 As DataRow = dst.Tables("DETJOBM1").Select("JOB_NO = '" & JOB_NO & "'")(0)
+
+                For Each rowDETJOBM3 As DataRow In dst.Tables("DETJOBM3").Select("JOB_NO = '" & JOB_NO & "'")
+                    BlankSelection(JOB_NO)
+
+                    Dim RL As String = rowDETJOBM3.Item("RL") & String.Empty
+
+                    If RL = "R" Then
+                        SPHERE_R = Val(rowDETJOBM3.Item("SPHERE") & String.Empty)
+                        BASE_CURVE_R = Val(rowDETJOBM3.Item("BASE_CURVE") & String.Empty)
+                        OPC_CODE_R = rowDETJOBM3.Item("OPC_CODE") & String.Empty
+                    Else
+                        SPHERE_L = Val(rowDETJOBM3.Item("SPHERE") & String.Empty)
+                        BASE_CURVE_L = Val(rowDETJOBM3.Item("BASE_CURVE") & String.Empty)
+                        OPC_CODE_L = rowDETJOBM3.Item("OPC_CODE") & String.Empty
+                    End If
+
+                    If clear_special_fields_if_necessary Then
+                        If rowDETJOBM1.Item("ENTER_AS_WORN") & String.Empty <> "1" Then ' If Not Absx1.chkFor("WRAP_DESIGN").Checked Then
+                            For Each COLUMN_NAME As String In New String() _
+                            {"FITTING_VERTEX", "REFRACTIVE_VERTEX", "PANTOSCOPIC_TILT", "PANORAMIC_ANGLE"}
+                                rowDETJOBM3.Item(COLUMN_NAME) = DBNull.Value
+                            Next
+                        End If
+
+                        If rowDETJOBM1.Item("RX_PRISM") & String.Empty <> "1" Then
+                            For Each COLUMN_NAME As String In New String() _
+                                {"PRISM_IN", "PRISM_IN_AXIS", "PRISM_UP", "PRISM_UP_AXIS"}
+                                rowDETJOBM3.Item(COLUMN_NAME) = DBNull.Value
+                            Next
+                        End If
+                    End If
+                Next
+
+                ' this next routine should probably be used for all designers who supply their own blanks
+
+                prevent_blank_selection = True
+
+                Dim BASE_CURVE As Double = 0
+                Dim OPC_CODE As String = ""
+
+                If rowDETJOBM1.Item("LENS_ORDER") & String.Empty = "B" AndAlso rowDETJOBM1("LENS_DESIGNER_CODE") & String.Empty = "SEIKO" Then
+                    If System.Math.Abs(SPHERE_R - SPHERE_L) <= 1 And _
+                       System.Math.Round(System.Math.Abs(BASE_CURVE_R - BASE_CURVE_L), 2) <> 0 And _
+                       OPC_CODE_L <> "" And OPC_CODE_R <> "" Then
+
+                        Dim LensToFix As String
+                        sql = String.Empty
+                        If SPHERE_R >= 0 And SPHERE_L >= 0 Then ' use the higher Base Curve for both
+                            If BASE_CURVE_R > BASE_CURVE_L Then
+                                LensToFix = "L"
+                                BASE_CURVE = BASE_CURVE_R
+                                sql = "OPC_CODE = '" & OPC_CODE_R & "'"
+                            Else
+                                LensToFix = "R"
+                                BASE_CURVE = BASE_CURVE_L
+                                sql = "OPC_CODE_LEFT = '" & OPC_CODE_L & "'"
+                            End If
+                        Else ' use the lower Base Curve for both
+                            If BASE_CURVE_R < BASE_CURVE_L Then
+                                LensToFix = "L"
+                                BASE_CURVE = BASE_CURVE_R
+                                sql = "OPC_CODE = '" & OPC_CODE_R & "'"
+                            Else
+                                LensToFix = "R"
+                                BASE_CURVE = BASE_CURVE_L
+                                sql = "OPC_CODE_LEFT = '" & OPC_CODE_L & "'"
+                            End If
+                        End If
+
+                        sql = "Select * from DETBLNK1 where " & sql
+                        Dim rowDETBLNK1 As DataRow = ABSolution.ASCDATA1.GetDataRow(sql)
+                        OPC_CODE = rowDETBLNK1.Item(IIf(LensToFix = "R", "OPC_CODE", "OPC_CODE_LEFT"))
+
+                        For Each rowDETJOBM3 As DataRow In dst.Tables("DETJOBM3").Select("JOB_NO = '" & JOB_NO & "'")
+                            If rowDETJOBM3.Item("RL") & String.Empty = LensToFix Then
+                                rowDETJOBM3.Item("BASE_CURVE") = BASE_CURVE
+                                rowDETJOBM3.Item("OPC_CODE") = OPC_CODE
+                            End If
+                        Next
+                    End If
+                End If
+                prevent_blank_selection = False
+
+            Catch ex As Exception
+                BlankSelections = False
+                RecordLogEntry("BlankSelections (" & JOB_NO & "): " & ex.Message)
+            End Try
+
+        End Function
+
+        Private Function BlankSelection(ByVal JOB_NO As String) As Boolean
+
+            Try
+
+                BlankSelection = True
+
+                If prevent_blank_selection Then Exit Function
+
+                Dim rowDETJOBM3 As DataRow = dst.Tables("DETJOBM3").Select("JOB_NO = '" & JOB_NO & "'")(0)
+
+                Dim MATL_CODE As String = rowDETJOBM3.Item("MATL_CODE") & String.Empty
+                Dim COLOR_CODE As String = rowDETJOBM3.Item("COLOR_CODE") & String.Empty
+                Dim COLOR_TYPE As String = rowDETJOBM3.Item("COLOR_TYPE") & String.Empty
+                Dim LENS_DESIGN_CODE As String = rowDETJOBM3.Item("LENS_DESIGN_CODE") & String.Empty
+                Dim LENS_DESIGNER_CODE As String = rowDETJOBM3.Item("LENS_DESIGNER_CODE") & String.Empty
+
+                Dim BASE_CURVE As Double = 0
+                Dim OPC_CODE As String = String.Empty
+
+                Dim CYLINDER As Double = Val(rowDETJOBM3.Item("CYLINDER") & String.Empty)
+                Dim SPHERE As Double = Val(rowDETJOBM3.Item("SPHERE") & String.Empty)
+                Dim ADD_POWER As Double = Val(rowDETJOBM3.Item("ADD_POWER") & String.Empty)
+                Dim RL As String = rowDETJOBM3.Item("RL") & String.Empty
+
+                Dim SPHERE_SIGN As Decimal
+                Dim SPHERE_ORIG As Double = SPHERE
+
+                If SPHERE < 0 Then
+                    SPHERE_SIGN = -1
+                Else
+                    SPHERE_SIGN = 1
+                End If
+                Dim TMP As Integer = (SPHERE / 0.25) + (SPHERE_SIGN * 0.5)
+
+                SPHERE = TMP * 0.25
+
+                Dim dtBlankInfo As DataTable = ABSolution.ASCDATA1.GetDataTableFromSP("DEL.BlankSelection", _
+                                                                           New String() {"MATL_CODE_IN", "COLOR_CODE_IN", "COLOR_TYPE_IN", _
+                                                                                         "LENS_DESIGN_CODE_IN", "LENS_DESIGNER_CODE_IN", _
+                                                                                         "CYLINDER_IN", "SPHERE_IN", "ADD_POWER_IN", "RL"}, _
+                                                                           New Object() {MATL_CODE, COLOR_CODE, COLOR_TYPE, LENS_DESIGN_CODE, _
+                                                                                         LENS_DESIGNER_CODE, CYLINDER, SPHERE, ADD_POWER, RL})
+
+                If dtBlankInfo.Rows.Count > 0 Then
+                    rowDETJOBM3.Item("BASE_CURVE") = dtBlankInfo.Rows(0).Item("BASE_CURVE")
+                    rowDETJOBM3.Item("OPC_CODE") = dtBlankInfo.Rows(0).Item("OPC_CODE")
+                End If
+
+                SPHERE = SPHERE_ORIG
+                Return True
+
+            Catch ex As Exception
+                RecordLogEntry("BlankSelection (" & JOB_NO & ") " & ex.Message)
+                Return False
+            End Try
+
+        End Function
 
 #End Region
 
@@ -5501,17 +5681,17 @@ Namespace OrdersImport
                 Dim errMsg As String = String.Empty
 
                 RecordLogEntry("Enter ValidateDPDAddress 4")
-                Dim AddressLine1 As String = rowSOTORDR5_ST.Item("CUST_ADDR1") & String.Empty
-                Dim AddressLine2 As String = rowSOTORDR5_ST.Item("CUST_ADDR2") & String.Empty
-                Dim AddressLine3 As String = rowSOTORDR5_ST.Item("CUST_ADDR3") & String.Empty
-                Dim Name As String = rowSOTORDR5_ST.Item("CUST_NAME") & String.Empty
-                Dim CompanyName As String = rowSOTORDR5_ST.Item("CUST_NAME") & String.Empty
+                Dim AddressLine1 As String = (rowSOTORDR5_ST.Item("CUST_ADDR1") & String.Empty).ToString.Trim.ToUpper
+                Dim AddressLine2 As String = (rowSOTORDR5_ST.Item("CUST_ADDR2") & String.Empty).ToString.Trim.ToUpper
+                Dim AddressLine3 As String = (rowSOTORDR5_ST.Item("CUST_ADDR3") & String.Empty).ToString.Trim.ToUpper
+                Dim Name As String = (rowSOTORDR5_ST.Item("CUST_NAME") & String.Empty).ToString.Trim.ToUpper
+                Dim CompanyName As String = (rowSOTORDR5_ST.Item("CUST_NAME") & String.Empty).ToString.Trim.ToUpper
 
-                Dim City As String = rowSOTORDR5_ST.Item("CUST_CITY") & String.Empty
-                Dim State As String = rowSOTORDR5_ST.Item("CUST_STATE") & String.Empty
-                Dim PostalCode As String = rowSOTORDR5_ST.Item("CUST_ZIP_CODE") & String.Empty
+                Dim City As String = (rowSOTORDR5_ST.Item("CUST_CITY") & String.Empty).ToString.Trim.ToUpper
+                Dim State As String = (rowSOTORDR5_ST.Item("CUST_STATE") & String.Empty).ToString.Trim.ToUpper
+                Dim PostalCode As String = (rowSOTORDR5_ST.Item("CUST_ZIP_CODE") & String.Empty).ToString.Trim.ToUpper
 
-                If City.Length = 0 AndAlso State.Length = 0 AndAlso PostalCode.Length = 0 Then
+                If City.Length = 0 OrElse State.Length = 0 OrElse PostalCode.Length = 0 Then
                     Return False
                 End If
 
@@ -5564,25 +5744,25 @@ Namespace OrdersImport
 
                 If convert AndAlso overrideCarrierRequestXmlDir.StartsWith(DriveLetter) Then
                     clsSHCUPSC1.CarrierRequestXmlDir = overrideCarrierRequestXmlDir
-                    RecordLogEntry("convert clsSHCUPSC1.CarrierRequestXmlDir: ")
+                    'RecordLogEntry("convert clsSHCUPSC1.CarrierRequestXmlDir: ")
                     clsSHCUPSC1.CarrierRequestXmlDir = clsSHCUPSC1.CarrierRequestXmlDir.Replace(DriveLetter, DriveLetterIP)
                 End If
 
                 If convert AndAlso overrideCarrierResponseRptDir.StartsWith(DriveLetter) Then
                     clsSHCUPSC1.CarrierResponseRptDir = overrideCarrierResponseRptDir
-                    RecordLogEntry("convert clsSHCUPSC1.CarrierResponseRptDir: ")
+                    'RecordLogEntry("convert clsSHCUPSC1.CarrierResponseRptDir: ")
                     clsSHCUPSC1.CarrierResponseRptDir = clsSHCUPSC1.CarrierResponseRptDir.Replace(DriveLetter, DriveLetterIP)
                 End If
 
                 If convert AndAlso overrideCarrierResponseXmlDir.StartsWith(DriveLetter) Then
                     clsSHCUPSC1.CarrierResponseXmlDir = overrideCarrierResponseXmlDir
-                    RecordLogEntry("convert clsSHCUPSC1.CarrierResponseXmlDir: ")
+                    'RecordLogEntry("convert clsSHCUPSC1.CarrierResponseXmlDir: ")
                     clsSHCUPSC1.CarrierResponseXmlDir = clsSHCUPSC1.CarrierResponseXmlDir.Replace(DriveLetter, DriveLetterIP)
                 End If
 
-                RecordLogEntry("clsSHCUPSC1.CarrierRequestXmlDir: " & clsSHCUPSC1.CarrierRequestXmlDir)
-                RecordLogEntry("clsSHCUPSC1.CarrierResponseRptDir: " & clsSHCUPSC1.CarrierResponseRptDir)
-                RecordLogEntry("clsSHCUPSC1.CarrierResponseXmlDir: " & clsSHCUPSC1.CarrierResponseXmlDir)
+                'RecordLogEntry("clsSHCUPSC1.CarrierRequestXmlDir: " & clsSHCUPSC1.CarrierRequestXmlDir)
+                'RecordLogEntry("clsSHCUPSC1.CarrierResponseRptDir: " & clsSHCUPSC1.CarrierResponseRptDir)
+                'RecordLogEntry("clsSHCUPSC1.CarrierResponseXmlDir: " & clsSHCUPSC1.CarrierResponseXmlDir)
 
                 Dim validAddress As Boolean = clsSHCUPSC1.AddressVaildationRequest(AddressLine1, _
                                                                                    AddressLine2, _
