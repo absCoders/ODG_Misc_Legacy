@@ -42,6 +42,7 @@ Namespace OrdersImport
         Private rowICTITEM1 As DataRow = Nothing
 
         Private dst As DataSet
+        Private vwXmlDataset As DataSet
 
         Private Const testMode As Boolean = False
         Private ImportErrorNotification As Hashtable
@@ -244,7 +245,7 @@ Namespace OrdersImport
                             If Not importInProcess Then
                                 importInProcess = True
                                 ProcessSalesOrders()
-                                'ProcessVisionWebDELOrders
+                                'ProcessVisionWebDELOrders()
                                 importInProcess = False
                             End If
                         End If
@@ -1859,6 +1860,8 @@ Namespace OrdersImport
             Dim itemCode As String = String.Empty
             Dim upcCode As String = String.Empty
 
+            If 1 = 1 Then Exit Sub
+
             Try
                 ImportedFiles.Clear()
 
@@ -1870,7 +1873,7 @@ Namespace OrdersImport
                 End If
 
                 ' Create the DataSet to read the schema into.
-                Dim vwXmlDataset As New DataSet
+                vwXmlDataset = New DataSet
                 'Create a FileStream object with the file path and name.
                 Dim myFileStream As System.IO.FileStream = New System.IO.FileStream(xsdFile, System.IO.FileMode.Open)
                 'Create a new XmlTextReader object with the FileStream.
@@ -2816,8 +2819,6 @@ Namespace OrdersImport
 
         Private Sub ProcessVisionWebDELOrders()
 
-            If 1 = 1 Then Exit Sub
-
             Dim vwConnection As New Connection("V")
             Dim numOrdersProcessed As Int16 = 0
             Dim ImportedFiles As List(Of String) = New List(Of String)
@@ -2827,9 +2828,6 @@ Namespace OrdersImport
             Dim rowSOTORDR5 As DataRow = Nothing
             Dim rowData As DataRow = Nothing
             Dim tempString As String = String.Empty
-
-            Dim rowARTCUST1 As DataRow = Nothing
-            Dim rowARTCUST2 As DataRow = Nothing
 
             Dim CUST_CODE As String = String.Empty
             Dim CUST_SHIP_TO_NO As String = String.Empty
@@ -2846,11 +2844,16 @@ Namespace OrdersImport
             Dim PRESCRIPTION_ID As String = String.Empty
             Dim LENS_ID As String = String.Empty
             Dim TREATMENTS_ID As String = String.Empty
+            Dim code As String = String.Empty
 
             Dim ErrorCodes As List(Of String) = New List(Of String)
+            Dim inTrans As Boolean = False
 
             Try
                 ImportedFiles.Clear()
+
+                vwConnection.LocalInDir = "C:\MessageClient\rx\Received\"
+                vwConnection.LocalInDirArchive = "C:\MessageClient\rx\Received\Archive\"
 
                 Dim xsdFile As String = vwConnection.LocalInDir & "CurrentRxOrder.xsd"
 
@@ -2860,7 +2863,7 @@ Namespace OrdersImport
                 End If
 
                 ' Create the DataSet to read the schema into.
-                Dim vwXmlDataset As New DataSet
+                vwXmlDataset = New DataSet
                 'Create a FileStream object with the file path and name.
                 Dim myFileStream As System.IO.FileStream = New System.IO.FileStream(xsdFile, System.IO.FileMode.Open)
                 'Create a new XmlTextReader object with the FileStream.
@@ -2871,44 +2874,32 @@ Namespace OrdersImport
 
                 ' Loop through downloaded xml files
                 For Each orderFile As String In My.Computer.FileSystem.GetFiles(vwConnection.LocalInDir, FileIO.SearchOption.SearchTopLevelOnly, "*.xml")
-                    With dst
-                        .Tables("DETJOBM1").Clear()
-                        .Tables("DETJOBM2").Clear()
-                        .Tables("DETJOBM3").Clear()
+                    Try
+                        With dst
+                            .Tables("DETJOBM1").Clear()
+                            .Tables("DETJOBM2").Clear()
+                            .Tables("DETJOBM3").Clear()
+                            .Tables("DETJOBM4").Clear()
+                            .Tables("DETJOBIE").Clear()
 
-                        .Tables("SOTORDR1").Clear()
-                        .Tables("SOTORDR5").Clear()
-                    End With
+                            .Tables("SOTORDR1").Clear()
+                            .Tables("SOTORDR5").Clear()
+                        End With
 
-                    RL_ISSUES.Clear()
+                        RL_ISSUES.Clear()
 
-                    For Each tbl As DataTable In vwXmlDataset.Tables
-                        tbl.Rows.Clear()
-                        tbl.BeginLoadData()
-                    Next
+                        For Each tbl As DataTable In vwXmlDataset.Tables
+                            tbl.Rows.Clear()
+                            tbl.BeginLoadData()
+                        Next
 
-                    vwXmlDataset.ReadXml(orderFile)
+                        vwXmlDataset.ReadXml(orderFile)
 
-                    For Each tbl As DataTable In vwXmlDataset.Tables
-                        tbl.EndLoadData()
-                    Next
+                        For Each tbl As DataTable In vwXmlDataset.Tables
+                            tbl.EndLoadData()
+                        Next
 
-                    RX_SPECTACLE_Id = String.Empty
-                    HEADER_Id = String.Empty
-                    CUSTOMER_Id = String.Empty
-                    ACCOUNTS_Id = String.Empty
-                    ACCOUNT_Id = String.Empty
-                    SP_EQUIPMENT_Id = String.Empty
-                    PATIENT_ID = String.Empty
-                    POSITION_ID = String.Empty
-                    PRESCRIPTION_ID = String.Empty
-                    LENS_ID = String.Empty
-                    TREATMENTS_ID = String.Empty
-
-                    For Each rowRX_SPECTACLE As DataRow In vwXmlDataset.Tables("RX_SPECTACLE").Rows
-
-                        Dim rowDETJOBM1 As DataRow = dst.Tables("DETJOBM1").NewRow
-                        RX_SPECTACLE_Id = Val(rowRX_SPECTACLE.Item("RX_SPECTACLE_Id") & String.Empty)
+                        RX_SPECTACLE_Id = String.Empty
                         HEADER_Id = String.Empty
                         CUSTOMER_Id = String.Empty
                         ACCOUNTS_Id = String.Empty
@@ -2920,321 +2911,473 @@ Namespace OrdersImport
                         LENS_ID = String.Empty
                         TREATMENTS_ID = String.Empty
 
-                        JOB_NO = ABSolution.ASCMAIN1.Next_Control_No("DETJOBM1.JOB_NO", 1)
-                        ORDR_NO = ABSolution.ASCMAIN1.Next_Control_No("SOTORDR1.ORDR_NO", 1)
-                        rowDETJOBM1.Item("JOB_NO") = JOB_NO
-                        rowDETJOBM1.Item("ORDR_NO") = ORDR_NO
-                        dst.Tables("DETJOBM1").Rows.Add(rowDETJOBM1)
+                        For Each rowRX_SPECTACLE As DataRow In vwXmlDataset.Tables("RX_SPECTACLE").Rows
 
-                        ' default values taken from DETJOBM1
-                        rowDETJOBM1.Item("JOB_STATUS") = "O"
-                        rowDETJOBM1.Item("ORDR_SOURCE") = "K"
-                        rowDETJOBM1.Item("JOB_TYPE_CODE") = "O" ' OriginaL
-                        rowDETJOBM1.Item("ORDR_DATE") = DateTime.Now.ToString("MM/dd/yyyy")
-                        rowDETJOBM1.Item("ORDR_CUST_PO") = "DEL/" & "SVC" & "/" & JOB_NO
-                        rowDETJOBM1.Item("COMMENT_LAB") = String.Empty
-                        rowDETJOBM1.Item("JOB_STATUS") = "O"
-                        rowDETJOBM1.Item("INIT_DATE") = DateTime.Now
-                        rowDETJOBM1.Item("INIT_OPER") = ABSolution.ASCMAIN1.USER_ID
-                        rowDETJOBM1.Item("LENS_ORDER") = "B"
-                        rowDETJOBM1.Item("FINISHED") = "U"
-                        rowDETJOBM1.Item("FRAME_STATUS") = "N"
-                        rowDETJOBM1.Item("TINT_CODE") = "NONE"
-                        rowDETJOBM1.Item("TRACE_FROM") = "N"
-                        rowDETJOBM1.Item("POLISHING") = "0"
-                        rowDETJOBM1.Item("ORDR_CALLER_NAME") = "Service"
-                        rowDETJOBM1.Item("USE_THINNING_PRISM") = "1"
-
-                        creationDate = (rowRX_SPECTACLE.Item("Creation_date") & String.Empty).ToString.Replace("T", Space(1))
-                        If IsDate(creationDate) Then
-                            rowDETJOBM1.Item("ORDR_DATE") = CDate(creationDate).ToString("dd-MMM-yyyy")
-                        Else
-                            rowDETJOBM1.Item("ORDR_DATE") = DateTime.Now
-                        End If
-
-                        For Each rowHeader As DataRow In vwXmlDataset.Tables("HEADER").Select("RX_SPECTACLE_Id = " & RX_SPECTACLE_Id)
-                            HEADER_Id = rowHeader.Item("HEADER_Id") & String.Empty
-                            rowDETJOBM1.Item("ORDR_CUST_PO") = TruncateField(rowRX_SPECTACLE.Item("Id") & IIf(rowHeader.Item("PurchaseOrderNumber") & String.Empty <> String.Empty, ":" & rowHeader.Item("PurchaseOrderNumber"), String.Empty), "DETJOBM1", "ORDR_CUST_PO")
-                            rowDETJOBM1.Item("ORDR_CALLER_NAME") = TruncateField(rowHeader.Item("OrderPlacedBy") & String.Empty, "DETJOBM1", "ORDR_CALLER_NAME")
-                            rowDETJOBM1.Item("ORDR_SOURCE") = "V"
-
+                            Dim rowDETJOBM1 As DataRow = dst.Tables("DETJOBM1").NewRow
+                            RX_SPECTACLE_Id = rowRX_SPECTACLE.Item("RX_SPECTACLE_Id") & String.Empty
+                            HEADER_Id = String.Empty
                             CUSTOMER_Id = String.Empty
-                            For Each rowCustomer As DataRow In vwXmlDataset.Tables("CUSTOMER").Select("HEADER_Id = " & HEADER_Id, "CUSTOMER_ID")
-                                CUSTOMER_Id = rowCustomer.Item("CUSTOMER_Id") & String.Empty
+                            ACCOUNTS_Id = String.Empty
+                            ACCOUNT_Id = String.Empty
+                            SP_EQUIPMENT_Id = String.Empty
+                            PATIENT_ID = String.Empty
+                            POSITION_ID = String.Empty
+                            PRESCRIPTION_ID = String.Empty
+                            LENS_ID = String.Empty
+                            TREATMENTS_ID = String.Empty
 
-                                For Each rowACCOUNTS As DataRow In vwXmlDataset.Tables("ACCOUNTS").Select("CUSTOMER_Id = " & CUSTOMER_Id, "ACCOUNTS_ID")
-                                    ACCOUNTS_Id = rowACCOUNTS.Item("ACCOUNTS_ID") & String.Empty
-                                    CUST_CODE = String.Empty
-                                    CUST_SHIP_TO_NO = String.Empty
+                            JOB_NO = ABSolution.ASCMAIN1.Next_Control_No("DETJOBM1.JOB_NO", 1)
+                            ORDR_NO = ABSolution.ASCMAIN1.Next_Control_No("SOTORDR1.ORDR_NO", 1)
+                            rowDETJOBM1.Item("JOB_NO") = JOB_NO
+                            rowDETJOBM1.Item("ORDR_NO") = ORDR_NO
+                            dst.Tables("DETJOBM1").Rows.Add(rowDETJOBM1)
 
-                                    For Each rowACCOUNT As DataRow In vwXmlDataset.Tables("ACCOUNT").Select("ACCOUNTS_ID = " & ACCOUNTS_Id, "ACCOUNT_ID")
+                            ' Default values taken from DETJOBM1
+                            rowDETJOBM1.Item("JOB_STATUS") = "O"
+                            rowDETJOBM1.Item("ORDR_SOURCE") = "K"
+                            rowDETJOBM1.Item("JOB_TYPE_CODE") = "O" ' Original
+                            rowDETJOBM1.Item("ORDR_DATE") = DateTime.Now.ToString("MM/dd/yyyy")
+                            rowDETJOBM1.Item("ORDR_CUST_PO") = "DEL/" & "SVC" & "/" & JOB_NO
+                            rowDETJOBM1.Item("COMMENT_LAB") = String.Empty
+                            rowDETJOBM1.Item("JOB_STATUS") = "O"
 
-                                        Select Case (rowACCOUNT.Item("Class") & String.Empty).ToString.Trim.ToUpper
-                                            Case "BIL"
-                                                ACCOUNT_Id = rowACCOUNT.Item("ACCOUNT_Id") & String.Empty
-                                                If ACCOUNT_Id.Length > 0 AndAlso vwXmlDataset.Tables("ADDRESS").Select("ACCOUNT_Id = " & ACCOUNT_Id).Length > 0 Then
-                                                    rowData = vwXmlDataset.Tables("ADDRESS").Select("ACCOUNT_Id = " & ACCOUNT_Id)(0)
+                            rowDETJOBM1.Item("INIT_DATE") = DateTime.Now
+                            rowDETJOBM1.Item("INIT_OPER") = ABSolution.ASCMAIN1.USER_ID
+                            rowDETJOBM1.Item("LAST_DATE") = DateTime.Now
+                            rowDETJOBM1.Item("LAST_OPER") = ABSolution.ASCMAIN1.USER_ID
 
-                                                    rowSOTORDR5 = dst.Tables("SOTORDR5").NewRow
-                                                    rowSOTORDR5.Item("ORDR_NO") = ORDR_NO
-                                                    rowSOTORDR5.Item("CUST_ADDR_TYPE") = "BT"
-                                                    dst.Tables("SOTORDR5").Rows.Add(rowSOTORDR5)
+                            rowDETJOBM1.Item("LENS_ORDER") = "B"
+                            rowDETJOBM1.Item("FINISHED") = "U"
+                            rowDETJOBM1.Item("FRAME_STATUS") = "N"
+                            rowDETJOBM1.Item("TINT_CODE") = "NONE"
+                            rowDETJOBM1.Item("FRAME_TYPE_CODE") = "NONE"
+                            rowDETJOBM1.Item("TRACE_FROM") = "N"
+                            rowDETJOBM1.Item("POLISHING") = "0"
+                            rowDETJOBM1.Item("ORDR_CALLER_NAME") = "Service"
+                            rowDETJOBM1.Item("USE_THINNING_PRISM") = "1"
+                            rowDETJOBM1.Item("COLOR_TYPE") = "C"
+                            rowDETJOBM1.Item("RX_PRISM") = "0"
+                            rowDETJOBM1.Item("EDGING") = "0"
+                            rowDETJOBM1.Item("NO_FREIGHT") = "0"
+                            rowDETJOBM1.Item("INV_FREIGHT") = 0
+                            rowDETJOBM1.Item("LIST_PRICE") = 0
+                            rowDETJOBM1.Item("INV_TOTAL_AMOUNT") = 0
+                            rowDETJOBM1.Item("OPS_YYYYPP") = ABSolution.ASCMAIN1.CYP
+                            rowDETJOBM1.Item("USE_DISC_PCT") = "0"
+                            rowDETJOBM1.Item("MIRROR_COATING") = "0"
+                            rowDETJOBM1.Item("AR_BACKSIDE_ONLY") = "0"
+                            rowDETJOBM1.Item("INV_SALES") = 0
+                            rowDETJOBM1.Item("JOB_HOLD_LAB") = "0"
+                            rowDETJOBM1.Item("JOB_HOLD_INV") = "0"
+                            rowDETJOBM1.Item("JOB_IN_QUEUE") = "0"
+                            rowDETJOBM1.Item("JOB_REQUIRES_REVIEW") = "0"
+                            rowDETJOBM1.Item("WRAP_EDGE") = "0"
+                            rowDETJOBM1.Item("CUSTOM_FRAME_NEW") = "0"
+                            rowDETJOBM1.Item("WRAP_EDGE_SPORT") = "0"
+                            rowDETJOBM1.Item("FOG_FREE") = "0"
+                            rowDETJOBM1.Item("UNCUT_TINTABLE") = "0"
+                            rowDETJOBM1.Item("JOB_NO_BACKSIDE_COAT") = "0"
+                            rowDETJOBM1.Item("LDS_IND") = "0"
+                            rowDETJOBM1.Item("LMS_IND") = "0"
+                            rowDETJOBM1.Item("TKT_IND") = "0"
+                            rowDETJOBM1.Item("BLANK_SELECTION") = "N"
+                            rowDETJOBM1.Item("BALANCE_LENS") = "0"
+                            rowDETJOBM1.Item("TKT_PRINT_COUNT") = 0
 
-                                                    rowSOTORDR5.Item("CUST_NAME") = String.Empty
-                                                    rowSOTORDR5.Item("CUST_ADDR1") = TruncateField((rowData.Item("Street_Number") & String.Empty & " " & rowData.Item("Street_Name") & String.Empty).ToString.Trim, "SOTORDR5", "CUST_ADDR1")
-                                                    rowSOTORDR5.Item("CUST_ADDR2") = TruncateField(rowData.Item("Suite") & String.Empty, "SOTORDR5", "CUST_ADDR2")
-                                                    rowSOTORDR5.Item("CUST_CITY") = TruncateField(rowData.Item("City") & String.Empty, "SOTORDR5", "CUST_CITY")
-                                                    rowSOTORDR5.Item("CUST_STATE") = TruncateField(rowData.Item("State") & String.Empty, "SOTORDR5", "CUST_STATE")
-                                                    rowSOTORDR5.Item("CUST_ZIP_CODE") = TruncateField(rowData.Item("ZipCode") & String.Empty, "SOTORDR5", "CUST_ZIP_CODE")
-                                                    Telephone = rowData.Item("TEL") & String.Empty
-                                                    Telephone = FormatTelePhone(Telephone)
-                                                    rowSOTORDR5.Item("CUST_PHONE") = TruncateField(Telephone, "SOTORDR5", "CUST_PHONE")
-                                                    rowSOTORDR5.Item("CUST_COUNTRY") = TruncateField(rowData.Item("Country") & String.Empty, "SOTORDR5", "CUST_COUNTRY")
-                                                    rowSOTORDR5.Item("CUST_FAX") = String.Empty
-                                                    rowSOTORDR5.Item("CUST_EMAIL") = String.Empty
-                                                End If
+                            creationDate = (rowRX_SPECTACLE.Item("Creation_date") & String.Empty).ToString.Replace("T", Space(1))
+                            If IsDate(creationDate) Then
+                                rowDETJOBM1.Item("ORDR_DATE") = CDate(creationDate).ToString("dd-MMM-yyyy")
+                            End If
 
-                                            Case "SHP"
-                                                ACCOUNT_Id = rowACCOUNT.Item("ACCOUNT_Id") & String.Empty
-                                                If ACCOUNT_Id.Length > 0 AndAlso vwXmlDataset.Tables("ADDRESS").Select("ACCOUNT_Id = " & ACCOUNT_Id).Length > 0 Then
-                                                    rowData = vwXmlDataset.Tables("ADDRESS").Select("ACCOUNT_Id = " & ACCOUNT_Id)(0)
+                            For Each rowHeader As DataRow In vwXmlDataset.Tables("HEADER").Select("RX_SPECTACLE_Id = " & RX_SPECTACLE_Id)
+                                HEADER_Id = rowHeader.Item("HEADER_Id") & String.Empty
+                                rowDETJOBM1.Item("ORDR_CUST_PO") = TruncateField(rowRX_SPECTACLE.Item("Id") & IIf(rowHeader.Item("PurchaseOrderNumber") & String.Empty <> String.Empty, ":" & rowHeader.Item("PurchaseOrderNumber"), String.Empty), "DETJOBM1", "ORDR_CUST_PO")
+                                rowDETJOBM1.Item("ORDR_CALLER_NAME") = TruncateField(rowHeader.Item("OrderPlacedBy") & String.Empty, "DETJOBM1", "ORDR_CALLER_NAME")
+                                rowDETJOBM1.Item("ORDR_SOURCE") = "V"
 
-                                                    rowSOTORDR5 = dst.Tables("SOTORDR5").NewRow
-                                                    rowSOTORDR5.Item("ORDR_NO") = JOB_NO
-                                                    rowSOTORDR5.Item("CUST_ADDR_TYPE") = "ST"
-                                                    dst.Tables("SOTORDR5").Rows.Add(rowSOTORDR5)
+                                CUSTOMER_Id = String.Empty
+                                For Each rowCustomer As DataRow In vwXmlDataset.Tables("CUSTOMER").Select("HEADER_Id = " & HEADER_Id, "CUSTOMER_ID")
+                                    CUSTOMER_Id = rowCustomer.Item("CUSTOMER_Id") & String.Empty
 
-                                                    rowSOTORDR5.Item("CUST_NAME") = String.Empty
-                                                    rowSOTORDR5.Item("CUST_ADDR1") = TruncateField((rowData.Item("Street_Number") & String.Empty & " " & rowData.Item("Street_Name") & String.Empty).ToString.Trim, "SOTORDR5", "CUST_ADDR1")
-                                                    rowSOTORDR5.Item("CUST_ADDR2") = TruncateField(rowData.Item("Suite") & String.Empty, "SOTORDR5", "CUST_ADDR2")
-                                                    rowSOTORDR5.Item("CUST_CITY") = TruncateField(rowData.Item("City") & String.Empty, "SOTORDR5", "CUST_CITY")
-                                                    rowSOTORDR5.Item("CUST_STATE") = TruncateField(rowData.Item("State") & String.Empty, "SOTORDR5", "CUST_STATE")
-                                                    rowSOTORDR5.Item("CUST_ZIP_CODE") = TruncateField(rowData.Item("Zipcode") & String.Empty, "SOTORDR5", "CUST_ZIP_CODE")
-                                                    Telephone = rowData.Item("TEL") & String.Empty
-                                                    Telephone = FormatTelePhone(Telephone)
-                                                    rowSOTORDR5.Item("CUST_PHONE") = TruncateField(Telephone, "SOTORDR5", "CUST_PHONE")
-                                                    rowSOTORDR5.Item("CUST_FAX") = String.Empty
-                                                    rowSOTORDR5.Item("CUST_EMAIL") = String.Empty
-                                                    rowSOTORDR5.Item("CUST_COUNTRY") = TruncateField(rowData.Item("Country") & String.Empty, "SOTORDR5", "CUST_COUNTRY")
+                                    For Each rowACCOUNTS As DataRow In vwXmlDataset.Tables("ACCOUNTS").Select("CUSTOMER_Id = " & CUSTOMER_Id, "ACCOUNTS_ID")
+                                        ACCOUNTS_Id = rowACCOUNTS.Item("ACCOUNTS_ID") & String.Empty
+                                        CUST_CODE = String.Empty
+                                        CUST_SHIP_TO_NO = String.Empty
 
-                                                    CUST_CODE = rowACCOUNT.Item("Name") & String.Empty
-                                                    If CUST_CODE.Contains("-") Then
-                                                        CUST_SHIP_TO_NO = Split(CUST_CODE, "-")(1)
-                                                        CUST_CODE = Split(CUST_CODE, "-")(0)
+                                        For Each rowACCOUNT As DataRow In vwXmlDataset.Tables("ACCOUNT").Select("ACCOUNTS_ID = " & ACCOUNTS_Id, "ACCOUNT_ID")
+
+                                            Select Case (rowACCOUNT.Item("Class") & String.Empty).ToString.Trim.ToUpper
+                                                Case "BIL"
+                                                    ACCOUNT_Id = rowACCOUNT.Item("ACCOUNT_Id") & String.Empty
+                                                    If ACCOUNT_Id.Length > 0 AndAlso vwXmlDataset.Tables("ADDRESS").Select("ACCOUNT_Id = " & ACCOUNT_Id).Length > 0 Then
+                                                        rowData = vwXmlDataset.Tables("ADDRESS").Select("ACCOUNT_Id = " & ACCOUNT_Id)(0)
+
+                                                        rowSOTORDR5 = dst.Tables("SOTORDR5").NewRow
+                                                        rowSOTORDR5.Item("ORDR_NO") = ORDR_NO
+                                                        rowSOTORDR5.Item("CUST_ADDR_TYPE") = "BT"
+                                                        dst.Tables("SOTORDR5").Rows.Add(rowSOTORDR5)
+
+                                                        rowSOTORDR5.Item("CUST_NAME") = String.Empty
+                                                        rowSOTORDR5.Item("CUST_ADDR1") = TruncateField((rowData.Item("Street_Number") & String.Empty & " " & rowData.Item("Street_Name") & String.Empty).ToString.Trim, "SOTORDR5", "CUST_ADDR1")
+                                                        rowSOTORDR5.Item("CUST_ADDR2") = TruncateField(rowData.Item("Suite") & String.Empty, "SOTORDR5", "CUST_ADDR2")
+                                                        rowSOTORDR5.Item("CUST_CITY") = TruncateField(rowData.Item("City") & String.Empty, "SOTORDR5", "CUST_CITY")
+                                                        rowSOTORDR5.Item("CUST_STATE") = TruncateField(rowData.Item("State") & String.Empty, "SOTORDR5", "CUST_STATE")
+                                                        rowSOTORDR5.Item("CUST_ZIP_CODE") = TruncateField(rowData.Item("ZipCode") & String.Empty, "SOTORDR5", "CUST_ZIP_CODE")
+                                                        Telephone = rowData.Item("TEL") & String.Empty
+                                                        Telephone = FormatTelePhone(Telephone)
+                                                        rowSOTORDR5.Item("CUST_PHONE") = TruncateField(Telephone, "SOTORDR5", "CUST_PHONE")
+                                                        rowSOTORDR5.Item("CUST_COUNTRY") = TruncateField(rowData.Item("Country") & String.Empty, "SOTORDR5", "CUST_COUNTRY")
+                                                        rowSOTORDR5.Item("CUST_FAX") = String.Empty
+                                                        rowSOTORDR5.Item("CUST_EMAIL") = String.Empty
                                                     End If
 
-                                                    CUST_CODE = ABSolution.ASCMAIN1.Format_Field(CUST_CODE, "CUST_CODE")
-                                                    If CUST_CODE.Length = 0 Then
+                                                Case "SHP"
+                                                    ACCOUNT_Id = rowACCOUNT.Item("ACCOUNT_Id") & String.Empty
+                                                    If ACCOUNT_Id.Length > 0 AndAlso vwXmlDataset.Tables("ADDRESS").Select("ACCOUNT_Id = " & ACCOUNT_Id).Length > 0 Then
+                                                        rowData = vwXmlDataset.Tables("ADDRESS").Select("ACCOUNT_Id = " & ACCOUNT_Id)(0)
+
+                                                        rowSOTORDR5 = dst.Tables("SOTORDR5").NewRow
+                                                        rowSOTORDR5.Item("ORDR_NO") = JOB_NO
+                                                        rowSOTORDR5.Item("CUST_ADDR_TYPE") = "ST"
+                                                        dst.Tables("SOTORDR5").Rows.Add(rowSOTORDR5)
+
+                                                        rowSOTORDR5.Item("CUST_NAME") = String.Empty
+                                                        rowSOTORDR5.Item("CUST_ADDR1") = TruncateField((rowData.Item("Street_Number") & String.Empty & " " & rowData.Item("Street_Name") & String.Empty).ToString.Trim, "SOTORDR5", "CUST_ADDR1")
+                                                        rowSOTORDR5.Item("CUST_ADDR2") = TruncateField(rowData.Item("Suite") & String.Empty, "SOTORDR5", "CUST_ADDR2")
+                                                        rowSOTORDR5.Item("CUST_CITY") = TruncateField(rowData.Item("City") & String.Empty, "SOTORDR5", "CUST_CITY")
+                                                        rowSOTORDR5.Item("CUST_STATE") = TruncateField(rowData.Item("State") & String.Empty, "SOTORDR5", "CUST_STATE")
+                                                        rowSOTORDR5.Item("CUST_ZIP_CODE") = TruncateField(rowData.Item("Zipcode") & String.Empty, "SOTORDR5", "CUST_ZIP_CODE")
+                                                        Telephone = rowData.Item("TEL") & String.Empty
+                                                        Telephone = FormatTelePhone(Telephone)
+                                                        rowSOTORDR5.Item("CUST_PHONE") = TruncateField(Telephone, "SOTORDR5", "CUST_PHONE")
+                                                        rowSOTORDR5.Item("CUST_FAX") = String.Empty
+                                                        rowSOTORDR5.Item("CUST_EMAIL") = String.Empty
+                                                        rowSOTORDR5.Item("CUST_COUNTRY") = TruncateField(rowData.Item("Country") & String.Empty, "SOTORDR5", "CUST_COUNTRY")
+
                                                         CUST_CODE = rowACCOUNT.Item("Name") & String.Empty
-                                                    End If
-                                                    CUST_CODE = TruncateField(CUST_CODE, "SOTORDR5", "CUST_CODE")
-                                                    If CUST_SHIP_TO_NO.Length > 0 Then
-                                                        CUST_SHIP_TO_NO = ABSolution.ASCMAIN1.Format_Field(CUST_SHIP_TO_NO, "CUST_SHIP_TO_NO")
-                                                        CUST_SHIP_TO_NO = TruncateField(CUST_SHIP_TO_NO, "DETJOBM1", "CUST_SHIP_TO_NO")
-                                                    End If
+                                                        If CUST_CODE.Contains("-") Then
+                                                            CUST_SHIP_TO_NO = Split(CUST_CODE, "-")(1)
+                                                            CUST_CODE = Split(CUST_CODE, "-")(0)
+                                                        End If
 
-                                                End If
-                                        End Select
+                                                        CUST_CODE = ABSolution.ASCMAIN1.Format_Field(CUST_CODE, "CUST_CODE")
+                                                        If CUST_CODE.Length = 0 Then
+                                                            CUST_CODE = rowACCOUNT.Item("Name") & String.Empty
+                                                        End If
+                                                        CUST_CODE = TruncateField(CUST_CODE, "SOTORDR5", "CUST_CODE")
+                                                        If CUST_SHIP_TO_NO.Length > 0 Then
+                                                            CUST_SHIP_TO_NO = ABSolution.ASCMAIN1.Format_Field(CUST_SHIP_TO_NO, "CUST_SHIP_TO_NO")
+                                                            CUST_SHIP_TO_NO = TruncateField(CUST_SHIP_TO_NO, "DETJOBM1", "CUST_SHIP_TO_NO")
+                                                        End If
+
+                                                    End If
+                                            End Select
+                                        Next
                                     Next
-                                Next
 
-                                For Each rowSP_EQUIPMENT As DataRow In vwXmlDataset.Tables("SP_EQUIPMENT").Select("RX_SPECTACLE_Id = " & RX_SPECTACLE_Id)
-                                    SP_EQUIPMENT_Id = rowSP_EQUIPMENT.Item("SP_EQUIPMENT_Id") & String.Empty
+                                    For Each rowSP_EQUIPMENT As DataRow In vwXmlDataset.Tables("SP_EQUIPMENT").Select("RX_SPECTACLE_Id = " & RX_SPECTACLE_Id)
+                                        SP_EQUIPMENT_Id = rowSP_EQUIPMENT.Item("SP_EQUIPMENT_Id") & String.Empty
 
-                                    If vwXmlDataset.Tables("PATIENT").Select("SP_EQUIPMENT_Id = " & SP_EQUIPMENT_Id).Length > 0 Then
-                                        rowData = vwXmlDataset.Tables("PATIENT").Select("SP_EQUIPMENT_Id = " & SP_EQUIPMENT_Id)(0)
-                                        tempString = rowData.Item("LASTNAME") & ", " & rowData.Item("FIRSTNAME") & String.Empty
-                                        tempString = tempString.Trim.ToUpper
-                                        rowDETJOBM1.Item("PATIENT_NAME") = TruncateField(tempString, "DETJOBM1", "PATIENT_NAME")
-                                        PATIENT_ID = rowData.Item("PATIENT_ID") & String.Empty
-                                    End If
-
-                                    If vwXmlDataset.Tables("FRAME").Select("SP_EQUIPMENT_Id = " & SP_EQUIPMENT_Id).Length > 0 Then
-                                        Dim rowFrame As DataRow = vwXmlDataset.Tables("FRAME").Select("SP_EQUIPMENT_Id = " & SP_EQUIPMENT_Id)(0)
-                                        Dim FRAME_TYPE_CODE As String = rowFrame.Item("CONVERT") & String.Empty
-
-                                        Dim rowDETFRAM1 As DataRow = ABSolution.ASCDATA1.GetDataRow("Select *  from DETFRAM1 where FRAME_TYPE_DESC = :PARM1", "V", New Object() {FRAME_TYPE_CODE})
-                                        If rowDETFRAM1 IsNot Nothing Then
-                                            rowDETJOBM1.Item("FRAME_TYPE_CODE") = FRAME_TYPE_CODE
+                                        If vwXmlDataset.Tables("PATIENT").Select("SP_EQUIPMENT_Id = " & SP_EQUIPMENT_Id).Length > 0 Then
+                                            rowData = vwXmlDataset.Tables("PATIENT").Select("SP_EQUIPMENT_Id = " & SP_EQUIPMENT_Id)(0)
+                                            tempString = rowData.Item("LASTNAME") & ", " & rowData.Item("FIRSTNAME") & String.Empty
+                                            tempString = tempString.Trim.ToUpper
+                                            rowDETJOBM1.Item("PATIENT_NAME") = TruncateField(tempString, "DETJOBM1", "PATIENT_NAME")
+                                            PATIENT_ID = rowData.Item("PATIENT_ID") & String.Empty
                                         End If
 
-                                        Dim FRAME_STATUS As String = rowFrame.Item("ACTION") & String.Empty
-                                        Select Case FRAME_STATUS
-                                            Case "TC"
-                                                rowDETJOBM1.Item("FRAME_STATUS") = "C"
-                                            Case "ESF"
-                                                rowDETJOBM1.Item("FRAME_STATUS") = "S"
-                                            Case Else
-                                                rowDETJOBM1.Item("FRAME_STATUS") = "N"
-                                        End Select
+                                        If vwXmlDataset.Tables("FRAME").Select("SP_EQUIPMENT_Id = " & SP_EQUIPMENT_Id).Length > 0 Then
+                                            Dim rowFrame As DataRow = vwXmlDataset.Tables("FRAME").Select("SP_EQUIPMENT_Id = " & SP_EQUIPMENT_Id)(0)
+                                            Dim FRAME_TYPE_CODE As String = rowFrame.Item("CONVERT") & String.Empty
 
-                                        rowDETJOBM1.Item("FRAME_A_WIDTH") = Val(rowFrame.Item("A") & String.Empty)
-                                        rowDETJOBM1.Item("FRAME_B_HEIGHT") = Val(rowFrame.Item("B") & String.Empty)
-                                        rowDETJOBM1.Item("FRAME_DBL_BRIDGE") = Val(rowFrame.Item("DBL") & String.Empty)
-                                        rowDETJOBM1.Item("FRAME_ED_DIAGONAL") = Val(rowFrame.Item("ED") & String.Empty)
-
-                                        rowDETJOBM1.Item("FRAME_MFG") = Val(rowFrame.Item("BRAND") & String.Empty)
-                                        rowDETJOBM1.Item("FRAME_MODEL_NO") = Val(rowFrame.Item("MODEL") & String.Empty)
-                                        rowDETJOBM1.Item("FRAME_SIZE") = String.Empty 'Val(rowFrame.Item("ED") & String.Empty)
-                                        rowDETJOBM1.Item("FRAME_COLOR") = Val(rowFrame.Item("COLOR") & String.Empty)
-
-                                    End If
-
-                                    For Each rowPOSITION As DataRow In vwXmlDataset.Tables("POSITION").Select("SP_EQUIPMENT_Id = " & SP_EQUIPMENT_Id)
-                                        POSITION_ID = rowPOSITION.Item("POSITION_ID") & String.Empty
-                                        PRESCRIPTION_ID = String.Empty
-                                        LENS_ID = String.Empty
-                                        TREATMENTS_ID = String.Empty
-
-                                        Dim rowDETJOBM3 As DataRow = dst.Tables("DETJOBM3").NewRow
-                                        rowDETJOBM3.Item("JOB_NO") = JOB_NO
-                                        rowDETJOBM3.Item("RL") = rowPOSITION.Item("EYE") & String.Empty
-                                        rowDETJOBM3.Item("MONO_PD") = Val(rowPOSITION.Item("FAR_HALF_PD") & String.Empty)
-                                        rowDETJOBM3.Item("FITTING_HEIGHT") = Val(rowPOSITION.Item("BOXING_HEIGHT") & String.Empty)
-                                        dst.Tables("DETJOBM3").Rows.Add(rowDETJOBM3)
-
-                                        If vwXmlDataset.Tables("PRESCRIPTION").Select("POSITION_ID = " & POSITION_ID).Length > 0 Then
-                                            rowData = vwXmlDataset.Tables("PRESCRIPTION").Select("POSITION_ID = " & POSITION_ID)(0)
-                                            PRESCRIPTION_ID = rowData.Item("PRESCRIPTION_ID") & String.Empty
-                                            rowDETJOBM3.Item("SPHERE") = Val(rowData.Item("SPHERE") & String.Empty)
-                                        End If
-
-                                        If vwXmlDataset.Tables("CYLINDER").Select("PRESCRIPTION_ID = " & PRESCRIPTION_ID).Length > 0 Then
-                                            rowData = vwXmlDataset.Tables("CYLINDER").Select("PRESCRIPTION_ID = " & PRESCRIPTION_ID)(0)
-                                            rowDETJOBM3.Item("CYLINDER") = Val(rowData.Item("VALUE") & String.Empty)
-                                            rowDETJOBM3.Item("AXIS") = Val(rowData.Item("AXIS") & String.Empty)
-                                        End If
-
-                                        If vwXmlDataset.Tables("ADDITION").Select("PRESCRIPTION_ID = " & PRESCRIPTION_ID).Length > 0 Then
-                                            rowData = vwXmlDataset.Tables("ADDITION").Select("PRESCRIPTION_ID = " & PRESCRIPTION_ID)(0)
-                                            rowDETJOBM3.Item("ADD_POWER") = Val(rowData.Item("VALUE") & String.Empty)
-                                        End If
-
-                                        If vwXmlDataset.Tables("LENS").Select("POSITION_ID = " & POSITION_ID).Length > 0 Then
-                                            rowData = vwXmlDataset.Tables("LENS").Select("POSITION_ID = " & POSITION_ID)(0)
-                                            LENS_ID = rowData.Item("LENS_ID") & String.Empty
-
-                                            If vwXmlDataset.Tables("DESIGN").Select("LENS_ID = " & LENS_ID).Length > 0 Then
-                                                rowData = vwXmlDataset.Tables("DESIGN").Select("LENS_ID = " & LENS_ID)(0)
-                                                rowDETJOBM1.Item("LENS_DESIGN_CODE") = rowData.Item("CONVERT") & String.Empty
+                                            Dim rowDETFRAM1 As DataRow = ABSolution.ASCDATA1.GetDataRow("Select *  from DETFRAM1 where FRAME_TYPE_DESC = :PARM1", "V", New Object() {FRAME_TYPE_CODE})
+                                            If rowDETFRAM1 IsNot Nothing Then
+                                                rowDETJOBM1.Item("FRAME_TYPE_CODE") = rowDETFRAM1.Item("FRAME_TYPE_CODE") & String.Empty
                                             End If
 
-                                            If vwXmlDataset.Tables("MATERIAL").Select("LENS_ID = " & LENS_ID).Length > 0 Then
-                                                rowData = vwXmlDataset.Tables("MATERIAL").Select("LENS_ID = " & LENS_ID)(0)
-                                                tempString = rowData.Item("CONVERT") & String.Empty
-                                                If tempString.Split(":").Length >= 2 Then
-                                                    rowDETJOBM1.Item("MATL_CODE") = tempString.Split(":")(0)
-                                                    rowDETJOBM1.Item("COLOR_CODE") = tempString.Split(":")(1)
-                                                Else
-                                                    rowDETJOBM1.Item("MATL_CODE") = tempString
+                                            Dim FRAME_STATUS As String = rowFrame.Item("ACTION") & String.Empty
+                                            Select Case FRAME_STATUS
+                                                Case "TC"
+                                                    rowDETJOBM1.Item("FRAME_STATUS") = "C"
+                                                Case "ESF"
+                                                    rowDETJOBM1.Item("FRAME_STATUS") = "S"
+                                                Case Else
+                                                    rowDETJOBM1.Item("FRAME_STATUS") = "N"
+                                            End Select
+
+                                            rowDETJOBM1.Item("FRAME_A_WIDTH") = Val(rowFrame.Item("A") & String.Empty)
+                                            rowDETJOBM1.Item("FRAME_B_HEIGHT") = Val(rowFrame.Item("B") & String.Empty)
+                                            rowDETJOBM1.Item("FRAME_DBL_BRIDGE") = Val(rowFrame.Item("DBL") & String.Empty)
+                                            rowDETJOBM1.Item("FRAME_ED_DIAGONAL") = Val(rowFrame.Item("ED") & String.Empty)
+
+                                            rowDETJOBM1.Item("FRAME_MFG") = rowFrame.Item("BRAND") & String.Empty
+                                            rowDETJOBM1.Item("FRAME_MODEL_NO") = rowFrame.Item("MODEL") & String.Empty
+                                            rowDETJOBM1.Item("FRAME_SIZE") = rowFrame.Item("EYESIZE") & String.Empty
+                                            rowDETJOBM1.Item("FRAME_COLOR") = rowFrame.Item("COLOR") & String.Empty
+
+                                        End If
+
+                                        For Each rowPOSITION As DataRow In vwXmlDataset.Tables("POSITION").Select("SP_EQUIPMENT_Id = " & SP_EQUIPMENT_Id)
+                                            POSITION_ID = rowPOSITION.Item("POSITION_ID") & String.Empty
+                                            PRESCRIPTION_ID = String.Empty
+                                            LENS_ID = String.Empty
+                                            TREATMENTS_ID = String.Empty
+
+                                            Dim rowDETJOBM3 As DataRow = dst.Tables("DETJOBM3").NewRow
+                                            rowDETJOBM3.Item("JOB_NO") = JOB_NO
+                                            rowDETJOBM3.Item("RL") = rowPOSITION.Item("EYE") & String.Empty
+                                            rowDETJOBM3.Item("MONO_PD") = Val(rowPOSITION.Item("FAR_HALF_PD") & String.Empty)
+                                            rowDETJOBM3.Item("FITTING_HEIGHT") = Val(rowPOSITION.Item("BOXING_HEIGHT") & String.Empty)
+                                            dst.Tables("DETJOBM3").Rows.Add(rowDETJOBM3)
+
+                                            If vwXmlDataset.Tables("PRESCRIPTION").Select("POSITION_ID = " & POSITION_ID).Length > 0 Then
+                                                rowData = vwXmlDataset.Tables("PRESCRIPTION").Select("POSITION_ID = " & POSITION_ID)(0)
+                                                PRESCRIPTION_ID = rowData.Item("PRESCRIPTION_ID") & String.Empty
+                                                rowDETJOBM3.Item("SPHERE") = Val(rowData.Item("SPHERE") & String.Empty)
+                                            End If
+
+                                            If vwXmlDataset.Tables("CYLINDER").Select("PRESCRIPTION_ID = " & PRESCRIPTION_ID).Length > 0 Then
+                                                rowData = vwXmlDataset.Tables("CYLINDER").Select("PRESCRIPTION_ID = " & PRESCRIPTION_ID)(0)
+                                                rowDETJOBM3.Item("CYLINDER") = Val(rowData.Item("VALUE") & String.Empty)
+                                                rowDETJOBM3.Item("AXIS") = Val(rowData.Item("AXIS") & String.Empty)
+                                            End If
+
+                                            If vwXmlDataset.Tables("ADDITION").Select("PRESCRIPTION_ID = " & PRESCRIPTION_ID).Length > 0 Then
+                                                rowData = vwXmlDataset.Tables("ADDITION").Select("PRESCRIPTION_ID = " & PRESCRIPTION_ID)(0)
+                                                rowDETJOBM3.Item("ADD_POWER") = Val(rowData.Item("VALUE") & String.Empty)
+                                            End If
+
+                                            If vwXmlDataset.Tables("LENS").Select("POSITION_ID = " & POSITION_ID).Length > 0 Then
+                                                rowData = vwXmlDataset.Tables("LENS").Select("POSITION_ID = " & POSITION_ID)(0)
+                                                LENS_ID = rowData.Item("LENS_ID") & String.Empty
+
+                                                If vwXmlDataset.Tables("DESIGN").Select("LENS_ID = " & LENS_ID).Length > 0 Then
+                                                    rowData = vwXmlDataset.Tables("DESIGN").Select("LENS_ID = " & LENS_ID)(0)
+                                                    rowDETJOBM1.Item("LENS_DESIGN_CODE") = rowData.Item("CONVERT") & String.Empty
+                                                End If
+
+                                                If vwXmlDataset.Tables("MATERIAL").Select("LENS_ID = " & LENS_ID).Length > 0 Then
+                                                    rowData = vwXmlDataset.Tables("MATERIAL").Select("LENS_ID = " & LENS_ID)(0)
+                                                    tempString = rowData.Item("CONVERT") & String.Empty
+                                                    If tempString.Split(":").Length >= 2 Then
+                                                        rowDETJOBM1.Item("MATL_CODE") = tempString.Split(":")(0)
+                                                        rowDETJOBM1.Item("COLOR_CODE") = tempString.Split(":")(1)
+                                                    Else
+                                                        rowDETJOBM1.Item("MATL_CODE") = tempString
+                                                    End If
+                                                End If
+
+                                                If vwXmlDataset.Tables("TREATMENTS").Select("LENS_ID = " & LENS_ID).Length > 0 Then
+                                                    rowData = vwXmlDataset.Tables("TREATMENTS").Select("LENS_ID = " & LENS_ID)(0)
+                                                    TREATMENTS_ID = rowData.Item("TREATMENTS_ID") & String.Empty
+
+                                                    For Each rowTREATMENT As DataRow In vwXmlDataset.Tables("TREATMENT").Select("TREATMENTS_ID = " & TREATMENTS_ID)
+                                                        tempString = rowTREATMENT.Item("CONVERT") & String.Empty
+
+                                                        Dim rowDETJOBVW As DataRow = ABSolution.ASCDATA1.GetDataRow("SELECT * FROM DETJOBVW WHERE ACTION_CODE = :PARM1 AND ACTION_TYPE = :PARM2", _
+                                                                                                                    "VV", New Object() {tempString, "TREATMENT"})
+                                                        If rowDETJOBVW IsNot Nothing Then
+                                                            For Each field As String In New String() {"AR_COATING", "AR_BACKSIDE_ONLY", "COLOR_CODE", "COLOR_TYPE", _
+                                                                                                      "FRAME_STATUS", "FRAME_TYPE_CODE", "LENS_DESIGN_CODE", _
+                                                                                                      "LENS_DESIGNER_CODE", "MATL_CODE", "MIRROR_COATING", _
+                                                                                                      "POLISHING", "TINT_CODE", "TINT_COLOR", "WRAP_EDGE", _
+                                                                                                      "MIRROR_COATING_COLOR", "FINISHED", "FOG_FREE"}
+                                                                If rowDETJOBVW.Item(field) & String.Empty <> String.Empty Then
+                                                                    rowDETJOBM1.Item(field) = rowDETJOBVW.Item(field) & String.Empty
+                                                                End If
+                                                            Next
+                                                        End If
+                                                    Next
                                                 End If
                                             End If
-
-                                            If vwXmlDataset.Tables("TREATMENTS").Select("LENS_ID = " & LENS_ID).Length > 0 Then
-                                                rowData = vwXmlDataset.Tables("TREATMENTS").Select("LENS_ID = " & LENS_ID)(0)
-                                                TREATMENTS_ID = rowData.Item("TREATMENTS_ID") & String.Empty
-
-                                                For Each rowTREATMENT As DataRow In vwXmlDataset.Tables("TREATMENT").Select("TREATMENTS_ID = " & TREATMENTS_ID)
-                                                    tempString = rowTREATMENT.Item("CONVERT") & String.Empty
-
-                                                    Dim rowDETJOBVW As DataRow = ABSolution.ASCDATA1.GetDataRow("SELECT * FROM DETJOBVW WHERE ACTION_CODE = :PARM1 AND ACTION_TYPE = :PARM2", _
-                                                                                                                "VV", New Object() {tempString, "TREATMENT"})
-                                                    If rowDETJOBVW IsNot Nothing Then
-                                                        If rowDETJOBVW.Item("AR_COATING") & String.Empty = "1" Then
-                                                            rowDETJOBM1.Item("AR_COATING") = "1"
-                                                        End If
-                                                        If rowDETJOBVW.Item("AR_BACKSIDE_ONLY") & String.Empty = "1" Then
-                                                            rowDETJOBM1.Item("AR_BACKSIDE_ONLY") = "1"
-                                                        End If
-
-                                                        For Each field As String In New String() {"COLOR_CODE", "COLOR_TYPE", "FINISHED", "FOG_FREE", _
-                                                                                                  "FRAME_STATUS", "FRAME_TYPE_CODE", "LENS_DESIGN_CODE", _
-                                                                                                  "LENS_DESIGNER_CODE", "MATL_CODE", "MIRROR_COATING", _
-                                                                                                  "POLISHING", "TINT_CODE", "TINT_COLOR", "WRAP_EDGE", _
-                                                                                                  "MIRROR_COATING_COLOR"}
-                                                            If rowDETJOBVW.Item(field) & String.Empty <> String.Empty Then
-                                                                rowDETJOBM1.Item(field) = rowDETJOBVW.Item(field) & String.Empty
-                                                            End If
-
-                                                        Next
-                                                    End If
-                                                Next
-                                            End If
-                                        End If
+                                        Next
                                     Next
                                 Next
                             Next
-                        Next
 
-                        rowARTCUST1 = baseClass.LookUp("ARTCUST1", CUST_CODE)
-                        rowARTCUST2 = baseClass.LookUp("ARTCUST2", New String() {CUST_CODE, CUST_SHIP_TO_NO})
+                            rowARTCUST1 = baseClass.LookUp("ARTCUST1", CUST_CODE)
+                            rowARTCUST2 = baseClass.LookUp("ARTCUST2", New String() {CUST_CODE, CUST_SHIP_TO_NO})
+                            rowARTCUST3 = baseClass.LookUp("ARTCUST3", CUST_CODE)
+                            'tempString = "Select * from ARTCUST3 where CUST_CODE = '" & CUST_CODE & "' and FRT_CONT_NO in (Select Max (FRT_CONT_NO) from ARTCUST3 where CUST_CODE = '" & CUST_CODE & "')"
+                            'Dim rowARTCUST3 As DataRow = ABSolution.ASCDATA1.GetDataRow(tempString)
+                            If rowARTCUST3 IsNot Nothing Then
+                                rowDETJOBM1.Item("SHIP_VIA_CODE") = rowARTCUST3.Item("SHIP_VIA_CODE")
 
-                        tempString = "Select * from ARTCUST3 where CUST_CODE = '" & CUST_CODE & "' and FRT_CONT_NO in (Select Max (FRT_CONT_NO) from ARTCUST3 where CUST_CODE = '" & CUST_CODE & "')"
-                        Dim rowARTCUST3 As DataRow = ABSolution.ASCDATA1.GetDataRow(tempString)
-                        If rowARTCUST3 IsNot Nothing Then
-                            rowDETJOBM1.Item("SHIP_VIA_CODE") = rowARTCUST3.Item("SHIP_VIA_CODE")
-
-                            If CUST_SHIP_TO_NO <> String.Empty Then
-                                If rowARTCUST2.Item("CUST_SHIP_TO_SHIP_VIA_CODE") & "" <> "" Then
-                                    rowDETJOBM1.Item("SHIP_VIA_CODE") = rowARTCUST2.Item("CUST_SHIP_TO_SHIP_VIA_CODE")
+                                If CUST_SHIP_TO_NO <> String.Empty Then
+                                    If rowARTCUST2.Item("CUST_SHIP_TO_SHIP_VIA_CODE") & "" <> "" Then
+                                        rowDETJOBM1.Item("SHIP_VIA_CODE") = rowARTCUST2.Item("CUST_SHIP_TO_SHIP_VIA_CODE")
+                                    End If
                                 End If
                             End If
-                        End If
 
-                        rowDETJOBM1.Item("CUST_CODE") = CUST_CODE
-                        If rowARTCUST1 IsNot Nothing Then
-                            rowDETJOBM1.Item("CUST_NAME") = rowARTCUST1.Item("CUST_NAME") & String.Empty
-                        ElseIf CUST_CODE = "014211" Then 'FOR NOW WE USE THINNING PRISM FOR EVERYONE EXCEPT FOR DR BEN NAYOR
-                            rowDETJOBM1.Item("USE_THINNING_PRISM") = "0"
-                        End If
+                            rowDETJOBM1.Item("CUST_CODE") = CUST_CODE
+                            If rowARTCUST1 IsNot Nothing Then
+                                rowDETJOBM1.Item("CUST_NAME") = rowARTCUST1.Item("CUST_NAME") & String.Empty
+                            ElseIf CUST_CODE = "014211" Then 'FOR NOW WE USE THINNING PRISM FOR EVERYONE EXCEPT FOR DR BEN NAYOR
+                                rowDETJOBM1.Item("USE_THINNING_PRISM") = "0"
+                            End If
 
-                        rowDETJOBM1.Item("CUST_SHIP_TO_NO") = CUST_SHIP_TO_NO
-                        If rowARTCUST2 IsNot Nothing Then
-                            rowDETJOBM1.Item("CUST_NAME") = rowARTCUST2.Item("CUST_SHIP_TO_NAME") & String.Empty
-                        End If
+                            rowDETJOBM1.Item("CUST_SHIP_TO_NO") = CUST_SHIP_TO_NO
+                            If rowARTCUST2 IsNot Nothing Then
+                                rowDETJOBM1.Item("CUST_NAME") = rowARTCUST2.Item("CUST_SHIP_TO_NAME") & String.Empty
+                            End If
 
-                        ' Validate the Job - Rules taken from DEFJOBM1
-                        ErrorCodes.Clear()
-                        Dim vData As New DECVALID(dst)
-                        vData.ValidateJobData(JOB_NO, False)
-                        Dim errorList As Hashtable = vData.GetErrors
+                            ' Need to update LENS_DESIGNER_CODE
+                            Dim rowDETDSGN1 As DataRow = Nothing
+                            If rowDETJOBM1.Item("LENS_DESIGNER_CODE") & String.Empty = String.Empty Then
+                                rowDETDSGN1 = baseClass.LookUp("DETDSGN1", rowDETJOBM1.Item("LENS_DESIGN_CODE"))
+                                If rowDETDSGN1 IsNot Nothing Then
+                                    rowDETJOBM1.Item("LENS_DESIGNER_CODE") = rowDETDSGN1.Item("LENS_DESIGNER_CODE") & String.Empty
+                                End If
+                            End If
 
-                        Dim rowSOTORDR1 As DataRow = dst.Tables("SOTORDR1").NewRow
-                        rowSOTORDR1.Item("ORDR_NO") = ORDR_NO
-                        rowSOTORDR1.Item("ORDR_DATE") = String.Empty
-                        rowSOTORDR1.Item("CUST_CODE") = CUST_CODE
-                        rowSOTORDR1.Item("CUST_NAME") = rowDETJOBM1.Item("CUST_NAME") & String.Empty
-                        rowSOTORDR1.Item("CUST_SHIP_TO_NO") = rowDETJOBM1.Item("CUST_SHIP_TO_NO") & String.Empty
-                        rowSOTORDR1.Item("CUST_SHIP_TO_NAME") = rowDETJOBM1.Item("CUST_SHIP_TO_NAME") & String.Empty
-                        rowSOTORDR1.Item("ORDR_CUST_PO") = rowDETJOBM1.Item("ORDR_CUST_PO") & String.Empty
-                        rowSOTORDR1.Item("ORDR_STATUS") = "O"
-                        rowSOTORDR1.Item("ORDR_SOURCE") = "V"
-                        rowSOTORDR1.Item("SHIP_VIA_CODE") = rowDETJOBM1.Item("SHIP_VIA_CODE") & String.Empty
-                        dst.Tables("SOTORDR1").Rows.Add(rowSOTORDR1)
+                            If rowARTCUST1 IsNot Nothing AndAlso rowARTCUST1.Item("CUST_DEL_JOB_INSPCT_SUP") & String.Empty <> String.Empty Then
+                                rowDETJOBM1.Item("JOB_INSPCT_SUP") = "1"
+                            End If
 
-                        Dim errorCode As String = String.Empty
-                        SetBillToAttributes(CUST_CODE, CUST_CODE, rowSOTORDR1, errorCode)
-                        CreateSalesOrderTax(ORDR_NO)
+                            Dim jb As DelJobService = New DelJobService(ABSolution.ASCMAIN1.oraCon, ABSolution.ASCMAIN1.oraAda)
 
-                        rowSOTORDR1.Item("WHSE_CODE") = "003"
-                        rowSOTORDR1.Item("INIT_OPER") = ABSolution.ASCMAIN1.USER_ID
-                        rowSOTORDR1.Item("LAST_OPER") = ABSolution.ASCMAIN1.USER_ID
-                        rowSOTORDR1.Item("INIT_DATE") = DateTime.Now
-                        rowSOTORDR1.Item("LAST_DATE") = DateTime.Now
-                        rowSOTORDR1.Item("ORDR_TYPE_CODE") = "REG"
-                        rowSOTORDR1.Item("ORDR_CALLER_NAME") = "VW Import"
-                        rowSOTORDR1.Item("ORDR_DPD") = "0"
-                        rowSOTORDR1.Item("BRANCH_CODE") = "NY"
-                        rowSOTORDR1.Item("DIVISION_CODE") = "DEL"
-                        rowSOTORDR1.Item("ORDR_TOTAL_AMT") = 0
-                        rowSOTORDR1.Item("ORDR_SALES") = 0
-                    Next
+                            ' JOB Status 110 = Entered
+                            Dim job As DelJobService.JobValidatorFields = jb.CreateJobObject(rowDETJOBM1, dst.Tables("DETJOBM3"), "110")
+                            Dim errors As List(Of DelJobService.DelJobValidationError) = jb.ValidateJobData(job)
+
+                            If Val(rowDETJOBM1.Item("FRAME_A_WIDTH") & "") > Val(dst.Tables("DETPARM1").Rows(0).Item("DE_PARM_MAX_A") & "") _
+                                OrElse Val(rowDETJOBM1.Item("FRAME_B_HEIGHT") & "") > Val(dst.Tables("DETPARM1").Rows(0).Item("DE_PARM_MAX_B") & "") _
+                                OrElse Val(rowDETJOBM1.Item("FRAME_DBL_BRIDGE") & "") > Val(dst.Tables("DETPARM1").Rows(0).Item("DE_PARM_MAX_DBL") & "") _
+                                OrElse Val(rowDETJOBM1.Item("FRAME_ED_DIAGONAL") & "") > Val(dst.Tables("DETPARM1").Rows(0).Item("DE_PARM_MAX_ED") & "") _
+                                OrElse Val(rowDETJOBM1.Item("FRAME_A_WIDTH") & "") < 0 _
+                                OrElse Val(rowDETJOBM1.Item("FRAME_B_HEIGHT") & "") < 0 _
+                                OrElse Val(rowDETJOBM1.Item("FRAME_DBL_BRIDGE") & "") < 0 _
+                                OrElse Val(rowDETJOBM1.Item("FRAME_ED_DIAGONAL") & "") < 0 Then
+
+                                Dim EMsg As String = "Max Values Frame Measurements: A=" & CStr(Val(dst.Tables("DETPARM1").Rows(0).Item("DE_PARM_MAX_A") & "")) _
+                                & ", B=" & CStr(Val(dst.Tables("DETPARM1").Rows(0).Item("DE_PARM_MAX_B") & "")) & ", ED=" _
+                                & CStr(Val(dst.Tables("DETPARM1").Rows(0).Item("DE_PARM_MAX_ED") & "")) & ", DBL=" _
+                                & CStr(Val(dst.Tables("DETPARM1").Rows(0).Item("DE_PARM_MAX_DBL") & "")) & ""
+
+                                errors.Add(New DelJobService.DelJobValidationError("Customer", dst.Tables("SOTORDRO").Select("ORDR_REL_HOLD_CODES = '" & code & "'")(0).Item("ORDR_COMMENT")))
+
+                            End If
+
+
+                            Dim rowSOTORDR1 As DataRow = dst.Tables("SOTORDR1").NewRow
+                            rowSOTORDR1.Item("ORDR_NO") = ORDR_NO
+                            rowSOTORDR1.Item("ORDR_DATE") = rowDETJOBM1.Item("ORDR_DATE")
+                            rowSOTORDR1.Item("CUST_CODE") = CUST_CODE
+                            rowSOTORDR1.Item("CUST_NAME") = rowDETJOBM1.Item("CUST_NAME") & String.Empty
+                            rowSOTORDR1.Item("CUST_SHIP_TO_NO") = rowDETJOBM1.Item("CUST_SHIP_TO_NO") & String.Empty
+                            rowSOTORDR1.Item("CUST_SHIP_TO_NAME") = rowDETJOBM1.Item("CUST_SHIP_TO_NAME") & String.Empty
+                            rowSOTORDR1.Item("ORDR_CUST_PO") = rowDETJOBM1.Item("ORDR_CUST_PO") & String.Empty
+                            rowSOTORDR1.Item("ORDR_STATUS") = "O"
+                            rowSOTORDR1.Item("ORDR_SOURCE") = "V"
+                            rowSOTORDR1.Item("SHIP_VIA_CODE") = rowDETJOBM1.Item("SHIP_VIA_CODE") & String.Empty
+                            dst.Tables("SOTORDR1").Rows.Add(rowSOTORDR1)
+
+                            Dim errorCode As String = String.Empty
+                            SetBillToAttributes(CUST_CODE, CUST_SHIP_TO_NO, rowSOTORDR1, errorCode)
+                            CreateSalesOrderTax(ORDR_NO)
+
+                            For Each errCode As Char In errorCode
+                                If dst.Tables("SOTORDRO").Select("ORDR_REL_HOLD_CODES = '" & errCode & "'").Length > 0 Then
+                                    errors.Add(New DelJobService.DelJobValidationError("Customer", dst.Tables("SOTORDRO").Select("ORDR_REL_HOLD_CODES = '" & errCode & "'")(0).Item("ORDR_COMMENT")))
+                                End If
+                            Next
+
+                            rowSOTORDR1.Item("WHSE_CODE") = "003"
+                            rowSOTORDR1.Item("INIT_OPER") = ABSolution.ASCMAIN1.USER_ID
+                            rowSOTORDR1.Item("LAST_OPER") = ABSolution.ASCMAIN1.USER_ID
+                            rowSOTORDR1.Item("INIT_DATE") = DateTime.Now
+                            rowSOTORDR1.Item("LAST_DATE") = DateTime.Now
+                            rowSOTORDR1.Item("ORDR_TYPE_CODE") = "REG"
+                            rowSOTORDR1.Item("ORDR_CALLER_NAME") = "VW Import"
+                            rowSOTORDR1.Item("ORDR_DPD") = "0"
+                            rowSOTORDR1.Item("BRANCH_CODE") = "NY"
+                            rowSOTORDR1.Item("DIVISION_CODE") = "DEL"
+                            rowSOTORDR1.Item("ORDR_TOTAL_AMT") = 0
+                            rowSOTORDR1.Item("ORDR_SALES") = 0
+
+                            For Each err As DelJobService.DelJobValidationError In errors
+                                Dim rowDETJOBIE As DataRow = dst.Tables("DETJOBIE").NewRow
+                                rowDETJOBIE.Item("JOB_NO") = JOB_NO
+                                rowDETJOBIE.Item("ERR_CODE") = err.Field
+                                rowDETJOBIE.Item("ERR_DESC") = err.Message
+                                dst.Tables("DETJOBIE").Rows.Add(rowDETJOBIE)
+                            Next
+
+                            PriceDelJob(JOB_NO)
+
+                            rowDETJOBM1.Item("TERM_CODE") = rowSOTORDR1.Item("TERM_CODE") & String.Empty
+
+                            rowDETDSGN1 = baseClass.LookUp("DETDSGN1", New String() {rowDETJOBM1.Item("LENS_DESIGNER_CODE") & String.Empty})
+                            If rowDETDSGN1 IsNot Nothing AndAlso rowDETDSGN1.Item("LENS_TYPE") & String.Empty = "S" Then
+                                For Each rowDETJOBM3 As DataRow In dst.Tables("DETJOBM3").Rows
+                                    rowDETJOBM3.Item("ADD_POWER") = DBNull.Value
+                                Next
+                            End If
+
+                            Dim rowDETDSGN3 As DataRow = baseClass.LookUp("DETDSGN3", New String() _
+                                    {rowDETJOBM1.Item("LENS_DESIGN_CODE") & String.Empty, _
+                                     rowDETJOBM1.Item("MATL_CODE") & String.Empty, _
+                                     rowDETJOBM1.Item("COLOR_CODE") & String.Empty})
+
+                            If rowDETDSGN3 IsNot Nothing Then
+                                rowDETJOBM1.Item("LIST_PRICE") = rowDETDSGN3("LIST_PRICE")
+                            End If
+
+                            Dim INV_SALES As Decimal = Val(dst.Tables("DETJOBM2").Compute("SUM(JOB_AMT)", String.Empty) & String.Empty)
+                            rowDETJOBM1.Item("INV_SALES") = INV_SALES
+
+                            If errors.Count > 0 Then
+                                rowDETJOBM1.Item("JOB_STATUS") = "H"
+                            End If
+
+                            Dim rowDETJOBM4 As DataRow = dst.Tables("DETJOBM4").NewRow
+                            rowDETJOBM4.Item("JOB_NO") = JOB_NO
+                            rowDETJOBM4.Item("STATUS_CODE") = "110"
+                            rowDETJOBM4.Item("INIT_OPER") = rowDETJOBM1.Item("INIT_OPER")
+                            rowDETJOBM4.Item("INIT_DATE") = rowDETJOBM1.Item("INIT_DATE")
+                            dst.Tables("DETJOBM4").Rows.Add(rowDETJOBM4)
+
+                            With baseClass
+                                .BeginTrans()
+                                inTrans = True
+
+                                .clsASCBASE1.Update_Record_TDA("DETJOBM1")
+                                .clsASCBASE1.Update_Record_TDA("DETJOBM2")
+                                .clsASCBASE1.Update_Record_TDA("DETJOBM3")
+                                .clsASCBASE1.Update_Record_TDA("DETJOBM4")
+                                .clsASCBASE1.Update_Record_TDA("DETJOBIE")
+
+                                .clsASCBASE1.Update_Record_TDA("SOTORDR1")
+                                .clsASCBASE1.Update_Record_TDA("SOTORDR5")
+
+                                If dst.Tables("DETJOBIE").Rows.Count = 0 Then
+                                    ABSolution.ASCDATA1.ExecuteSQL("Begin ARPCUST6_ORDR_NO('DEL', '" & rowDETJOBM1.Item("CUST_CODE") & "', '" & rowDETJOBM1.Item("JOB_NO") & "', SYSDATE, " & INV_SALES & ");  End;")
+                                End If
+
+                                .CommitTrans()
+                                inTrans = False
+                                My.Computer.FileSystem.MoveFile(orderFile, vwConnection.LocalInDirArchive & My.Computer.FileSystem.GetName(orderFile))
+                                If dst.Tables("DETJOBIE").Rows.Count > 0 Then
+                                    Dim note As String = String.Empty
+                                    For Each row As DataRow In dst.Tables("DETJOBIE").Select
+                                        note &= Environment.NewLine & row.Item("ERR_CODE") & vbTab & row.Item("ERR_DESC")
+                                    Next
+                                    emailErrors(String.Empty, errors.Count, note, "DEL_VWEB")
+                                End If
+                            End With
+                        Next
+                    Catch ex As Exception
+                        RecordLogEntry("ProcessVisionWebDELOrders: File(" & orderFile & ") " & ex.Message)
+                        ' Need to send email about error file
+                        ' Move file to errors folder
+                    End Try
                 Next
+
             Catch ex As Exception
                 RecordLogEntry("ProcessVisionWebDELOrders: " & ex.Message)
             Finally
                 RecordLogEntry("ProcessVisionWebDELOrders: " & numOrdersProcessed & " DEL orders imported ")
-
                 ' Archive processed XML files
             End Try
         End Sub
@@ -3625,7 +3768,7 @@ Namespace OrdersImport
                 Dim rowDETJOBM1 As DataRow = dst.Tables("DETJOBM1").Select("JOB_NO = '" & JOB_NO & "'")(0)
                 Dim rowDETJOBM2 As DataRow = dst.Tables("DETJOBM2").Select("JOB_NO = '" & JOB_NO & "' AND JOB_CHARGE_TYPE = 'M'", "")(0)
 
-                If rowDETJOBM1.Item("chkMIRROR_COATING") & String.Empty = "1" Then
+                If rowDETJOBM1.Item("MIRROR_COATING") & String.Empty = "1" Then
                     rowDETJOBM2("JOB_QTY") = IIf(rowDETJOBM1.Item("LENS_ORDER") & String.Empty = "B" Or rowDETJOBM1.Item("BALANCE_LENS") & String.Empty = "1", 2, 1)
                 Else
                     rowDETJOBM2("JOB_QTY") = 0
@@ -4869,7 +5012,7 @@ Namespace OrdersImport
                 End If
 
                 clsSOCORDR1.AffiliateFreeShipping()
-                clsSOCORDR1.Price_and_Qty()
+                clsSOCORDR1.Price_and_Qty(False, True)
 
                 ' Added on 1/22/2009 as per walter
                 If clsSOCORDR1.SHIP_VIA_CODE_switch_to.Trim.Length > 0 Then
@@ -5832,6 +5975,7 @@ Namespace OrdersImport
                     .Tables("DETJOBM1").Clear()
                     .Tables("DETJOBM2").Clear()
                     .Tables("DETJOBM3").Clear()
+                    .Tables("DETJOBIE").Clear()
 
                     If ClearXSTtables Then
                         .Tables("XSTORDR1").Clear()
@@ -5967,7 +6111,12 @@ Namespace OrdersImport
 
                     baseClass.Create_TDA(.Tables.Add, "DETJOBM1", "*")
                     baseClass.Create_TDA(.Tables.Add, "DETJOBM2", "*")
+                    .Tables("DETJOBM2").Columns.Add("JOB_AMT", GetType(System.Double), "JOB_QTY * JOB_PRICE")
+                    .Tables("DETJOBM2").Columns.Add("CUST_PRICE", GetType(System.Double))
+
                     baseClass.Create_TDA(.Tables.Add, "DETJOBM3", "*")
+                    baseClass.Create_TDA(.Tables.Add, "DETJOBM4", "*")
+                    baseClass.Create_TDA(.Tables.Add, "DETJOBIE", "*")
 
                     With .Tables("SOTORDR2")
                         .Columns.Add("ORDR_LNO_EXT", GetType(System.Double), "ISNULL(ORDR_QTY, 0) * ISNULL(ORDR_UNIT_PRICE, 0)")
@@ -6328,10 +6477,24 @@ Namespace OrdersImport
             End If
         End Sub
 
-        Private Sub emailErrors(ByRef ORDR_SOURCE As String, ByVal numErrors As Int16, Optional ByVal note As String = "")
-            Try
+        Private Sub emailErrors(ByRef ORDR_SOURCE As String, ByVal numErrors As Int16)
+            emailErrors(ORDR_SOURCE, numErrors, String.Empty, String.Empty)
+        End Sub
 
-                Dim clsASTNOTE1 As New TAC.ASCNOTE1("IMPERROR_" & ORDR_SOURCE, dst, "")
+        Private Sub emailErrors(ByRef ORDR_SOURCE As String, ByVal numErrors As Int16, ByVal note As String)
+            emailErrors(ORDR_SOURCE, numErrors, note, String.Empty)
+        End Sub
+
+        Private Sub emailErrors(ByRef ORDR_SOURCE As String, ByVal numErrors As Int16, ByVal note As String, ByVal NoteOverride As String)
+            Try
+                Dim clsASTNOTE1 As TAC.ASCNOTE1
+
+                If NoteOverride.Length > 0 Then
+                    clsASTNOTE1 = New TAC.ASCNOTE1(NoteOverride, dst, "")
+                Else
+                    clsASTNOTE1 = New TAC.ASCNOTE1("IMPERROR_" & ORDR_SOURCE, dst, "")
+                End If
+
                 If note.Length = 0 Then
                     note = "There were " & numErrors & " import error(s) on " & DateTime.Now.ToLongDateString & " " & DateTime.Now.ToLongTimeString
                 End If
