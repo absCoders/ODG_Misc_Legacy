@@ -962,7 +962,7 @@ Namespace StatementEmail
                 Dim tblARTPYMTW As DataTable = ABSolution.ASCDATA1.GetDataTable(sql, "", "V", New Object() {OPS_YYYYPP})
 
                 If tblARTPYMTW Is Nothing OrElse tblARTPYMTW.Rows.Count = 0 Then
-                    RecordLogEntry("CreateCreditCardStatementPayments: No credit card Staement entries.")
+                    RecordLogEntry("CreateCreditCardStatementPayments: No credit card Statement entries.")
                     Exit Sub
                 End If
 
@@ -1132,6 +1132,7 @@ Namespace StatementEmail
                     rowARTCCPA1.Item("CUST_CREDIT_CARD_ZIP_CODE") = rowARTPYMTW.Item("CC_ZIP_CODE") & String.Empty
                     rowARTCCPA1.Item("CUST_CREDIT_CARD_LAST4") = CUST_CREDIT_CARD_LAST4
                     rowARTCCPA1.Item("OPS_YYYYPP") = OPS_YYYYPP
+                    rowARTCCPA1.Item("WEB_PYMT_ID") = rowARTPYMTW.Item("PYMT_ID") & String.Empty
                     rowARTCCPA1("INIT_OPER") = ABSolution.ASCMAIN1.USER_ID
                     rowARTCCPA1("INIT_DATE") = DateTime.Now
                     rowARTCCPA1("LAST_OPER") = ABSolution.ASCMAIN1.USER_ID
