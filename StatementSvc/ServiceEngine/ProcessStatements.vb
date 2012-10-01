@@ -137,6 +137,7 @@ Namespace StatementEmail
             End Try
 
             ' Create ACH Auto Payments
+            Dim okToProcessCeditCards As Boolean = False
             Try
                 Dim rowARTPARMA As DataRow = ABSolution.ASCDATA1.GetDataRow("Select * from ARTPARMA where AR_PARM_KEY = 'Z'")
                 If rowARTPARMA IsNot Nothing AndAlso rowARTPARMA.Item("AR_PARM_LAST_OPS_YYYYPP") & String.Empty <> String.Empty Then
@@ -148,6 +149,7 @@ Namespace StatementEmail
                         RecordLogEntry("Statement ACH processing was previously completed for the current period.")
                     Else
                         ' Start Processing Monthly ACH Statement Billings
+                        okToProcessCeditCards = True
                         ACHBillingStatements()
                     End If
                 Else
@@ -159,7 +161,9 @@ Namespace StatementEmail
             End Try
 
             Try
-                CreateSqlServerCreditCardStatementPayments()
+                If okToProcessCeditCards Then
+                    CreateSqlServerCreditCardStatementPayments()
+                End If
             Catch ex As Exception
                 RecordLogEntry("MainProcess (Call to CC Processing): " & ex.Message)
             End Try
@@ -851,6 +855,11 @@ Namespace StatementEmail
                 connectionString = "Server=" & rowWBTPARM1.Item("WB_PARM_WEB_IP_ADDRESS") & ";" & _
                     "Initial Catalog=" & rowWBTPARM1.Item("WB_PARM_WEB_INITIAL_CATALOG") & ";" & _
                     "User Id=" & rowWBTPARM1.Item("WB_PARM_WEB_UID") & ";Password=" & rowWBTPARM1.Item("WB_PARM_WEB_PWD")
+
+                siteConnectionString = "Server=" & rowWBTPARM1.Item("WB_PARM_WEB_IP_ADDRESS") & ";" & _
+                    "Initial Catalog=" & rowWBTPARM1.Item("WB_PARM_SITE_INITIAL_CATALOG") & ";" & _
+                    "User Id=" & rowWBTPARM1.Item("WB_PARM_SITE_UID") & ";Password=" & rowWBTPARM1.Item("WB_PARM_SITE_PWD")
+
                 clsASCSQLS1.sqlServerConnection = New SqlClient.SqlConnection(connectionString)
                 clsASCSQLS1.sqlServerConnection.Open()
 
@@ -870,7 +879,7 @@ Namespace StatementEmail
                     Dim PYMT_AMT As Decimal = Val(rowARTPYMTW.Item("PYMT_AMT") & String.Empty)
 
                     sql = "Insert Into abs_ARTPYMTW"
-                    sql &= " (PYMT_TYPE, ACH_ACCT_ID, CC_ACCT_ID, PYMT_DATE, PYMT_STATUS, PYMT_AMT, AUTO_PAY, OPS_YYYYPP)"
+                    sql &= " (PYMT_TYPE, ACH_ACCT_ID, CC_ACCT_ID, PYMT_DATE, PYMT_STATUS, PYMT_AMT, AUTO_PAY, OPS_YYYYPP, SUBMIT_ID)"
                     sql &= " Values"
                     sql &= " ("
                     sql &= "'" & PYMT_TYPE & "',"
@@ -880,7 +889,8 @@ Namespace StatementEmail
                     sql &= "'" & ABSolution.ASCMAIN1.GetEnumChar(ABSolution.ASCMAIN1.ACH_Statuses.Pending) & "',"
                     sql &= PYMT_AMT
                     sql &= ", '1',"
-                    sql &= "'" & OPS_YYYYPP & "'"
+                    sql &= "'" & OPS_YYYYPP & "',"
+                    sql &= " LEFT(NEWID(),32)"
                     sql &= ")"
                     clsASCSQLS1.sqlSvrExecuteSQL(sql)
                     ictr += 1
@@ -991,7 +1001,7 @@ Namespace StatementEmail
                     PYMT_AMT = Val(rowARTPYMTW.Item("PYMT_AMT") & String.Empty)
 
                     sql = "Insert Into abs_ARTPYMTW"
-                    sql &= " (PYMT_TYPE, ACH_ACCT_ID, CC_ACCT_ID, PYMT_DATE, PYMT_STATUS, PYMT_AMT, AUTO_PAY, OPS_YYYYPP)"
+                    sql &= " (PYMT_TYPE, ACH_ACCT_ID, CC_ACCT_ID, PYMT_DATE, PYMT_STATUS, PYMT_AMT, AUTO_PAY, OPS_YYYYPP, SUBMIT_ID)"
                     sql &= " Values"
                     sql &= " ("
                     sql &= "'" & PYMT_TYPE & "',"
@@ -1002,6 +1012,7 @@ Namespace StatementEmail
                     sql &= PYMT_AMT
                     sql &= ", '1',"
                     sql &= "'" & OPS_YYYYPP & "'"
+                    sql &= ", LEFT(NEWID(),32)"
                     sql &= ")"
                     clsASCSQLS1.sqlSvrExecuteSQL(sql)
                     ictr += 1
