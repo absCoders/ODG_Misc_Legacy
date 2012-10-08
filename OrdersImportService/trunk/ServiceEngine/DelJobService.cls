@@ -63,6 +63,7 @@
         Dim Tint As String
         Dim TintColor As String
         Dim TintPercent As Int16
+        Dim CorridorLength As String
         Dim UseWorkingDistances As Int16
         Dim WorkingDistancesDistance As Int16
         Dim WorkingDistancesViewingAngle As String
@@ -150,7 +151,6 @@
         'Dim OrdrSource As String
         'Dim ShipViaCode As String
         'Dim ColorCode As String
-        'Dim CorridorLength As String
         'Dim Finished As String
 
         'Dim FrameAWidth As Decimal
@@ -761,8 +761,8 @@
         Dim dt = GetDataTable(String.Format(TSql, job.LensDesign, job.Material))
 
         If dt.Rows.Count <> 1 Then
-            Throw New Exception(String.Format("Invalid Design/Material Combination ({0}, {1})", job.LensDesign, job.Material))
-            'Return rules
+            'Throw New Exception(String.Format("Invalid Design/Material Combination ({0}, {1})", job.LensDesign, job.Material))
+            Return Nothing
         End If
 
         Dim dr As DataRow = dt.Rows(0)
@@ -921,16 +921,22 @@
         If job.AccountNumber.Trim().Length = 0 Then
             errors.Add(New DelJobValidationError("AccountNumber", "A Valid Account Number is required"))
         Else
-            If GetDataValue("select cust_code from artcust1 where cust_code = '" & job.AccountNumber.Trim & "'") & String.Empty = String.Empty Then
+            Dim rowARTCUST1 As DataRow = GetDataRow("select * from artcust1 where cust_code = '" & job.AccountNumber.Trim & "'")
+            If rowARTCUST1 Is Nothing Then
                 errors.Add(New DelJobValidationError("AccountNumber", "A Valid Account Number is required"))
+            ElseIf rowARTCUST1.Item("CUST_STATUS") & String.Empty = "C" Then
+                errors.Add(New DelJobValidationError("AccountNumber", "Account is Closed"))
             Else
                 isvalidAccount = True
             End If
         End If
 
         If isvalidAccount AndAlso job.ShipToID.Length > 0 Then
-            If GetDataValue("select cust_code from artcust2 where cust_code = '" & job.AccountNumber.Trim & "' and cust_ship_to_to = '" & job.ShipToID & "'") & String.Empty = String.Empty Then
+            Dim rowARTCUST2 As DataRow = GetDataRow("select * from artcust2 where cust_code = '" & job.AccountNumber.Trim & "' and cust_ship_to_no = '" & job.ShipToID & "'")
+            If rowARTCUST2 Is Nothing Then
                 errors.Add(New DelJobValidationError("AccountNumber", "A Valid Account Number is required"))
+            ElseIf rowARTCUST2.Item("CUST_SHIP_TO_STATUS") & String.Empty = "C" Then
+                errors.Add(New DelJobValidationError("AccountNumber", "Ship to is closed"))
             End If
         End If
 
@@ -962,7 +968,7 @@
             errors.Add(New DelJobValidationError("Tint", "Tint is required"))
         Else
             If job.Tint <> "NONE" Then
-                If job.TintColor.Trim().Length = 0 Then
+                If job.TintColor.Trim.Length = 0 Then
                     errors.Add(New DelJobValidationError("TintColor", "Tint Color is required"))
                 End If
                 'If job.TintPercent < 0 OrElse job.TintPercent > 100 Then
@@ -972,6 +978,10 @@
                     errors.Add(New DelJobValidationError("TintPercent", "Tint % must be one of the following values: 5, 10, 20, 30, 40, 50, 60, 70, 80"))
                 End If
             End If
+        End If
+
+        If job.CorridorLength.Trim.Length = 0 Then
+            errors.Add(New DelJobValidationError("CorridorLength", "Corridor Length is required"))
         End If
 
         'DistanceRxLeftAxis, DistanceRxRightAxis, DistanceRxLeftCyl, DistanceRxRightCyl, NearRxRightAdd, NearRxLeftAdd, FittingMeasurementsRightMonocularPD, FittingMeasurementsLeftMonocularPD
@@ -1087,25 +1097,26 @@
                     errors.Add(New DelJobValidationError("FrameDataED", "Frame ED Diagonal value is required"))
                 End If
 
+                ' .5 error messages were taken out on 9/6/2012 
                 Dim frameDataDbl = GetFrameDataDbl(job)
                 If frameDataDbl Is Nothing Then
                     errors.Add(New DelJobValidationError("FrameDataDbl", "Frame Dbl Bridge value is required"))
                 Else
                     If Math.Ceiling(frameDataDbl * 2) <> Math.Floor(frameDataDbl * 2) Then
-                        errors.Add(New DelJobValidationError("FrameDataDbl", "Frame Dbl Bridge value must be in 0.5 increments"))
+                        'errors.Add(New DelJobValidationError("FrameDataDbl", "Frame Dbl Bridge value must be in 0.5 increments"))
                     End If
                 End If
 
                 If Math.Ceiling(job.FrameDataA * 2) <> Math.Floor(job.FrameDataA * 2) Then
-                    errors.Add(New DelJobValidationError("FrameDataA", "Frame A Width value must be in 0.5 increments"))
+                    'errors.Add(New DelJobValidationError("FrameDataA", "Frame A Width value must be in 0.5 increments"))
                 End If
 
                 If Math.Ceiling(job.FrameDataB * 2) <> Math.Floor(job.FrameDataB * 2) Then
-                    errors.Add(New DelJobValidationError("FrameDataB", "Frame B Height value must be in 0.5 increments"))
+                    'errors.Add(New DelJobValidationError("FrameDataB", "Frame B Height value must be in 0.5 increments"))
                 End If
 
                 If Math.Ceiling(job.FrameDataED * 2) <> Math.Floor(job.FrameDataED * 2) Then
-                    errors.Add(New DelJobValidationError("FrameDataED", "Frame ED Diagonal value must be in 0.5 increments"))
+                    'errors.Add(New DelJobValidationError("FrameDataED", "Frame ED Diagonal value must be in 0.5 increments"))
                 End If
 
                 If job.FrameDataED < job.FrameDataA Then
@@ -1143,13 +1154,11 @@
             End If
         End If
 
-
         If job.LensDesigner <> "SEIKO" Then 'And Absx1.optFor("FINISHED").Value <> "O" Then
             'If LookUp("DETDSGN4", New String() {Absx1.txtFor("LENS_DESIGNER_CODE").Text, Absx1.txtFor("MATL_CODE").Text & "", Absx1.txtFor("COLOR_CODE").Text}) Is Nothing Then
             'errors.Add(New DelJobValidationError("LMATID", "No LMATID on file for Designer, Material & Color Specified"))
             'End If
         End If
-
 
         If job.FittingMeasurementsLeftMonocularPD = 0 AndAlso job.WhichLenses <> "R" Then
             errors.Add(New DelJobValidationError("MonocularPDL", "Left Monocular PD is required"))
@@ -1222,36 +1231,42 @@
         Dim ranges As DelJobRules.Ranges
         Try
             ranges = GetRules(job, False).RxRanges
+
+            If ranges Is Nothing Then
+                errors.Add(New DelJobValidationError("RxNumbers", "Ranges could not be calculated. Most likely invalid Designer/Design"))
+                Exit Sub
+            End If
+
+            Dim checkRight = (job.WhichLenses = "B" Or job.WhichLenses = "R")
+            Dim checkLeft = (job.WhichLenses = "B" Or job.WhichLenses = "L")
+
+            ValidateRxNumber(errors, checkRight, checkLeft, ranges.DistanceSph, job.DistanceRxRightSph, job.DistanceRxLeftSph, "DistanceRxSph", "Distance RX Sphere")
+            ValidateRxNumber(errors, checkRight, checkLeft, ranges.DistanceCyl, job.DistanceRxRightCyl, job.DistanceRxLeftCyl, "DistanceRxCyl", "Distance RX Cylinder")
+            ValidateRxNumber(errors, checkRight, checkLeft, ranges.DistanceAxis, job.DistanceRxRightAxis, job.DistanceRxLeftAxis, "DistanceRxAxis", "Distance RX Axis")
+            ValidateRxNumber(errors, checkRight, checkLeft, ranges.NearAdd, job.NearRxRightAdd, job.NearRxLeftAdd, "NearRxAdd", "Near RX Add")
+            If job.IncludePrism Then
+                ValidateRxNumber(errors, checkRight, checkLeft, ranges.PrismIn, job.PrismRightIn, job.PrismLeftIn, "PrismIn", "Prism In")
+                ValidateRxNumber(errors, checkRight, checkLeft, ranges.PrismUp, job.PrismRightUp, job.PrismLeftUp, "PrismUp", "Prism Up")
+            End If
+            ValidateRxNumber(errors, checkRight, checkLeft, ranges.FittingVertex, job.VertexPantoRightFittingVertex, job.VertexPantoLeftFittingVertex, "FittingVertex", "Fitting Vertex")
+            ValidateRxNumber(errors, checkRight, checkLeft, ranges.RefractiveVertex, job.VertexPantoRightRefractiveVertex, job.VertexPantoLeftRefractiveVertex, "RefractiveVertex", "Refractive Vertex")
+            ValidateRxNumber(errors, checkRight, checkLeft, ranges.PantoTilt, job.VertexPantoRightPantoTilt, job.VertexPantoLeftPantoTilt, "PantoTilt", "Panto Tilt")
+            ValidateRxNumber(errors, checkRight, checkLeft, ranges.WrapAngle, job.VertexPantoRightWrapAngle, job.VertexPantoLeftWrapAngle, "WrapAngle", "Wrap Angle")
+            ValidateRxNumber(errors, checkRight, checkLeft, ranges.MonocularPD, job.FittingMeasurementsRightMonocularPD, job.FittingMeasurementsLeftMonocularPD, "MonocularPD", "Monocular PD")
+            ValidateRxNumber(errors, checkRight, checkLeft, ranges.FittingHeight, job.FittingMeasurementsRightFittingHeight, job.FittingMeasurementsLeftFittingHeight, "FittingHeight", "Fitting Height")
+            ValidateRxNumber(errors, ranges.FrameA, job.FrameDataA, "FrameDataA", "Frame A (Width)")
+            ValidateRxNumber(errors, ranges.FrameB, job.FrameDataB, "FrameDataB", "Frame B (Height)")
+            ValidateRxNumber(errors, ranges.FrameDbl, GetFrameDataDbl(job), "FrameDataDbl", "Frame DBL (Bridge)")
+            ValidateRxNumber(errors, ranges.FrameED, job.FrameDataED, "FrameDataED", "Frame ED (Diagonal)")
+
         Catch ex As Exception
             ' If we can't get the rules, then we can't validate the RX numbers, but
             ' will still allow validation to continue without an exception. We rely on
             ' the cause of the exception retrieving the rules (e.g., missing color) 
             ' to be flagged with its own validation rule (e.g., color is required)
+            errors.Add(New DelJobValidationError("ValidateRxNumbers", ex.Message))
             Return
         End Try
-
-        Dim checkRight = (job.WhichLenses = "B" Or job.WhichLenses = "R")
-        Dim checkLeft = (job.WhichLenses = "B" Or job.WhichLenses = "L")
-
-        ValidateRxNumber(errors, checkRight, checkLeft, ranges.DistanceSph, job.DistanceRxRightSph, job.DistanceRxLeftSph, "DistanceRxSph", "Distance RX Sphere")
-        ValidateRxNumber(errors, checkRight, checkLeft, ranges.DistanceCyl, job.DistanceRxRightCyl, job.DistanceRxLeftCyl, "DistanceRxCyl", "Distance RX Cylinder")
-        ValidateRxNumber(errors, checkRight, checkLeft, ranges.DistanceAxis, job.DistanceRxRightAxis, job.DistanceRxLeftAxis, "DistanceRxAxis", "Distance RX Axis")
-        ValidateRxNumber(errors, checkRight, checkLeft, ranges.NearAdd, job.NearRxRightAdd, job.NearRxLeftAdd, "NearRxAdd", "Near RX Add")
-        If job.IncludePrism Then
-            ValidateRxNumber(errors, checkRight, checkLeft, ranges.PrismIn, job.PrismRightIn, job.PrismLeftIn, "PrismIn", "Prism In")
-            ValidateRxNumber(errors, checkRight, checkLeft, ranges.PrismUp, job.PrismRightUp, job.PrismLeftUp, "PrismUp", "Prism Up")
-        End If
-        ValidateRxNumber(errors, checkRight, checkLeft, ranges.FittingVertex, job.VertexPantoRightFittingVertex, job.VertexPantoLeftFittingVertex, "FittingVertex", "Fitting Vertex")
-        ValidateRxNumber(errors, checkRight, checkLeft, ranges.RefractiveVertex, job.VertexPantoRightRefractiveVertex, job.VertexPantoLeftRefractiveVertex, "RefractiveVertex", "Refractive Vertex")
-        ValidateRxNumber(errors, checkRight, checkLeft, ranges.PantoTilt, job.VertexPantoRightPantoTilt, job.VertexPantoLeftPantoTilt, "PantoTilt", "Panto Tilt")
-        ValidateRxNumber(errors, checkRight, checkLeft, ranges.WrapAngle, job.VertexPantoRightWrapAngle, job.VertexPantoLeftWrapAngle, "WrapAngle", "Wrap Angle")
-        ValidateRxNumber(errors, checkRight, checkLeft, ranges.MonocularPD, job.FittingMeasurementsRightMonocularPD, job.FittingMeasurementsLeftMonocularPD, "MonocularPD", "Monocular PD")
-        ValidateRxNumber(errors, checkRight, checkLeft, ranges.FittingHeight, job.FittingMeasurementsRightFittingHeight, job.FittingMeasurementsLeftFittingHeight, "FittingHeight", "Fitting Height")
-        ValidateRxNumber(errors, ranges.FrameA, job.FrameDataA, "FrameDataA", "Frame A (Width)")
-        ValidateRxNumber(errors, ranges.FrameB, job.FrameDataB, "FrameDataB", "Frame B (Height)")
-        ValidateRxNumber(errors, ranges.FrameDbl, GetFrameDataDbl(job), "FrameDataDbl", "Frame DBL (Bridge)")
-        ValidateRxNumber(errors, ranges.FrameED, job.FrameDataED, "FrameDataED", "Frame ED (Diagonal)")
-
     End Sub
 
     Private Shared Sub ValidateRxNumber( _
@@ -1412,6 +1427,7 @@
             .Tint = DETJOBM1.Item("TINT_CODE") & String.Empty
             .TintColor = DETJOBM1.Item("TINT_COLOR") & String.Empty
             .TintPercent = Val(DETJOBM1.Item("TINT_PCT") & String.Empty)
+            .CorridorLength = DETJOBM1.Item("CORRIDOR_LENGTH") & String.Empty
 
             Select Case DETJOBM1.Item("LENS_DESIGN_CODE") & String.Empty
                 Case "AUTOOFFICE" : .UseWorkingDistances = 1
