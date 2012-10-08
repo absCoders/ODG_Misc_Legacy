@@ -1963,16 +1963,16 @@ Namespace OrdersImport
                                                     If ACCOUNT_Id.Length > 0 AndAlso vwXmlDataset.Tables("ADDRESS").Select("ACCOUNT_Id = " & ACCOUNT_Id).Length > 0 Then
                                                         rowData = vwXmlDataset.Tables("ADDRESS").Select("ACCOUNT_Id = " & ACCOUNT_Id)(0)
                                                         rowSOTORDRX.Item("CUST_SHIP_TO_NAME") = String.Empty
-                                                        rowSOTORDRX.Item("CUST_SHIP_TO_ADDR1") = TruncateField((rowData.Item("Street_Number") & String.Empty & " " & rowData.Item("Street_Name") & String.Empty).ToString.Trim, "SOTORDRX", "CUST_SHIP_TO_ADDR1")
-                                                        rowSOTORDRX.Item("CUST_SHIP_TO_ADDR2") = TruncateField(rowData.Item("Suite") & String.Empty, "SOTORDRX", "CUST_SHIP_TO_ADDR2")
+                                                        rowSOTORDRX.Item("CUST_SHIP_TO_ADDR1") = TruncateField(((rowData.Item("Street_Number") & String.Empty).ToString.Trim & " " & (rowData.Item("Street_Name") & String.Empty).ToString.Trim), "SOTORDRX", "CUST_SHIP_TO_ADDR1")
+                                                        rowSOTORDRX.Item("CUST_SHIP_TO_ADDR2") = TruncateField((rowData.Item("Suite") & String.Empty).ToString.Trim, "SOTORDRX", "CUST_SHIP_TO_ADDR2")
                                                         rowSOTORDRX.Item("CUST_SHIP_TO_ADDR3") = String.Empty
-                                                        rowSOTORDRX.Item("CUST_SHIP_TO_CITY") = TruncateField(rowData.Item("City") & String.Empty, "SOTORDRX", "CUST_SHIP_TO_CITY")
-                                                        rowSOTORDRX.Item("CUST_SHIP_TO_STATE") = TruncateField(rowData.Item("State") & String.Empty, "SOTORDRX", "CUST_SHIP_TO_STATE")
-                                                        rowSOTORDRX.Item("CUST_SHIP_TO_ZIP_CODE") = TruncateField(rowData.Item("ZipCode") & String.Empty, "SOTORDRX", "CUST_SHIP_TO_ZIP_CODE")
-                                                        Telephone = rowData.Item("TEL") & String.Empty
+                                                        rowSOTORDRX.Item("CUST_SHIP_TO_CITY") = TruncateField((rowData.Item("City") & String.Empty).ToString.Trim, "SOTORDRX", "CUST_SHIP_TO_CITY")
+                                                        rowSOTORDRX.Item("CUST_SHIP_TO_STATE") = TruncateField((rowData.Item("State") & String.Empty).ToString.Trim, "SOTORDRX", "CUST_SHIP_TO_STATE")
+                                                        rowSOTORDRX.Item("CUST_SHIP_TO_ZIP_CODE") = TruncateField((rowData.Item("ZipCode") & String.Empty).ToString.Trim, "SOTORDRX", "CUST_SHIP_TO_ZIP_CODE")
+                                                        Telephone = (rowData.Item("TEL") & String.Empty).ToString.Trim
                                                         Telephone = FormatTelePhone(Telephone)
                                                         rowSOTORDRX.Item("CUST_SHIP_TO_PHONE") = TruncateField(Telephone, "SOTORDRX", "CUST_SHIP_TO_PHONE")
-                                                        rowSOTORDRX.Item("CUST_SHIP_TO_COUNTRY") = TruncateField(rowData.Item("Country") & String.Empty, "SOTORDRX", "CUST_SHIP_TO_COUNTRY")
+                                                        rowSOTORDRX.Item("CUST_SHIP_TO_COUNTRY") = TruncateField((rowData.Item("Country") & String.Empty).ToString.Trim, "SOTORDRX", "CUST_SHIP_TO_COUNTRY")
                                                         rowSOTORDRX.Item("CUST_SHIP_TO_FAX") = String.Empty
                                                         rowSOTORDRX.Item("CUST_SHIP_TO_EMAIL") = String.Empty
                                                     End If
@@ -1984,17 +1984,17 @@ Namespace OrdersImport
                                                     If ACCOUNT_Id.Length > 0 AndAlso vwXmlDataset.Tables("ADDRESS").Select("ACCOUNT_Id = " & ACCOUNT_Id).Length > 0 Then
                                                         rowData = vwXmlDataset.Tables("ADDRESS").Select("ACCOUNT_Id = " & ACCOUNT_Id)(0)
                                                         rowSOTORDRX.Item("CUST_NAME") = String.Empty
-                                                        rowSOTORDRX.Item("CUST_ADDR1") = TruncateField((rowData.Item("Street_Number") & String.Empty & " " & rowData.Item("Street_Name") & String.Empty).ToString.Trim, "SOTORDRX", "CUST_ADDR1")
-                                                        rowSOTORDRX.Item("CUST_ADDR2") = TruncateField(rowData.Item("Suite") & String.Empty, "SOTORDRX", "CUST_ADDR2")
-                                                        rowSOTORDRX.Item("CUST_CITY") = TruncateField(rowData.Item("City") & String.Empty, "SOTORDRX", "CUST_CITY")
-                                                        rowSOTORDRX.Item("CUST_STATE") = TruncateField(rowData.Item("State") & String.Empty, "SOTORDRX", "CUST_STATE")
-                                                        rowSOTORDRX.Item("CUST_ZIP_CODE") = TruncateField(rowData.Item("Zipcode") & String.Empty, "SOTORDRX", "CUST_ZIP_CODE")
-                                                        Telephone = rowData.Item("TEL") & String.Empty
+                                                        rowSOTORDRX.Item("CUST_ADDR1") = TruncateField(((rowData.Item("Street_Number") & String.Empty).ToString.Trim & " " & rowData.Item("Street_Name") & String.Empty).ToString.Trim, "SOTORDRX", "CUST_ADDR1")
+                                                        rowSOTORDRX.Item("CUST_ADDR2") = TruncateField((rowData.Item("Suite") & String.Empty).ToString.Trim, "SOTORDRX", "CUST_ADDR2")
+                                                        rowSOTORDRX.Item("CUST_CITY") = TruncateField((rowData.Item("City") & String.Empty).ToString.Trim, "SOTORDRX", "CUST_CITY")
+                                                        rowSOTORDRX.Item("CUST_STATE") = TruncateField((rowData.Item("State") & String.Empty).ToString.Trim, "SOTORDRX", "CUST_STATE")
+                                                        rowSOTORDRX.Item("CUST_ZIP_CODE") = TruncateField((rowData.Item("Zipcode") & String.Empty).ToString.Trim, "SOTORDRX", "CUST_ZIP_CODE")
+                                                        Telephone = (rowData.Item("TEL") & String.Empty).ToString.Trim
                                                         Telephone = FormatTelePhone(Telephone)
                                                         rowSOTORDRX.Item("CUST_PHONE") = TruncateField(Telephone, "SOTORDRX", "CUST_PHONE")
                                                         rowSOTORDRX.Item("CUST_FAX") = String.Empty
                                                         rowSOTORDRX.Item("CUST_EMAIL") = String.Empty
-                                                        rowSOTORDRX.Item("CUST_COUNTRY") = TruncateField(rowData.Item("Country") & String.Empty, "SOTORDRX", "CUST_COUNTRY")
+                                                        rowSOTORDRX.Item("CUST_COUNTRY") = TruncateField((rowData.Item("Country") & String.Empty).ToString.Trim, "SOTORDRX", "CUST_COUNTRY")
 
                                                         CUST_CODE = rowACCOUNT.Item("Name") & String.Empty
                                                         If CUST_CODE.Contains("-") Then
@@ -2027,18 +2027,18 @@ Namespace OrdersImport
                                 If vwXmlDataset.Tables("DELIVERY").Select("HEADER_Id = " & HEADER_Id, "DELIVERY_Id").Length > 0 Then
                                     rowData = vwXmlDataset.Tables("DELIVERY").Select("HEADER_Id = " & HEADER_Id, "DELIVERY_Id")(0)
                                     DELIVERY_Id = rowData.Item("DELIVERY_Id") & String.Empty
-                                    AttentionTo = rowData.Item("AttentionTo") & String.Empty
+                                    AttentionTo = (rowData.Item("AttentionTo") & String.Empty).ToString.Trim
 
                                     If vwXmlDataset.Tables("DELIVERY_METHOD").Select("DELIVERY_id = " & DELIVERY_Id).Length > 0 Then
                                         rowData = vwXmlDataset.Tables("DELIVERY_METHOD").Select("DELIVERY_id = " & DELIVERY_Id)(0)
-                                        rowSOTORDRX.Item("SHIP_VIA_CODE") = rowData.Item("Name") & String.Empty
+                                        rowSOTORDRX.Item("SHIP_VIA_CODE") = (rowData.Item("Name") & String.Empty).ToString.Trim
 
                                         If (rowSOTORDRX.Item("SHIP_VIA_CODE") & String.Empty).ToString.ToUpper = "STANDARD CONTRACT" Then
                                             rowSOTORDRX.Item("SHIP_VIA_CODE") = "STANDARD"
                                         End If
 
                                         If rowSOTORDRX.Item("SHIP_VIA_CODE") & String.Empty = String.Empty Then
-                                            rowSOTORDRX.Item("SHIP_VIA_CODE") = rowData.Item("Id") & String.Empty
+                                            rowSOTORDRX.Item("SHIP_VIA_CODE") = (rowData.Item("Id") & String.Empty).ToString.Trim
                                         End If
                                     End If
 
@@ -2056,17 +2056,17 @@ Namespace OrdersImport
                                     If vwXmlDataset.Tables("ADDRESS").Select("DELIVERY_Id = " & DELIVERY_Id).Length > 0 Then
                                         rowData = vwXmlDataset.Tables("ADDRESS").Select("DELIVERY_Id = " & DELIVERY_Id)(0)
                                         rowSOTORDRX.Item("CUST_NAME") = TruncateField(AttentionTo, "SOTORDRX", "CUST_NAME")
-                                        rowSOTORDRX.Item("CUST_ADDR1") = TruncateField((rowData.Item("Street_Number") & String.Empty & " " & rowData.Item("Street_Name") & String.Empty).ToString.Trim, "SOTORDRX", "CUST_ADDR1")
-                                        rowSOTORDRX.Item("CUST_ADDR2") = TruncateField(rowData.Item("Suite") & String.Empty, "SOTORDRX", "CUST_ADDR2")
-                                        rowSOTORDRX.Item("CUST_CITY") = TruncateField(rowData.Item("City") & String.Empty, "SOTORDRX", "CUST_CITY")
-                                        rowSOTORDRX.Item("CUST_STATE") = TruncateField(rowData.Item("State") & String.Empty, "SOTORDRX", "CUST_STATE")
-                                        rowSOTORDRX.Item("CUST_ZIP_CODE") = TruncateField(rowData.Item("Zipcode") & String.Empty, "SOTORDRX", "CUST_ZIP_CODE")
-                                        Telephone = rowData.Item("TEL") & String.Empty
+                                        rowSOTORDRX.Item("CUST_ADDR1") = TruncateField(((rowData.Item("Street_Number") & String.Empty).ToString.Trim & " " & rowData.Item("Street_Name") & String.Empty).ToString.Trim, "SOTORDRX", "CUST_ADDR1")
+                                        rowSOTORDRX.Item("CUST_ADDR2") = TruncateField((rowData.Item("Suite") & String.Empty).ToString.Trim, "SOTORDRX", "CUST_ADDR2")
+                                        rowSOTORDRX.Item("CUST_CITY") = TruncateField((rowData.Item("City") & String.Empty).ToString.Trim, "SOTORDRX", "CUST_CITY")
+                                        rowSOTORDRX.Item("CUST_STATE") = TruncateField((rowData.Item("State") & String.Empty).ToString.Trim, "SOTORDRX", "CUST_STATE")
+                                        rowSOTORDRX.Item("CUST_ZIP_CODE") = TruncateField((rowData.Item("Zipcode") & String.Empty).ToString.Trim, "SOTORDRX", "CUST_ZIP_CODE")
+                                        Telephone = (rowData.Item("TEL") & String.Empty).ToString.Trim
                                         Telephone = FormatTelePhone(Telephone)
                                         rowSOTORDRX.Item("CUST_PHONE") = TruncateField(Telephone, "SOTORDRX", "CUST_PHONE")
                                         rowSOTORDRX.Item("CUST_FAX") = String.Empty
                                         rowSOTORDRX.Item("CUST_EMAIL") = String.Empty
-                                        rowSOTORDRX.Item("CUST_COUNTRY") = TruncateField(rowData.Item("Country") & String.Empty, "SOTORDRX", "CUST_COUNTRY")
+                                        rowSOTORDRX.Item("CUST_COUNTRY") = TruncateField((rowData.Item("Country") & String.Empty).ToString.Trim, "SOTORDRX", "CUST_COUNTRY")
                                     End If
                                 End If
 
@@ -2101,7 +2101,7 @@ Namespace OrdersImport
                                         Dim fieldName As String = IIf(tableName = "STK_SOFT_OFFICE", "SOFTCONTACT_id", "RX_SOFT_PATIENT_ID")
                                         If vwXmlDataset.Tables("PATIENT").Select(fieldName & " = " & SOFTCONTACT_id).Length > 0 Then
                                             rowData = vwXmlDataset.Tables("PATIENT").Select(fieldName & " = " & SOFTCONTACT_id)(0)
-                                            rowSOTORDRX.Item("PATIENT_NAME") = TruncateField((rowData.Item("FirstName") & " " & rowData.Item("LastName")).ToString.Trim, "SOTORDRX", "PATIENT_NAME")
+                                            rowSOTORDRX.Item("PATIENT_NAME") = TruncateField(((rowData.Item("FirstName") & String.Empty).ToString.Trim & " " & (rowData.Item("LastName") & String.Empty)).ToString.Trim, "SOTORDRX", "PATIENT_NAME")
                                             rowSOTORDRX.Item("PATIENT_NAME") = StrConv(rowSOTORDRX.Item("PATIENT_NAME") & String.Empty, VbStrConv.ProperCase)
                                         End If
 
@@ -3100,7 +3100,7 @@ Namespace OrdersImport
                                                         rowSOTORDR5.Item("CUST_CITY") = TruncateField(rowData.Item("City") & String.Empty, "SOTORDR5", "CUST_CITY")
                                                         rowSOTORDR5.Item("CUST_STATE") = TruncateField(rowData.Item("State") & String.Empty, "SOTORDR5", "CUST_STATE")
                                                         rowSOTORDR5.Item("CUST_ZIP_CODE") = TruncateField(rowData.Item("Zipcode") & String.Empty, "SOTORDR5", "CUST_ZIP_CODE")
-                                                        Telephone = rowData.Item("TEL") & String.Empty
+                                                        Telephone = (rowData.Item("TEL") & String.Empty).trim
                                                         Telephone = FormatTelePhone(Telephone)
                                                         rowSOTORDR5.Item("CUST_PHONE") = TruncateField(Telephone, "SOTORDR5", "CUST_PHONE")
                                                         rowSOTORDR5.Item("CUST_FAX") = String.Empty
@@ -3108,14 +3108,13 @@ Namespace OrdersImport
                                                         rowSOTORDR5.Item("CUST_COUNTRY") = TruncateField(rowData.Item("Country") & String.Empty, "SOTORDR5", "CUST_COUNTRY")
 
                                                         CUST_CODE = rowACCOUNT.Item("Name") & String.Empty
-                                                        If ABSolution.ASCMAIN1.DBS_COMPANY.Trim.ToUpper = "TST" Then
+                                                        If ABSolution.ASCMAIN1.DBS_COMPANY.Trim.ToUpper = "TST" & CUST_CODE = "1234567" Then
                                                             CUST_CODE = "77780-1"
                                                         End If
                                                         If CUST_CODE.Contains("-") Then
                                                             CUST_SHIP_TO_NO = Split(CUST_CODE, "-")(1)
                                                             CUST_CODE = Split(CUST_CODE, "-")(0)
                                                         End If
-
 
                                                         CUST_CODE = ABSolution.ASCMAIN1.Format_Field(CUST_CODE, "CUST_CODE")
                                                         If CUST_CODE.Length = 0 Then
@@ -3126,7 +3125,6 @@ Namespace OrdersImport
                                                             CUST_SHIP_TO_NO = ABSolution.ASCMAIN1.Format_Field(CUST_SHIP_TO_NO, "CUST_SHIP_TO_NO")
                                                             CUST_SHIP_TO_NO = TruncateField(CUST_SHIP_TO_NO, "DETJOBM1", "CUST_SHIP_TO_NO")
                                                         End If
-
                                                     End If
                                             End Select
                                         Next
@@ -3137,10 +3135,10 @@ Namespace OrdersImport
 
                                         If vwXmlDataset.Tables("PATIENT").Select("SP_EQUIPMENT_Id = " & SP_EQUIPMENT_Id).Length > 0 Then
                                             rowData = vwXmlDataset.Tables("PATIENT").Select("SP_EQUIPMENT_Id = " & SP_EQUIPMENT_Id)(0)
-                                            tempString = rowData.Item("LASTNAME") & ", " & rowData.Item("FIRSTNAME") & String.Empty
+                                            tempString = (rowData.Item("LASTNAME") & ", " & rowData.Item("FIRSTNAME") & String.Empty).ToString.Trim
                                             tempString = tempString.Trim.ToUpper
                                             rowDETJOBM1.Item("PATIENT_NAME") = TruncateField(tempString, "DETJOBM1", "PATIENT_NAME")
-                                            PATIENT_ID = rowData.Item("PATIENT_ID") & String.Empty
+                                            PATIENT_ID = (rowData.Item("PATIENT_ID") & String.Empty).ToString.Trim
                                         End If
 
                                         If vwXmlDataset.Tables("FRAME").Select("SP_EQUIPMENT_Id = " & SP_EQUIPMENT_Id).Length > 0 Then
@@ -3205,6 +3203,18 @@ Namespace OrdersImport
                                             rowDETJOBM3.Item("FITTING_HEIGHT") = Val(rowPOSITION.Item("BOXING_HEIGHT") & String.Empty)
                                             dst.Tables("DETJOBM3").Rows.Add(rowDETJOBM3)
 
+                                            ' Need to see if Both or a single lens
+                                            If rowDETJOBM1.Item("LENS_ORDER") = "B" Then
+                                                If rowDETJOBM3.Item("RL") & String.Empty = "L" Or rowDETJOBM3.Item("RL") & String.Empty = "R" Then
+                                                    rowDETJOBM1.Item("LENS_ORDER") = rowDETJOBM3.Item("RL") & String.Empty
+                                                End If
+                                            ElseIf rowDETJOBM3.Item("RL") & String.Empty = "L" Or rowDETJOBM3.Item("RL") & String.Empty = "R" Then
+                                                If rowDETJOBM1.Item("LENS_ORDER") <> "B" AndAlso _
+                                                        rowDETJOBM1.Item("LENS_ORDER") <> rowDETJOBM3.Item("RL") & String.Empty Then
+                                                    rowDETJOBM1.Item("LENS_ORDER") = "B"
+                                                End If
+                                            End If
+
                                             If vwXmlDataset.Tables("SHAPE").Select("POSITION_ID = " & POSITION_ID).Length > 0 Then
                                                 Dim rowShape As DataRow = vwXmlDataset.Tables("SHAPE").Select("POSITION_ID = " & POSITION_ID)(0)
 
@@ -3221,7 +3231,7 @@ Namespace OrdersImport
 
                                             If vwXmlDataset.Tables("PRESCRIPTION").Select("POSITION_ID = " & POSITION_ID).Length > 0 Then
                                                 rowData = vwXmlDataset.Tables("PRESCRIPTION").Select("POSITION_ID = " & POSITION_ID)(0)
-                                                PRESCRIPTION_ID = rowData.Item("PRESCRIPTION_ID") & String.Empty
+                                                PRESCRIPTION_ID = (rowData.Item("PRESCRIPTION_ID") & String.Empty).ToString.Trim
                                                 rowDETJOBM3.Item("SPHERE") = Val(rowData.Item("SPHERE") & String.Empty)
                                             End If
 
@@ -3270,23 +3280,23 @@ Namespace OrdersImport
 
                                             If vwXmlDataset.Tables("LENS").Select("POSITION_ID = " & POSITION_ID).Length > 0 Then
                                                 rowData = vwXmlDataset.Tables("LENS").Select("POSITION_ID = " & POSITION_ID)(0)
-                                                LENS_ID = rowData.Item("LENS_ID") & String.Empty
+                                                LENS_ID = (rowData.Item("LENS_ID") & String.Empty).ToString.Trim
 
                                                 If vwXmlDataset.Tables("DESIGN").Select("LENS_ID = " & LENS_ID).Length > 0 Then
                                                     rowData = vwXmlDataset.Tables("DESIGN").Select("LENS_ID = " & LENS_ID)(0)
-                                                    rowDETJOBM1.Item("LENS_DESIGN_CODE") = rowData.Item("CONVERT") & String.Empty
+                                                    rowDETJOBM1.Item("LENS_DESIGN_CODE") = (rowData.Item("CONVERT") & String.Empty).ToString.Trim
                                                 End If
 
                                                 If vwXmlDataset.Tables("THICKNESS").Select("LENS_ID = " & LENS_ID).Length > 0 Then
                                                     rowData = vwXmlDataset.Tables("THICKNESS").Select("LENS_ID = " & LENS_ID)(0)
                                                     specialInstructions &= rowPOSITION.Item("EYE") & String.Empty & " eye thickness:"
-                                                    specialInstructions &= rowData.Item("TYPE") & "=" & rowData.Item("VALUE")
+                                                    specialInstructions &= (rowData.Item("TYPE") & "=" & rowData.Item("VALUE")).ToString.Trim
                                                     specialInstructions &= Environment.NewLine
                                                 End If
 
                                                 If vwXmlDataset.Tables("MATERIAL").Select("LENS_ID = " & LENS_ID).Length > 0 Then
                                                     rowData = vwXmlDataset.Tables("MATERIAL").Select("LENS_ID = " & LENS_ID)(0)
-                                                    tempString = rowData.Item("CONVERT") & String.Empty
+                                                    tempString = (rowData.Item("CONVERT") & String.Empty).ToString.Trim
                                                     If tempString.Split(":").Length >= 2 Then
                                                         rowDETJOBM1.Item("MATL_CODE") = tempString.Split(":")(0)
                                                         rowDETJOBM1.Item("COLOR_CODE") = tempString.Split(":")(1)
@@ -3297,7 +3307,7 @@ Namespace OrdersImport
 
                                                 If vwXmlDataset.Tables("TREATMENTS").Select("LENS_ID = " & LENS_ID).Length > 0 Then
                                                     rowData = vwXmlDataset.Tables("TREATMENTS").Select("LENS_ID = " & LENS_ID)(0)
-                                                    TREATMENTS_ID = rowData.Item("TREATMENTS_ID") & String.Empty
+                                                    TREATMENTS_ID = (rowData.Item("TREATMENTS_ID") & String.Empty).ToString.Trim
 
                                                     For Each rowTREATMENT As DataRow In vwXmlDataset.Tables("TREATMENT").Select("TREATMENTS_ID = " & TREATMENTS_ID)
                                                         tempString = rowTREATMENT.Item("CONVERT") & String.Empty
