@@ -964,6 +964,10 @@
             errors.Add(New DelJobValidationError("Color", "Color is required"))
         End If
 
+        If Not "BRL".Contains(job.WhichLenses) Then
+            errors.Add(New DelJobValidationError("LensOrder", "Invalid Lens Order"))
+        End If
+
         If job.Tint.Trim().Length = 0 Then
             errors.Add(New DelJobValidationError("Tint", "Tint is required"))
         Else
