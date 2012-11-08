@@ -486,89 +486,96 @@ Namespace OrdersImport
                 aspPriceCatgys = New List(Of String)
                 rowWBTPARM1 = Nothing
 
-                For Each rowSOTPARMP As DataRow In ABSolution.ASCDATA1.GetDataTable("SELECT DISTINCT SO_PARM_KEY ORDR_SOURCE FROM SOTPARMP WHERE NVL(SO_PARM_USE_SERVICE, '0') = '1' ORDER BY SO_PARM_KEY").Rows
+                For Each rowSOTPARMP As DataRow In ABSolution.ASCDATA1.GetDataTable("SELECT DISTINCT SO_PARM_KEY ORDR_SOURCE FROM SOTPARMP WHERE NVL(SO_PARM_USE_SERVICE, '0') = '1' ORDER BY SO_PARM_KEY").Select("", "ORDR_SOURCE")
 
-                    ORDR_SOURCE = rowSOTPARMP.Item("ORDR_SOURCE") & String.Empty
+                    ' Use inner Try/Catch so if one Import fails the others still execute
+                    Try
+                        ORDR_SOURCE = rowSOTPARMP.Item("ORDR_SOURCE") & String.Empty
 
-                    ' House Keeping, common things to do
-                    Ftp1 = New nsoftware.IPWorks.Ftp
-                    System.Threading.Thread.Sleep(1000)
-                    Ftp1.RuntimeLicense = nSoftwareftpkey
+                        ' House Keeping, common things to do
+                        Ftp1 = New nsoftware.IPWorks.Ftp
+                        System.Threading.Thread.Sleep(1000)
+                        Ftp1.RuntimeLicense = nSoftwareftpkey
 
-                    ftpFileList.Clear()
-                    ImportedFiles.Clear()
-                    baseClass.clsASCBASE1.Fill_Records("SOTSVIAF", ORDR_SOURCE)
+                        ftpFileList.Clear()
+                        ImportedFiles.Clear()
+                        baseClass.clsASCBASE1.Fill_Records("SOTSVIAF", ORDR_SOURCE)
 
-                    If Not ABSolution.ASCMAIN1.Logical_Lock("IMPSVC01", ORDR_SOURCE, False, False, True, 1) Then
-                        RecordLogEntry("Order Import Type: " & ORDR_SOURCE & " locked by previous instance.")
-                        Continue For
-                    End If
+                        If Not ABSolution.ASCMAIN1.Logical_Lock("IMPSVC01", ORDR_SOURCE, False, False, True, 1) Then
+                            RecordLogEntry("Order Import Type: " & ORDR_SOURCE & " locked by previous instance.")
+                            Continue For
+                        End If
 
-                    If Not ClearDataSetTables(True) Then
-                        Continue For
-                    End If
+                        If Not ClearDataSetTables(True) Then
+                            Continue For
+                        End If
 
-                    ImportErrorNotification = New Hashtable
+                        ImportErrorNotification = New Hashtable
 
-                    ' *****************************************************************************
-                    ' Make sure there is an Entry in ASTNOTE1 for each Ordr Source
-                    ' *****************************************************************************
-                    Select Case ORDR_SOURCE
-                        Case "D"
-                            ' Hard D to get separate parameters for Vision Web Digital Eyelab orders
-                            ProcessVisionWebDELOrders("V")
+                        ' *****************************************************************************
+                        ' Make sure there is an Entry in ASTNOTE1 for each Ordr Source
+                        ' *****************************************************************************
+                        Select Case ORDR_SOURCE
+                            Case "D"
+                                ' Hard D to get separate parameters for Vision Web Digital Eyelab orders
+                                ProcessVisionWebDELOrders("V")
 
-                        Case "Y"  ' (Y) Eyeconic
-                            ProcessWebServiceSalesOrders(ORDR_SOURCE)
+                            Case "Y"  ' (Y) Eyeconic
+                                ProcessWebServiceSalesOrders(ORDR_SOURCE)
 
-                        Case "X" ' AnyLens (A), DBVISION (D), 
-                            '   do not grab Y for eyeconic. There order source is 'Y' it is a differnt import
-                            '   do not grab O for OptiPort. There order source is 'O' it is a differnt import
-                            For Each row As DataRow In ABSolution.ASCDATA1.GetDataTable("SELECT ORDR_LINE_SOURCE FROM XMTXREF1 WHERE ORDR_SOURCE = 'X' AND ORDR_LINE_SOURCE NOT IN ('Y', 'O')").Rows
-                                ProcessWebServiceSalesOrders(row.Item("ORDR_LINE_SOURCE") & String.Empty)
+                            Case "X" ' AnyLens (A), DBVISION (D), 
+                                '   do not grab Y for eyeconic. There order source is 'Y' it is a differnt import
+                                '   do not grab O for OptiPort. There order source is 'O' it is a differnt import
+                                For Each row As DataRow In ABSolution.ASCDATA1.GetDataTable("SELECT ORDR_LINE_SOURCE FROM XMTXREF1 WHERE ORDR_SOURCE = 'X' AND ORDR_LINE_SOURCE NOT IN ('Y', 'O')").Rows
+                                    ProcessWebServiceSalesOrders(row.Item("ORDR_LINE_SOURCE") & String.Empty)
 
-                                If ImportErrorNotification.Keys.Count > 0 Then
-                                    For Each Item As DictionaryEntry In ImportErrorNotification
-                                        emailErrors(Item.Key, Item.Value)
-                                    Next
+                                    If ImportErrorNotification.Keys.Count > 0 Then
+                                        For Each Item As DictionaryEntry In ImportErrorNotification
+                                            emailErrors(Item.Key, Item.Value)
+                                        Next
+                                    End If
+
+                                    ImportErrorNotification.Clear()
+                                Next
+
+                            Case "U", "F" ' (U) AcuityLogic, (F) eyeFinity - Replaces SOFORDRF
+                                ProcessEyeFinAquitySalesOrders(ORDR_SOURCE)
+
+                            Case "E" 'EDI - (S) Spectera
+                                ProcessEDISalesOrders(ORDR_SOURCE)
+
+                            Case "B" ' US Vision Care Scan
+                                ProcessBLScan(ORDR_SOURCE)
+                                ' The sales order has an E as the order source
+                                If ImportErrorNotification.Count > 0 Then
+                                    ImportErrorNotification.Add("B", ImportErrorNotification.Item("E"))
+                                    ImportErrorNotification.Remove("E")
                                 End If
 
-                                ImportErrorNotification.Clear()
+                            Case "V" 'Vision Web
+                                ProcessVisionWebSalesOrders(ORDR_SOURCE)
+                                System.Threading.Thread.Sleep(2000)
+                                ExportVisionWebStatus()
+
+                            Case "O" ' Optiport
+                                ProcessOptiportSalesOrders(ORDR_SOURCE)
+                        End Select
+
+                    Catch ex As Exception
+                        RecordLogEntry("ProcessSalesOrders, Order Source: " & ORDR_SOURCE & " - " & ex.Message)
+
+                    Finally
+                        ABSolution.ASCMAIN1.MultiTask_Release(, , 1)
+                        Ftp1.Dispose()
+
+                        If ImportErrorNotification.Keys.Count > 0 Then
+                            For Each Item As DictionaryEntry In ImportErrorNotification
+                                emailErrors(Item.Key, Item.Value)
                             Next
+                        End If
 
-                        Case "U", "F" ' (U) AcuityLogic, (F) eyeFinity - Replaces SOFORDRF
-                            ProcessEyeFinAquitySalesOrders(ORDR_SOURCE)
-
-                        Case "E" 'EDI - (S) Spectera
-                            ProcessEDISalesOrders(ORDR_SOURCE)
-
-                        Case "B" ' US Vision Care Scan
-                            ProcessBLScan(ORDR_SOURCE)
-                            ' The sales order has an E as the order source
-                            If ImportErrorNotification.Count > 0 Then
-                                ImportErrorNotification.Add("B", ImportErrorNotification.Item("E"))
-                                ImportErrorNotification.Remove("E")
-                            End If
-
-                        Case "V" 'Vision Web
-                            ProcessVisionWebSalesOrders(ORDR_SOURCE)
-                            System.Threading.Thread.Sleep(2000)
-                            ExportVisionWebStatus()
-
-                        Case "O" ' Optiport
-                            ProcessOptiportSalesOrders(ORDR_SOURCE)
-                    End Select
-
-                    ABSolution.ASCMAIN1.MultiTask_Release(, , 1)
-                    Ftp1.Dispose()
-
-                    If ImportErrorNotification.Keys.Count > 0 Then
-                        For Each Item As DictionaryEntry In ImportErrorNotification
-                            emailErrors(Item.Key, Item.Value)
-                        Next
-                    End If
-
-                    ImportErrorNotification.Clear()
+                        ImportErrorNotification.Clear()
+                    End Try
                 Next
 
                 If testMode Then RecordLogEntry("Exit ProcessSalesOrders.")
@@ -2833,7 +2840,7 @@ Namespace OrdersImport
 
             ' Hard D to get separate parameters for Vision Web Digital Eyelab orders
             Dim vwConnection As New Connection("D")
-            Dim numOrdersProcessed As Int16 = 0
+            Dim numJobsProcessed As Int16 = 0
             Dim ImportedFiles As List(Of String) = New List(Of String)
             Dim JOB_NO As String = String.Empty
             Dim ORDR_NO As String = String.Empty
@@ -2868,7 +2875,9 @@ Namespace OrdersImport
             Dim invalidCustomer As Boolean = False
 
             Dim sqlColorCode As String = String.Empty
-            sqlColorCode = " SELECT COLOR_CODE FROM (SELECT CX.COLOR_CODE,CASE WHEN NVL(M2.COLOR_CODE_DEFAULT,'')=CX.COLOR_CODE THEN 1 ELSE 0 END SORTRANK"
+            sqlColorCode = " SELECT * FROM DETCOLR1 WHERE COLOR_CODE = "
+            sqlColorCode &= " ("
+            sqlColorCode &= " SELECT COLOR_CODE FROM (SELECT CX.COLOR_CODE,CASE WHEN NVL(M2.COLOR_CODE_DEFAULT,'')=CX.COLOR_CODE THEN 1 ELSE 0 END SORTRANK"
             sqlColorCode &= " FROM"
             sqlColorCode &= " DETDSGN3 D3"
             sqlColorCode &= " JOIN"
@@ -2880,6 +2889,7 @@ Namespace OrdersImport
             sqlColorCode &= "  D3.LENS_DESIGN_CODE = :PARM1"
             sqlColorCode &= "  AND D3.MATL_CODE = :PARM2"
             sqlColorCode &= "  AND CX.COLOR_CODE_WEB = :PARM3 AND ROWNUM <= 1 ORDER BY SORTRANK DESC) X"
+            sqlColorCode &= " )"
 
             Try
                 ImportedFiles.Clear()
@@ -3108,8 +3118,8 @@ Namespace OrdersImport
                                                         rowSOTORDR5.Item("CUST_COUNTRY") = TruncateField(rowData.Item("Country") & String.Empty, "SOTORDR5", "CUST_COUNTRY")
 
                                                         CUST_CODE = rowACCOUNT.Item("Name") & String.Empty
-                                                        If ABSolution.ASCMAIN1.DBS_COMPANY.Trim.ToUpper = "TST" & CUST_CODE = "1234567" Then
-                                                            CUST_CODE = "77780-1"
+                                                        If ABSolution.ASCMAIN1.DBS_COMPANY.Trim.ToUpper = "TST" AndAlso CUST_CODE = "1234567" Then
+                                                            CUST_CODE = "77780"
                                                         End If
                                                         If CUST_CODE.Contains("-") Then
                                                             CUST_SHIP_TO_NO = Split(CUST_CODE, "-")(1)
@@ -3190,18 +3200,40 @@ Namespace OrdersImport
 
                                         End If
 
+                                        ' Create the detjobm3 records
+                                        Dim rowDETJOBM3 As DataRow = Nothing
+
+                                        If dst.Tables("DETJOBM3").Select("JOB_NO = '" & JOB_NO & "' AND RL = 'R'").Length = 0 Then
+                                            rowDETJOBM3 = dst.Tables("DETJOBM3").NewRow()
+                                            rowDETJOBM3.Item("JOB_NO") = JOB_NO
+                                            rowDETJOBM3.Item("RL") = "R"
+                                            dst.Tables("DETJOBM3").Rows.Add(rowDETJOBM3)
+                                        End If
+
+                                        If dst.Tables("DETJOBM3").Select("JOB_NO = '" & JOB_NO & "' AND RL = 'L'").Length = 0 Then
+                                            rowDETJOBM3 = dst.Tables("DETJOBM3").NewRow()
+                                            rowDETJOBM3.Item("JOB_NO") = JOB_NO
+                                            rowDETJOBM3.Item("RL") = "L"
+                                            dst.Tables("DETJOBM3").Rows.Add(rowDETJOBM3)
+                                        End If
+
                                         For Each rowPOSITION As DataRow In vwXmlDataset.Tables("POSITION").Select("SP_EQUIPMENT_Id = " & SP_EQUIPMENT_Id)
                                             POSITION_ID = rowPOSITION.Item("POSITION_ID") & String.Empty
                                             PRESCRIPTION_ID = String.Empty
                                             LENS_ID = String.Empty
                                             TREATMENTS_ID = String.Empty
 
-                                            Dim rowDETJOBM3 As DataRow = dst.Tables("DETJOBM3").NewRow
-                                            rowDETJOBM3.Item("JOB_NO") = JOB_NO
-                                            rowDETJOBM3.Item("RL") = rowPOSITION.Item("EYE") & String.Empty
+                                            If Not "RL".Contains(rowPOSITION.Item("EYE") & String.Empty) Then
+                                                rowDETJOBM1.Item("LENS_ORDER") = "X"
+                                                Continue For
+                                            End If
+
+                                            rowDETJOBM3 = dst.Tables("DETJOBM3").Select("JOB_NO = '" & JOB_NO & "' AND RL = '" & rowPOSITION.Item("EYE") & "'")(0)
+                                            'rowDETJOBM3.Item("JOB_NO") = JOB_NO
+                                            'rowDETJOBM3.Item("RL") = rowPOSITION.Item("EYE") & String.Empty
                                             rowDETJOBM3.Item("MONO_PD") = Val(rowPOSITION.Item("FAR_HALF_PD") & String.Empty)
                                             rowDETJOBM3.Item("FITTING_HEIGHT") = Val(rowPOSITION.Item("BOXING_HEIGHT") & String.Empty)
-                                            dst.Tables("DETJOBM3").Rows.Add(rowDETJOBM3)
+                                            'dst.Tables("DETJOBM3").Rows.Add(rowDETJOBM3)
 
                                             ' Need to see if Both or a single lens
                                             If rowDETJOBM1.Item("LENS_ORDER") = "B" Then
@@ -3368,6 +3400,13 @@ Namespace OrdersImport
                             Dim rowCOLORCODE As DataRow = ABSolution.ASCDATA1.GetDataRow(sqlColorCode, "VVV", New Object() {LENS_DESIGN_CODE, MATL_CODE, COLOR_CODE})
                             If rowCOLORCODE IsNot Nothing Then
                                 rowDETJOBM1.Item("COLOR_CODE") = rowCOLORCODE.Item("COLOR_CODE") & String.Empty
+                                If rowCOLORCODE.Item("COLOR_CODE") = "CLEAR" Then
+                                    rowDETJOBM1.Item("COLOR_TYPE") = "C"
+                                ElseIf rowCOLORCODE.Item("POLARIZED") & String.Empty = "1" Then '
+                                    rowDETJOBM1.Item("COLOR_TYPE") = "P"
+                                Else
+                                    rowDETJOBM1.Item("COLOR_TYPE") = "T"
+                                End If
                             End If
 
                             ' Corridor Length
@@ -3504,6 +3543,75 @@ Namespace OrdersImport
                                 End If
                             End If
 
+                            ' Set Enter As Worn defaults
+                            If rowDETDSGN1 IsNot Nothing AndAlso rowDETDSGN1.Item("SHOW_AS_WORN") & String.Empty = "1" Then
+                                For Each VCA_KEY As String In New String() {"ZTILT", "PANTO", "BVD", "RVD"}
+                                    Dim row As DataRow = baseClass.LookUp("DETDEFD1", New String() {rowDETJOBM1.Item("LENS_DESIGN_CODE"), VCA_KEY})
+                                    If row IsNot Nothing Then
+                                        Dim VALUE_NUM As Decimal = Val(row.Item("VALUE_NUM") & String.Empty)
+                                        Dim COLUMN_NAME As String = ""
+                                        If VCA_KEY = "BVD" Then
+                                            COLUMN_NAME = "FITTING_VERTEX"
+                                        ElseIf VCA_KEY = "PANTO" Then
+                                            COLUMN_NAME = "PANTOSCOPIC_TILT"
+                                        ElseIf VCA_KEY = "RVD" Then
+                                            COLUMN_NAME = "REFRACTIVE_VERTEX"
+                                        ElseIf VCA_KEY = "ZTILT" Then
+                                            COLUMN_NAME = "PANORAMIC_ANGLE"
+                                        End If
+                                        dst.Tables("DETJOBM3").Select("JOB_NO = '" & JOB_NO & "' AND RL = 'R'")(0).Item(COLUMN_NAME) = VALUE_NUM
+                                        dst.Tables("DETJOBM3").Select("JOB_NO = '" & JOB_NO & "' AND RL = 'L'")(0).Item(COLUMN_NAME) = VALUE_NUM
+                                    End If
+                                Next
+                            End If
+
+                            ' Now see if they provided values for 'Enter As Worn' and overwrite the defaults
+                            ' All items in the Select Case statement were emailed to Maria and Dana on 10/17/2012
+                            ' I asked what to do with these values
+                            For Each rowPERSONALIZED_DATA As DataRow In vwXmlDataset.Tables("PERSONALIZED_DATA").Select("PATIENT_ID = " & PATIENT_ID)
+                                Dim PERSONALIZED_DATA_ID As String = rowPERSONALIZED_DATA.Item("PERSONALIZED_DATA_ID") & String.Empty
+                                Dim COLUMN_NAME As String = String.Empty
+                                Dim eye As String = String.Empty
+                                For Each rowSPECIAL_PARAMETER As DataRow In vwXmlDataset.Tables("SPECIAL_PARAMETER").Select("PERSONALIZED_DATA_ID = " & PERSONALIZED_DATA_ID)
+                                    COLUMN_NAME = String.Empty
+                                    eye = String.Empty
+                                    Select Case rowSPECIAL_PARAMETER.Item("NAME") & String.Empty
+                                        Case "HE_coeff"
+                                        Case "ST_coeff"
+                                        Case "Progression_Length"
+                                        Case "VertexDistance"
+                                        Case "WrapAngle" : COLUMN_NAME = "PANTOSCOPIC_TILT" : eye = "B"
+                                        Case "PantoAngle" : COLUMN_NAME = "PANORAMIC_ANGLE" : eye = "B"
+                                        Case "SeeProudRightInsert"
+                                        Case "SeeProudLeftInsert"
+                                        Case "RightFittingHeight"
+                                        Case "LeftFittingHeight"
+                                        Case "RightVertexDistance" : COLUMN_NAME = "FITTING_VERTEX" : eye = "R"
+                                        Case "LeftVertexDistance" : COLUMN_NAME = "FITTING_VERTEX" : eye = "L"
+                                        Case "ReadingDistance"
+                                        Case "CorridorLength"
+                                        Case "FrameFit"
+                                        Case "RightERCD"
+                                        Case "LeftERCD"
+                                        Case "CAPE"
+                                    End Select
+
+                                    If COLUMN_NAME.Length > 0 Then
+                                        If (rowSPECIAL_PARAMETER.Item("VALUE") & String.Empty).ToString.Length > 0 Then
+                                            Dim VALUE_NUM As Decimal = Val(rowSPECIAL_PARAMETER.Item("VALUE") & String.Empty)
+                                            If eye = "B" Then
+                                                dst.Tables("DETJOBM3").Select("JOB_NO = '" & JOB_NO & "' AND RL = 'R'")(0).Item(COLUMN_NAME) = VALUE_NUM
+                                                dst.Tables("DETJOBM3").Select("JOB_NO = '" & JOB_NO & "' AND RL = 'L'")(0).Item(COLUMN_NAME) = VALUE_NUM
+                                            ElseIf eye = "L" Then
+                                                dst.Tables("DETJOBM3").Select("JOB_NO = '" & JOB_NO & "' AND RL = 'L'")(0).Item(COLUMN_NAME) = VALUE_NUM
+                                            ElseIf eye = "R" Then
+                                                dst.Tables("DETJOBM3").Select("JOB_NO = '" & JOB_NO & "' AND RL = 'R'")(0).Item(COLUMN_NAME) = VALUE_NUM
+                                            End If
+                                        End If
+                                    End If
+                                Next
+                            Next
+
                             ' Other processing for LENS_DESIGNER_CODE
                             Dim rowDESIGN0 As DataRow = baseClass.LookUp("DETDSGN0", rowDETJOBM1.Item("LENS_DESIGNER_CODE") & String.Empty)
                             If rowDESIGN0 IsNot Nothing Then
@@ -3620,6 +3728,8 @@ Namespace OrdersImport
 
                             If errors.Count > 0 Then
                                 rowDETJOBM1.Item("JOB_STATUS") = "H"
+                                ' If on hold then take out of queue
+                                rowDETJOBM1.Item("JOB_IN_QUEUE") = "0"
                                 rowSOTORDR1.Item("ORDR_STATUS") = "H"
                             End If
 
@@ -3673,6 +3783,7 @@ Namespace OrdersImport
                                 ImportErrorNotification.Clear()
                             End If
                         End If
+                        numJobsProcessed += 1
                     End Try
                 Next ' For Each orderFile
 
@@ -3681,7 +3792,7 @@ Namespace OrdersImport
                 Dim note As String = "ProcessVisionWebDELOrders: " & ex.Message & Environment.NewLine
                 emailErrors(String.Empty, 1, note, "DEL_VWEB")
             Finally
-                RecordLogEntry("ProcessVisionWebDELOrders: " & numOrdersProcessed & " DEL orders imported ")
+                RecordLogEntry("ProcessVisionWebDELOrders: " & numJobsProcessed & " DEL orders imported ")
                 ' Archive processed XML files
             End Try
         End Sub
@@ -5343,6 +5454,34 @@ Namespace OrdersImport
 
                 clsSOCORDR1.AffiliateFreeShipping()
                 clsSOCORDR1.Price_and_Qty(False, True)
+
+                'Dim tblSubs As DataTable = clsSOCORDR1.ItemSubsitiutions
+                'If tblSubs.Rows.Count > 0 Then
+                '    For Each rowSubs As DataRow In tblSubs.Select("", "ORDR_LNO")
+
+                '        Dim rowSOTORDR2_ORIG As DataRow = dst.Tables("SOTORDR2").Select("ORDR_LNO = " & rowSubs.Item("ORDR_LNO_ORIG"))(0)
+                '        Dim rowSOTORDR2 As DataRow = dst.Tables("SOTORDR2").NewRow
+                '        rowSOTORDR2.Item("ORDR_NO") = ORDR_NO
+                '        rowSOTORDR2.Item("ORDR_LNO") = rowSubs.Item("ORDR_LNO")
+                '        rowSOTORDR2.Item("ITEM_CODE") = rowSubs.Item("ITEM_CODE")
+                '        rowSOTORDR2.Item("ORDR_QTY") = Val(rowSubs.Item("ORDR_QTY") & String.Empty)
+                '        rowSOTORDR2.Item("ORDR_UNIT_PRICE") = Val(rowSubs.Item("ORDR_UNIT_PRICE") & String.Empty)
+                '        rowSOTORDR2.Item("ORDR_UNIT_PRICE_PATIENT") = Val(rowSubs.Item("ORDR_UNIT_PRICE_PATIENT") & String.Empty)
+                '        rowSOTORDR2.Item("ORDR_UNIT_PRICE_OVERRIDDEN") = rowSubs.Item("ORDR_UNIT_PRICE_OVERRIDDEN") & String.Empty
+                '        rowSOTORDR2.Item("ORDR_UNIT_PRICE_MANUAL") = Val(rowSubs.Item("ORDR_UNIT_PRICE") & String.Empty)
+                '        rowSOTORDR2.Item("ORDR_UNIT_PRICE_SOURCE") = rowSubs.Item("ORDR_UNIT_PRICE_SOURCE") & String.Empty
+                '        rowSOTORDR2.Item("ITEM_UOM") = rowSubs.Item("ITEM_UOM") & String.Empty
+                '        rowSOTORDR2.Item("PATIENT_NAME") = rowSOTORDR2_ORIG.Item("PATIENT_NAME") & String.Empty
+                '        rowSOTORDR2.Item("ORDR_LR") = rowSOTORDR2_ORIG.Item("ORDR_LR") & String.Empty
+                '        rowSOTORDR2.Item("PATIENT_GROUP") = rowSOTORDR2_ORIG.Item("PATIENT_GROUP") & String.Empty
+                '        dst.Tables("SOTORDR2").Rows.Add(rowSOTORDR2)
+
+                '        rowSOTORDR2_ORIG.Item("ORDR_QTY") = 0
+                '    Next
+
+                '    ' Reprice the Sales Order after Substitutions
+                '    clsSOCORDR1.Price_and_Qty(False, True)
+                'End If
 
                 ' Added on 1/22/2009 as per walter
                 If clsSOCORDR1.SHIP_VIA_CODE_switch_to.Trim.Length > 0 Then
