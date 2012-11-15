@@ -2838,6 +2838,13 @@ Namespace OrdersImport
 
         Private Sub ProcessVisionWebDELOrders(ByVal ORDR_SOURCE As String)
 
+            ' Pull jobs only into the live system.
+            If ABSolution.ASCMAIN1.DBS_COMPANY <> "ODG" _
+                OrElse ABSolution.ASCMAIN1.DBS_PASSWORD <> "ODG" _
+                OrElse ABSolution.ASCMAIN1.DBS_SERVER <> "ODG" Then
+                Exit Sub
+            End If
+
             ' Hard D to get separate parameters for Vision Web Digital Eyelab orders
             Dim vwConnection As New Connection("D")
             Dim numJobsProcessed As Int16 = 0
@@ -3657,6 +3664,7 @@ Namespace OrdersImport
 
                             Dim rowSOTORDR1 As DataRow = dst.Tables("SOTORDR1").NewRow
                             rowSOTORDR1.Item("ORDR_NO") = ORDR_NO
+                            rowSOTORDR1.Item("EDI_CUST_REF_NO") = rowRX_SPECTACLE.Item("Id") & String.Empty
                             rowSOTORDR1.Item("ORDR_DATE") = rowDETJOBM1.Item("ORDR_DATE")
                             rowSOTORDR1.Item("CUST_CODE") = CUST_CODE
                             rowSOTORDR1.Item("CUST_NAME") = rowDETJOBM1.Item("CUST_NAME") & String.Empty
@@ -3689,7 +3697,6 @@ Namespace OrdersImport
                             rowSOTORDR1.Item("ORDR_DPD") = "0"
                             rowSOTORDR1.Item("BRANCH_CODE") = "NY"
                             rowSOTORDR1.Item("DIVISION_CODE") = "DEL"
-                            rowSOTORDR1.Item("ORDR_TOTAL_AMT") = 0
                             rowSOTORDR1.Item("ORDR_SALES") = 0
 
                             ERR_LNO = 1
