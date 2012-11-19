@@ -2839,13 +2839,13 @@ Namespace OrdersImport
         Private Sub ProcessVisionWebDELOrders(ByVal ORDR_SOURCE As String)
 
             ' Pull jobs only into the live system.
-            If ABSolution.ASCMAIN1.DBS_COMPANY <> "ODG" _
-                OrElse ABSolution.ASCMAIN1.DBS_PASSWORD <> "ODG" _
-                OrElse ABSolution.ASCMAIN1.DBS_SERVER <> "ODG" Then
+            If ABSolution.ASCMAIN1.DBS_COMPANY.Trim.ToUpper <> "ODG" _
+                OrElse ABSolution.ASCMAIN1.DBS_PASSWORD.Trim.ToUpper <> "ODG" _
+                OrElse ABSolution.ASCMAIN1.DBS_SERVER.Trim.ToUpper <> "ODG" Then
                 Exit Sub
             End If
 
-            ' Hard D to get separate parameters for Vision Web Digital Eyelab orders
+            ' Hard code D to get separate parameters for Vision Web Digital Eyelab orders
             Dim vwConnection As New Connection("D")
             Dim numJobsProcessed As Int16 = 0
             Dim ImportedFiles As List(Of String) = New List(Of String)
