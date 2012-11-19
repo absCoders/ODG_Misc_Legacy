@@ -3037,8 +3037,8 @@ Namespace OrdersImport
                             rowDETJOBM1.Item("INV_SALES") = 0
                             rowDETJOBM1.Item("JOB_HOLD_LAB") = "0"
                             rowDETJOBM1.Item("JOB_HOLD_INV") = "0"
-                            rowDETJOBM1.Item("JOB_IN_QUEUE") = "0"
-                            rowDETJOBM1.Item("JOB_REQUIRES_REVIEW") = "0"
+                            'rowDETJOBM1.Item("JOB_IN_QUEUE") = "0"
+                            'rowDETJOBM1.Item("JOB_REQUIRES_REVIEW") = "0"
                             rowDETJOBM1.Item("WRAP_EDGE") = "0"
                             rowDETJOBM1.Item("CUSTOM_FRAME_NEW") = "0"
                             rowDETJOBM1.Item("WRAP_EDGE_SPORT") = "0"
@@ -3051,8 +3051,11 @@ Namespace OrdersImport
                             rowDETJOBM1.Item("BLANK_SELECTION") = "N"
                             rowDETJOBM1.Item("BALANCE_LENS") = "0"
                             rowDETJOBM1.Item("TKT_PRINT_COUNT") = 0
+
                             ' As per Maria place in Queue
                             rowDETJOBM1.Item("JOB_IN_QUEUE") = "1"
+                            ' As per Gati - Requires review 11/19/2012
+                            rowDETJOBM1.Item("JOB_REQUIRES_REVIEW") = "1"
 
                             creationDate = (rowRX_SPECTACLE.Item("Creation_date") & String.Empty).ToString.Replace("T", Space(1))
                             If IsDate(creationDate) Then
