@@ -110,6 +110,8 @@ Namespace OrdersImport
             Other = 999
         End Enum
 
+        Private traceFileDirectory As String = "\\192.168.130.201\Shared\DEL\TRC\"
+
         Private Class Connection
 
             Public RemoteHost As String = String.Empty
@@ -3037,8 +3039,6 @@ Namespace OrdersImport
                             rowDETJOBM1.Item("INV_SALES") = 0
                             rowDETJOBM1.Item("JOB_HOLD_LAB") = "0"
                             rowDETJOBM1.Item("JOB_HOLD_INV") = "0"
-                            'rowDETJOBM1.Item("JOB_IN_QUEUE") = "0"
-                            'rowDETJOBM1.Item("JOB_REQUIRES_REVIEW") = "0"
                             rowDETJOBM1.Item("WRAP_EDGE") = "0"
                             rowDETJOBM1.Item("CUSTOM_FRAME_NEW") = "0"
                             rowDETJOBM1.Item("WRAP_EDGE_SPORT") = "0"
@@ -3382,7 +3382,7 @@ Namespace OrdersImport
                                                     Dim traceLines() As String = traceData.Split(" ")
 
                                                     'write trace file
-                                                    Using traceFileToSave As New System.IO.FileStream("\\192.168.130.201\Shared\DEL\TRC\" & JOB_NO & ".trc", IO.FileMode.Create)
+                                                    Using traceFileToSave As New System.IO.FileStream(traceFileDirectory & JOB_NO & ".trc", IO.FileMode.Create)
                                                         Using traceFileStream As New System.IO.StreamWriter(traceFileToSave)
                                                             For Each line As String In traceLines
                                                                 traceFileStream.WriteLine(line)
@@ -3392,6 +3392,7 @@ Namespace OrdersImport
                                                         End Using
                                                     End Using
 
+                                                    rowDETJOBM1.Item("TRC_IND") = "2"
                                                     rowDETJOBM1.Item("TRACE_FROM") = "T"
 
                                                 Catch ex As Exception
@@ -3738,8 +3739,6 @@ Namespace OrdersImport
 
                             If errors.Count > 0 Then
                                 rowDETJOBM1.Item("JOB_STATUS") = "H"
-                                ' If on hold then take out of queue
-                                rowDETJOBM1.Item("JOB_IN_QUEUE") = "0"
                                 rowSOTORDR1.Item("ORDR_STATUS") = "H"
                             End If
 
@@ -6297,7 +6296,7 @@ Namespace OrdersImport
             ValidateDPDAddress = False
 
             Try
-                RecordLogEntry("Enter ValidateDPDAddress")
+                'RecordLogEntry("Enter ValidateDPDAddress")
                 Dim clsSHCUPSC1 As New TAC.SHCUPSC1
                 Dim addressValidations As New List(Of TAC.SHCUPSC1.AddressValidationResponse)
                 Dim errMsg As String = String.Empty
@@ -6399,7 +6398,7 @@ Namespace OrdersImport
                     RecordLogEntry("ValidateDPDAddress clsSHCUPSC1 Error: " & errMsg)
                     Return False
                 ElseIf addressValidations.Count = 0 Then
-                    RecordLogEntry("ValidateDPDAddress: Address Count = 0")
+                    'RecordLogEntry("ValidateDPDAddress: Address Count = 0")
                     Return False
                 ElseIf addressValidations.Count > 0 Then
                     ' If there is a match to what we sent then do not display the matches
@@ -6415,14 +6414,14 @@ Namespace OrdersImport
                             Return True
                         End If
                     Next
-                    RecordLogEntry("ValidateDPDAddress: Address not matched")
+                    'RecordLogEntry("ValidateDPDAddress: Address not matched")
                 End If
 
             Catch ex As Exception
                 RecordLogEntry("ValidateDPDAddress :" & ex.Message)
                 Return False
             Finally
-                RecordLogEntry("Exit ValidateDPDAddress")
+                'RecordLogEntry("Exit ValidateDPDAddress")
             End Try
 
         End Function
