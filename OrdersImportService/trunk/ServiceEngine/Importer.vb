@@ -502,6 +502,7 @@ Namespace OrdersImport
                         ftpFileList.Clear()
                         ImportedFiles.Clear()
                         baseClass.clsASCBASE1.Fill_Records("SOTSVIAF", ORDR_SOURCE)
+                        ImportErrorNotification = New Hashtable
 
                         If Not ABSolution.ASCMAIN1.Logical_Lock("IMPSVC01", ORDR_SOURCE, False, False, True, 1) Then
                             RecordLogEntry("Order Import Type: " & ORDR_SOURCE & " locked by previous instance.")
@@ -512,8 +513,6 @@ Namespace OrdersImport
                             Continue For
                         End If
 
-                        ImportErrorNotification = New Hashtable
-
                         ' *****************************************************************************
                         ' Make sure there is an Entry in ASTNOTE1 for each Ordr Source
                         ' *****************************************************************************
@@ -521,6 +520,7 @@ Namespace OrdersImport
                             Case "D"
                                 ' Hard D to get separate parameters for Vision Web Digital Eyelab orders
                                 ProcessVisionWebDELOrders("V")
+                                ExportVisionWebJobStatus()
 
                             Case "Y"  ' (Y) Eyeconic
                                 ProcessWebServiceSalesOrders(ORDR_SOURCE)
@@ -1913,7 +1913,9 @@ Namespace OrdersImport
                         End Try
                     Next
 
-                    If errorfile Then Continue For
+                    If errorfile Then
+                        Continue For
+                    End If
 
                     SOFT_Id = String.Empty
 
@@ -2602,7 +2604,7 @@ Namespace OrdersImport
                         xmlWriter.WriteEndAttribute()
 
                         xmlWriter.WriteStartAttribute("Type")
-                        If rowSOTORDR1.Item("ORDR_NO") & String.Empty = "1" Then
+                        If rowSOTORDR1.Item("ORDR_DPD") & String.Empty = "1" Then
                             xmlWriter.WriteValue("CP")
                         Else
                             xmlWriter.WriteValue("CO")
@@ -2746,6 +2748,220 @@ Namespace OrdersImport
             End Try
 
         End Sub
+
+        Private Sub ExportVisionWebJobStatus()
+
+            Dim numJobsProcessed As Int16 = 0
+            Dim vwConnection As New Connection("D")
+            Dim xmlFilename As String = String.Empty
+
+            Dim jobsProcessed As List(Of String) = New List(Of String)
+
+            Dim JOB_NO As String = String.Empty
+            Dim sql As String = String.Empty
+
+            Dim tblSOTINVH1 As DataTable = Nothing
+            Dim tblDETSTAT1 As DataTable = Nothing
+
+            Dim rowSOTINVH1 As DataRow = Nothing
+            Dim rowSOTORDR1 As DataRow = Nothing
+            Dim rowDETJOBM1 As DataRow = Nothing
+            Dim rowDETJOBM4 As DataRow = Nothing
+
+            Try
+
+                If vwConnection.LocalOutDir.Length = 0 Then
+                    Exit Sub
+                End If
+
+                sql = " SELECT DETSTAT1.STATUS_CODE, DETSTAT1.STATUS_CODE_WEB, DETSTAT2.STATUS_DESC_WEB"
+                sql &= " FROM DETSTAT1, DETSTAT2"
+                sql &= " WHERE DETSTAT1.STATUS_CODE_WEB = DETSTAT2.STATUS_CODE_WEB"
+                tblDETSTAT1 = ABSolution.ASCDATA1.GetDataTable(sql)
+
+                baseClass.clsASCBASE1.Fill_Records("XSTORDRJ", String.Empty, True, "Select * From XSTORDRJ WHERE ORDR_SOURCE = 'V'")
+
+                For Each rowXSTORDRJ As DataRow In dst.Tables("XSTORDRJ").Select("", "JOB_NO")
+
+                    JOB_NO = rowXSTORDRJ.Item("JOB_NO")
+
+                    If jobsProcessed.Contains(JOB_NO) Then
+                        Continue For
+                    End If
+
+                    jobsProcessed.Add(JOB_NO)
+
+                    baseClass.clsASCBASE1.Fill_Records("DETJOBM1", JOB_NO)
+                    If dst.Tables("DETJOBM1").Rows.Count = 0 Then
+                        Continue For
+                    End If
+                    rowDETJOBM1 = dst.Tables("DETJOBM1").Rows(0)
+                    If rowDETJOBM1.Item("ORDR_SOURCE") <> "V" Then
+                        Continue For
+                    End If
+
+                    baseClass.clsASCBASE1.Fill_Records("SOTORDR1", rowDETJOBM1.Item("ORDR_NO") & String.Empty)
+                    If dst.Tables("SOTORDR1").Rows.Count = 0 Then
+                        Continue For
+                    End If
+                    rowSOTORDR1 = dst.Tables("SOTORDR1").Rows(0)
+
+                    ' We need to have the Vision Web ID code.
+                    ' The Import uses EDI_CUST_REF_NO and keyed in orders use ORDR_CUST_PO
+                    If rowSOTORDR1.Item("EDI_CUST_REF_NO") & String.Empty = String.Empty Then
+                        Continue For
+                    End If
+
+                    ' Grab the most recent entry in the status table
+                    rowDETJOBM4 = dst.Tables("XSTORDRJ").Select("JOB_NO = '" & JOB_NO & "'", "LAST_DATE DESC")(0)
+                    
+                    sql = "SELECT * FROM DETJOBM4 WHERE JOB_NO = '" & JOB_NO & "'"
+                    sql &= " AND INIT_DATE <= TO_TIMESTAMP('" & rowDETJOBM4.Item("LAST_DATE") & "','MM/DD/YYYY HH:MI:SS AM') +.00001"
+
+                    baseClass.clsASCBASE1.Fill_Records("DETJOBM4", String.Empty, True, sql)
+                    If dst.Tables("DETJOBM4").Rows.Count = 0 Then
+                        Continue For
+                    End If
+
+                    ' Get the last status FOR THE JOB 
+                    rowDETJOBM4 = dst.Tables("DETJOBM4").Select("", "INIT_DATE DESC, STATUS_CODE DESC")(0)
+
+                    If rowDETJOBM1.Item("INV_NO") & String.Empty <> String.Empty Then
+                        ' Send over the Shipping / Tracking / Url for the shipment
+                        sql = " SELECT SOTINVH1.INV_NO, SOTINVH2.INV_LNO, SOTINVH1.INV_DATE, SOTINVH1.SHIP_VIA_CODE, SOTSVIA1.SHIP_VIA_DESC, SOTINVH1.SHIP_REF"
+                        sql &= " FROM SOTINVH1, SOTINVH2, SOTSVIA1, DETJOBM1"
+                        sql &= " WHERE SOTINVH1.INV_NO = SOTINVH2.INV_NO"
+                        sql &= " AND SOTINVH1.INV_TYPE = SOTINVH1.INV_TYPE"
+                        sql &= " AND SOTSVIA1.SHIP_VIA_CODE = SOTINVH1.SHIP_VIA_CODE"
+                        sql &= " AND SOTINVH1.INV_NO = DETJOBM1.INV_NO"
+                        sql &= " AND DETJOBM1.JOB_NO = :PARM1"
+
+                        tblSOTINVH1 = ABSolution.ASCDATA1.GetDataTable(sql, "", "V", New Object() {JOB_NO})
+                    Else
+                        tblSOTINVH1 = Nothing
+                    End If
+
+                    numJobsProcessed += 1
+
+                    xmlFilename = JOB_NO & DateTime.Now.ToString("_yyyyMMddhhmmss") & ".xml"
+
+                    If My.Computer.FileSystem.FileExists(vwConnection.LocalOutDir & xmlFilename) Then
+                        My.Computer.FileSystem.DeleteFile(vwConnection.LocalOutDir & xmlFilename)
+                    End If
+
+                    Using xmlWriter As New XmlTextWriter(vwConnection.LocalOutDir & xmlFilename, System.Text.Encoding.UTF8)
+
+
+                        xmlWriter.WriteStartDocument(True)
+                        xmlWriter.Formatting = Formatting.Indented
+                        xmlWriter.Indentation = 4
+                        xmlWriter.WriteStartElement("VW_TRACKING")
+
+                        xmlWriter.WriteStartElement("SUPPLIER")
+                        xmlWriter.WriteStartAttribute("Id")
+                        xmlWriter.WriteValue("5545")
+                        xmlWriter.WriteEndAttribute()
+
+                        xmlWriter.WriteStartElement("ACCOUNT")
+
+                        Dim ACCOUNT As String = rowDETJOBM1.Item("CUST_CODE") & String.Empty _
+                                             & IIf(rowDETJOBM1.Item("CUST_SHIP_TO_NO") & String.Empty <> String.Empty, "-" & rowDETJOBM1.Item("CUST_SHIP_TO_NO") & String.Empty, "")
+
+                        xmlWriter.WriteStartAttribute("Shipping")
+                        xmlWriter.WriteValue(ACCOUNT)
+                        xmlWriter.WriteEndAttribute()
+
+                        xmlWriter.WriteStartAttribute("Billing")
+                        xmlWriter.WriteValue(ACCOUNT)
+                        xmlWriter.WriteEndAttribute()
+
+                        xmlWriter.WriteStartElement("ITEM")
+
+                        Dim PATIENT_NAME As String = rowDETJOBM1.Item("PATIENT_NAME") & String.Empty
+                        If PATIENT_NAME.Length > 60 Then PATIENT_NAME = PATIENT_NAME.Substring(0, 60).Trim
+                        xmlWriter.WriteStartAttribute("Patient")
+                        xmlWriter.WriteValue(PATIENT_NAME)
+                        xmlWriter.WriteEndAttribute()
+
+                        xmlWriter.WriteStartAttribute("Tracking_Id")
+                        xmlWriter.WriteValue(rowDETJOBM1.Item("JOB_NO") & String.Empty)
+                        xmlWriter.WriteEndAttribute()
+
+                        xmlWriter.WriteStartAttribute("Received_at")
+                        xmlWriter.WriteValue(rowDETJOBM4.Item("INIT_DATE") & String.Empty)
+                        xmlWriter.WriteEndAttribute()
+
+                        xmlWriter.WriteStartAttribute("Status")
+                        If rowDETJOBM1.Item("JOB_STATUS") & String.Empty = "C" Then
+                            xmlWriter.WriteValue("900")
+                        Else
+                            xmlWriter.WriteValue("999")
+                        End If
+                        xmlWriter.WriteEndAttribute()
+
+                        xmlWriter.WriteStartAttribute("Type")
+                        xmlWriter.WriteValue("SP")
+                        xmlWriter.WriteEndAttribute()
+
+                        xmlWriter.WriteStartAttribute("Visionweb_Tracking_Id")
+                        xmlWriter.WriteValue(rowSOTORDR1.Item("EDI_CUST_REF_NO") & String.Empty)
+                        xmlWriter.WriteEndAttribute()
+
+                        ' Send over Mandatory Status Descriotion for code 999
+                        Dim desc As String = String.Empty
+                        If rowDETJOBM1.Item("JOB_STATUS") & String.Empty <> "C" Then
+                            Dim STATUS_CODE As String = rowDETJOBM4.Item("STATUS_CODE") & String.Empty
+                            If tblDETSTAT1.Select("STATUS_CODE = '" & STATUS_CODE & "'").Length > 0 Then
+                                desc = tblDETSTAT1.Select("STATUS_CODE = '" & STATUS_CODE & "'")(0).Item("STATUS_DESC_WEB") & String.Empty
+                            Else
+                                desc = "Unknown"
+                            End If
+                        Else
+                            desc = "Cancelled"
+                        End If
+                        xmlWriter.WriteElementString("STATUS_DESCRIPTION", desc)
+
+                        If tblSOTINVH1 IsNot Nothing AndAlso tblSOTINVH1.Rows.Count > 0 Then
+                            rowSOTINVH1 = tblSOTINVH1.Select()(0)
+                            xmlWriter.WriteStartElement("SHIPPING")
+
+                            xmlWriter.WriteStartAttribute("Tracking")
+                            xmlWriter.WriteValue(rowSOTINVH1.Item("SHIP_VIA_DESC") & String.Empty)
+                            xmlWriter.WriteEndAttribute()
+
+                            xmlWriter.WriteStartAttribute("Url")
+                            xmlWriter.WriteValue(Track_Shipment(rowSOTINVH1.Item("SHIP_VIA_CODE") & String.Empty, rowSOTINVH1.Item("SHIP_REF") & String.Empty))
+                            xmlWriter.WriteEndAttribute()
+
+                            xmlWriter.WriteEndElement() ' SHIPPING
+                        End If
+
+                        xmlWriter.WriteEndElement() ' ITEM
+                        xmlWriter.WriteEndElement() ' ACCOUNT
+                        xmlWriter.WriteEndElement() ' SUPPLIER
+                        xmlWriter.WriteEndElement() ' VW_TRACKING
+                        xmlWriter.WriteEndDocument()
+                        xmlWriter.Close()
+                    End Using
+                Next
+
+            Catch ex As Exception
+                RecordLogEntry("ExportVisionWebStatus: " & ex.Message)
+            Finally
+
+                ' Delete processed JOBS
+                For Each jobNumber As String In jobsProcessed
+                    For Each row As DataRow In baseClass.clsASCBASE1.dst.Tables("XSTORDRJ").Select("JOB_NO = '" & jobNumber & "'")
+                        sql = "Delete From XSTORDRJ Where JOB_NO = '" & jobNumber & "' AND LAST_DATE <= TO_TIMESTAMP('" & row.Item("LAST_DATE") & "','MM/DD/YYYY HH:MI:SS AM') +.00001"
+                        ABSolution.ASCDATA1.ExecuteSQL(sql)
+                    Next
+                Next
+
+                RecordLogEntry("ExportVisionWebJobStatus: " & numJobsProcessed & " job updates placed in " & vwConnection.LocalOutDir)
+            End Try
+
+        End Sub
+
 
         Private Function Track_Shipment(ByVal SHIP_VIA_CODE As String, ByVal SHIP_REF As String) As String
 
@@ -6619,6 +6835,7 @@ Namespace OrdersImport
                     baseClass.Create_TDA(.Tables.Add, "XMTORDR2", "*", 1)
 
                     baseClass.Create_TDA(.Tables.Add, "XSTORDRQ", "*", 2)
+                    baseClass.Create_TDA(.Tables.Add, "XSTORDRJ", "*")
                     baseClass.Create_TDA(.Tables.Add, "ARTCUST4", "*")
 
                     baseClass.Create_TDA(dst.Tables.Add, "SOTORDRO", "Select LPAD( ' ', 15) ORDR_REL_HOLD_CODES, ORDR_COMMENT From SOTORDR1", , False)
