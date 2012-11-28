@@ -3216,10 +3216,10 @@ Namespace OrdersImport
                             ORDR_NO = ABSolution.ASCMAIN1.Next_Control_No("SOTORDR1.ORDR_NO", 1)
                             rowDETJOBM1.Item("JOB_NO") = JOB_NO
                             rowDETJOBM1.Item("ORDR_NO") = ORDR_NO
+                            rowDETJOBM1.Item("JOB_STATUS") = "O"
                             dst.Tables("DETJOBM1").Rows.Add(rowDETJOBM1)
 
                             ' Default values taken from DETJOBM1
-                            rowDETJOBM1.Item("JOB_STATUS") = "O"
                             rowDETJOBM1.Item("ORDR_SOURCE") = ORDR_SOURCE
                             rowDETJOBM1.Item("JOB_TYPE_CODE") = "O" ' Original
                             rowDETJOBM1.Item("ORDR_DATE") = DateTime.Now.ToString("MM/dd/yyyy")
