@@ -2888,7 +2888,7 @@ Namespace OrdersImport
                         xmlWriter.WriteEndAttribute()
 
                         xmlWriter.WriteStartAttribute("Received_at")
-                        xmlWriter.WriteValue(rowDETJOBM4.Item("INIT_DATE") & String.Empty)
+                        xmlWriter.WriteValue(CDate(rowDETJOBM4.Item("INIT_DATE") & String.Empty).ToString("yyyy-MM-ddTHH:mm:ss"))
                         xmlWriter.WriteEndAttribute()
 
                         xmlWriter.WriteStartAttribute("Status")
