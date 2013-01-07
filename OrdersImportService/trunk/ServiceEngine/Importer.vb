@@ -3516,6 +3516,7 @@ Namespace OrdersImport
                                                         Continue For
                                                 End Select
                                                 rowDETJOBM1.Item("RX_PRISM") = "1"
+                                                rowDETJOBM1.Item("USE_THINNING_PRISM") = "0"
                                             Next
 
                                             If vwXmlDataset.Tables("CALCULATIONS").Select("POSITION_ID = " & POSITION_ID).Length > 0 Then
@@ -3660,7 +3661,7 @@ Namespace OrdersImport
                                 rowDETJOBM1.Item("CORRIDOR_LENGTH") = CORRIDOR_LENGTH
                             End If
 
-                            rowDETJOBM1.Item("COMMENT_LAB") = specialInstructions
+                            rowDETJOBM1.Item("COMMENT_LAB") = TruncateField(specialInstructions, "DETJOBM1", "COMMENT_LAB")
 
                             rowARTCUST1 = baseClass.LookUp("ARTCUST1", CUST_CODE)
                             rowARTCUST2 = baseClass.LookUp("ARTCUST2", New String() {CUST_CODE, CUST_SHIP_TO_NO})
