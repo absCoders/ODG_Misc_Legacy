@@ -1392,10 +1392,6 @@ Namespace OrdersImport
                                 PATIENT_NAME = dst.Tables("EDT850I5").Select("EDI_ENTITY_ID_CODE = 'QC'")(0).Item("EDI_ADDR_NAME") & String.Empty
                             End If
                             rowSOTORDRX.Item("PATIENT_NAME") = TruncateField(PATIENT_NAME, "SOTORDR2", "PATIENT_NAME")
-                            'rowSOTORDRX.Item("PATIENT_NAME") = StrConv(rowSOTORDRX.Item("PATIENT_NAME") & String.Empty, VbStrConv.ProperCase)
-
-                            rowSOTORDRX.Item("ORDR_CUST_PO") = rowEDT850I1.Item("EDI_PO_ORDER_NO") & String.Empty
-
                             rowSOTORDRX.Item("CUST_PHONE") = ""
 
                             rowEDT850I5 = Nothing
@@ -1568,9 +1564,6 @@ Namespace OrdersImport
             Dim ORDR_NO As String = String.Empty
             Dim recCount As Integer = 1
 
-            ' Tweak the order source
-            ORDR_SOURCE = "E"
-
             ' Perform FTP Here
             ftpFileList.Clear()
             ImportedFiles.Clear()
@@ -1677,6 +1670,7 @@ Namespace OrdersImport
                             rowSOTORDRX.Item("CUST_NAME") = orderElements(22) & String.Empty
 
                             rowSOTORDRX.Item("ORDR_TYPE_CODE") = "REG"
+                            rowSOTORDRX.Item("ORDR_LINE_SOURCE") = ORDR_SOURCE
                             rowSOTORDRX.Item("ORDR_DPD") = "0"
                             rowSOTORDRX.Item("ORDR_QTY") = Val(orderElements(17) & String.Empty)
                             rowSOTORDRX.Item("ITEM_CODE") = TruncateField(orderElements(11), "SOTORDR2", "ITEM_CODE")
@@ -1787,6 +1781,7 @@ Namespace OrdersImport
                 ' Need to process each order individually for pricing reasons; therefore
                 ' need to move the datat to a temp data table and process each order individually
                 For Each headers As DataRow In ABSolution.ASCDATA1.GetDataTable("SELECT DISTINCT ORDR_NO FROM SOTORDRX WHERE PROCESS_IND IS NULL AND ORDR_SOURCE = :PARM1", String.Empty, "V", New Object() {ORDR_SOURCE}).Rows
+
                     ClearDataSetTables(True)
                     ORDR_NO = headers.Item("ORDR_NO") & String.Empty
                     baseClass.clsASCBASE1.Fill_Records("SOTORDRX", New Object() {ORDR_SOURCE, ORDR_NO})
@@ -1796,10 +1791,18 @@ Namespace OrdersImport
                         Continue For
                     End If
 
+                    ' Tweak the order source to have BL as an EDI
+
+                    For Each row As DataRow In dst.Tables("SOTORDRX").Select("")
+                        rowSOTORDRX.Item("ORDR_SOURCE") = "E"
+                    Next
+
                     'ORDR_NO = String.Empty
                     ORDR_CALLER_NAME = dst.Tables("SOTORDRX").Rows(0).Item("ORDR_CALLER_NAME") & String.Empty
                     ORDR_SHIP_COMPLETE = dst.Tables("SOTORDRX").Rows(0).Item("ORDR_SHIP_COMPLETE") & String.Empty
-                    If CreateSalesOrder(ORDR_NO, False, False, ORDR_SOURCE, ORDR_SOURCE, ORDR_CALLER_NAME, False, "B") Then
+
+                    ' Tweak the order source to have BL as an EDI
+                    If CreateSalesOrder(ORDR_NO, False, False, ORDR_SOURCE, "E", ORDR_CALLER_NAME, False, ORDR_SOURCE) Then
                         dst.Tables("SOTORDR1").Rows(0).Item("ORDR_SHIP_COMPLETE") = ORDR_SHIP_COMPLETE
                         UpdateDataSetTables()
                         salesOrdersProcessed += 1
@@ -2295,6 +2298,7 @@ Namespace OrdersImport
             Dim CALLER_NAME As String = String.Empty
             Dim ORDR_SHIP_COMPLETE As String = "0"
             Dim XMT_ORDER_SOURCE As String = ORDR_SOURCE
+            Dim ordrShipComplete As String = "0"
 
             If testMode Then
                 RecordLogEntry("Enter ProcessOptiPort")
@@ -2318,7 +2322,7 @@ Namespace OrdersImport
 
                 For Each rowXMTORDR1 As DataRow In dst.Tables("XMTORDR1").Select("", "XML_DOC_SEQ_NO")
                     ClearDataSetTables(False)
-
+                    ordrShipComplete = ORDR_SHIP_COMPLETE
                     ' Done so if the record causes an error on the import it will be skipped.
                     ' An email with the error will be sent.
                     rowXMTORDR1.Item("XML_PROCESS_IND") = "X"
@@ -2361,6 +2365,7 @@ Namespace OrdersImport
                         If rowXMTORDR1.Item("XML_SHIP_TO_PATIENT") & String.Empty = "Y" Then
                             rowSOTORDRX.Item("ORDR_DPD") = "1"
                             rowSOTORDRX.Item("ORDR_SHIP_COMPLETE") = "1"
+                            ordrShipComplete = "1"
 
                             rowSOTORDRX.Item("CUST_NAME") = (rowXMTORDR1.Item("XML_SHIP_TO_NAME") & String.Empty)
                             rowSOTORDRX.Item("CUST_ADDR1") = (rowXMTORDR1.Item("XML_SHIP_TO_ADDRESS1") & String.Empty).ToString.Trim
@@ -2473,7 +2478,11 @@ Namespace OrdersImport
 
                     ' Create sales order
                     Dim ORDR_NO As String = String.Empty
+                    ordrShipComplete = dst.Tables("SOTORDRX").Rows(0).Item("ORDR_SHIP_COMPLETE") & String.Empty
+
                     If CreateSalesOrder(ORDR_NO, CREATE_SHIP_TO, SELECT_SHIP_TO_BY_TELE, ORDR_LINE_SOURCE, XMT_ORDER_SOURCE, CALLER_NAME, False, ORDR_SOURCE) Then
+                        ' reset the Order Ship Complete for this sales order
+                        dst.Tables("SOTORDR1").Rows(0).Item("ORDR_SHIP_COMPLETE") = ordrShipComplete
                         UpdateDataSetTables()
                         salesOrdersProcessed += 1
                     Else
@@ -3968,7 +3977,7 @@ Namespace OrdersImport
 
                             If errors.Count > 0 Then
                                 rowDETJOBM1.Item("JOB_STATUS") = "H"
-                                rowSOTORDR1.Item("ORDR_STATUS") = "H"
+                                'rowSOTORDR1.Item("ORDR_STATUS") = "H"
                             End If
 
                             Dim rowDETJOBM4 As DataRow = dst.Tables("DETJOBM4").NewRow
@@ -6809,7 +6818,7 @@ Namespace OrdersImport
                 .Tables("SOTORDR2").Columns.Add("SAMPLE_IND", GetType(System.String))
                 .Tables("SOTORDR2").Columns.Add("PRICE_CATGY_SAMPLE_IND", GetType(System.String))
 
-                clsSOCORDR1 = New TAC.SOCORDR1(SOTINVH2_PC, SOTORDRP, SOTORDR2_pricing, baseClass.clsASCBASE1)
+                clsSOCORDR1 = New TAC.SOCORDR1(baseClass.clsASCBASE1)
 
                 If testMode Then RecordLogEntry("Exit LoadTablesForPricing.")
 
@@ -7068,6 +7077,11 @@ Namespace OrdersImport
             rowSOTORDRO = dst.Tables("SOTORDRO").NewRow
             rowSOTORDRO.Item("ORDR_REL_HOLD_CODES") = InvalidDPD
             rowSOTORDRO.Item("ORDR_COMMENT") = "Invalid DPD"
+            dst.Tables("SOTORDRO").Rows.Add(rowSOTORDRO)
+
+            rowSOTORDRO = dst.Tables("SOTORDRO").NewRow
+            rowSOTORDRO.Item("ORDR_REL_HOLD_CODES") = InvalidDPDAddress
+            rowSOTORDRO.Item("ORDR_COMMENT") = "Invalid DPD Address"
             dst.Tables("SOTORDRO").Rows.Add(rowSOTORDRO)
 
             rowSOTORDRO = dst.Tables("SOTORDRO").NewRow
