@@ -1358,8 +1358,19 @@ Namespace OrdersImport
                                     rowSOTORDRX.Item("ORDR_LR") = "L"
                             End Select
 
-                            rowSOTORDRX.Item("ITEM_DESC") = TruncateField(rowEDT850I2.Item("EDI_ITEM_DESC_1") & String.Empty, "SOTORDR1", "ITEM_DESC")
-                            rowSOTORDRX.Item("ITEM_DESC2") = TruncateField(rowEDT850I2.Item("EDI_ITEM_DESC_2") & String.Empty, "SOTORDR1", "ITEM_DESC2")
+                            ' Trim extra spaces in description
+                            Dim EDI_ITEM_DESC_1 As String = rowEDT850I2.Item("EDI_ITEM_DESC_1") & String.Empty
+                            While EDI_ITEM_DESC_1.Contains(Space(2))
+                                EDI_ITEM_DESC_1 = EDI_ITEM_DESC_1.Replace(Space(2), Space(1))
+                            End While
+
+                            Dim EDI_ITEM_DESC_2 As String = rowEDT850I2.Item("EDI_ITEM_DESC_2") & String.Empty
+                            While EDI_ITEM_DESC_2.Contains(Space(2))
+                                EDI_ITEM_DESC_2 = EDI_ITEM_DESC_2.Replace(Space(2), Space(1))
+                            End While
+
+                            rowSOTORDRX.Item("ITEM_DESC") = TruncateField(EDI_ITEM_DESC_1, "SOTORDR2", "ITEM_DESC")
+                            rowSOTORDRX.Item("ITEM_DESC2") = TruncateField(EDI_ITEM_DESC_2, "SOTORDR2", "ITEM_DESC2")
 
                             rowSOTORDRX.Item("SHIP_VIA_CODE") = String.Empty
 
