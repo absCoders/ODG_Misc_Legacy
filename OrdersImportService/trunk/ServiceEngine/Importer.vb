@@ -6197,7 +6197,7 @@ Namespace OrdersImport
                 ORDR_REL_HOLD_CODES = String.Empty
 
                 For Each rowSOTORDR2 As DataRow In dst.Tables("SOTORDR2").Select("ISNULL(ORDR_REL_HOLD_CODES,'@@@') <> '@@@'")
-                    ITEM_LIST = "'" & rowSOTORDR2.Item("ITEM_CODE") & "'"
+                    ITEM_LIST = rowSOTORDR2.Item("ITEM_CODE")
                     ORDR_REL_HOLD_CODES = rowSOTORDR2.Item("ORDR_REL_HOLD_CODES") & String.Empty
 
                     ' Remove Detail Error Code
@@ -6677,7 +6677,7 @@ Namespace OrdersImport
                             rowSOTORDR5_ST.Item("CUST_CITY") = addressSel.City
                             rowSOTORDR5_ST.Item("CUST_STATE") = addressSel.State
                             rowSOTORDR5_ST.Item("CUST_ZIP_CODE") = addressSel.PostalCode
-                            RecordLogEntry("ValidateDPDAddress: Valid DPD Address")
+                            'RecordLogEntry("ValidateDPDAddress: Valid DPD Address")
                             Return True
                         End If
                     Next
