@@ -94,7 +94,6 @@
     <Import Include="System.Linq" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DECVALID.vb" />
     <Compile Include="DelJobService.cls" />
     <Compile Include="DelJobRules.vb" />
     <Compile Include="Importer.vb" />
