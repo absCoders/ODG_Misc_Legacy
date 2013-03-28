@@ -2782,6 +2782,11 @@ Namespace OrdersImport
             Dim rowDETJOBM4 As DataRow = Nothing
 
             Try
+                If ABSolution.ASCMAIN1.DBS_COMPANY.Trim.ToUpper <> "ODG" _
+                    OrElse ABSolution.ASCMAIN1.DBS_PASSWORD.Trim.ToUpper <> "ODG" _
+                    OrElse ABSolution.ASCMAIN1.DBS_SERVER.Trim.ToUpper <> "ODG" Then
+                    Exit Sub
+                End If
 
                 If vwConnection.LocalOutDir.Length = 0 Then
                     Exit Sub
@@ -3175,6 +3180,9 @@ Namespace OrdersImport
                             .Tables("DETJOBM3").Clear()
                             .Tables("DETJOBM4").Clear()
                             .Tables("DETJOBIE").Clear()
+
+                            .Tables("DETJOBT1").Clear()
+                            .Tables("DETJOBT2").Clear()
 
                             .Tables("SOTORDR1").Clear()
                             .Tables("SOTORDR5").Clear()
@@ -3640,6 +3648,8 @@ Namespace OrdersImport
                                                     rowDETJOBM1.Item("TRC_IND") = "2"
                                                     rowDETJOBM1.Item("TRACE_FROM") = "T"
 
+                                                    ProcessTraceFile(rowDETJOBM1)
+
                                                 Catch ex As Exception
                                                     errors.Add(New DelJobService.DelJobValidationError("TraceData", "Error: " & ex.Message))
                                                 End Try
@@ -4008,6 +4018,9 @@ Namespace OrdersImport
                                 .clsASCBASE1.Update_Record_TDA("DETJOBM4")
                                 .clsASCBASE1.Update_Record_TDA("DETJOBIE")
 
+                                .clsASCBASE1.Update_Record_TDA("DETJOBT1")
+                                .clsASCBASE1.Update_Record_TDA("DETJOBT2")
+
                                 .clsASCBASE1.Update_Record_TDA("SOTORDR1")
                                 .clsASCBASE1.Update_Record_TDA("SOTORDR5")
 
@@ -4052,6 +4065,42 @@ Namespace OrdersImport
             Finally
                 RecordLogEntry("ProcessVisionWebDELOrders: " & numJobsProcessed & " DEL orders imported ")
                 ' Archive processed XML files
+            End Try
+        End Sub
+
+        Private Sub ProcessTraceFile(ByRef rowDETJOBM1 As DataRow)
+            Try
+                Dim JOB_NO As String = rowDETJOBM1.Item("JOB_NO") & String.Empty
+                Dim TraceFile As String = traceFileDirectory & JOB_NO & ".trc"
+
+                If TraceFile.Length > 0 AndAlso My.Computer.FileSystem.FileExists(TraceFile) Then
+                    Using sr As New System.IO.StreamReader(TraceFile)
+                        Dim data As String = sr.ReadToEnd
+
+                        Dim COMM As New Dictionary(Of String, String) ' most recent Keyword/Value pairs received (dups ignored)
+                        Dim data_lines() As String = Nothing ' Keyword/Value block of data, separated into lines
+                        Dim TRCFMTs As New List(Of String) ' Trace Formats Supported by the Device, including the TRCFMT= prefix
+                        Dim Rs As New List(Of String) ' Radii data sent by the Device, NOT including the R= prefix
+                        Dim CRIBFMTs As New List(Of String) ' Crib Formats Supported by the Device, including the CRIBFMT= prefix
+                        Dim TD As New Dictionary(Of String, Double)
+                        Dim SPts As New Dictionary(Of String, System.Drawing.PointF())
+                        Dim Panel1 As New System.Windows.Forms.Panel
+
+                        TAC.DECMAIN1.Load_COMM(data, COMM, TRCFMTs, Rs, CRIBFMTs, data_lines)
+
+                        Dim TRACE_CIRC_OFFSET As Decimal = 0
+                        TAC.DECMAIN1.Execute_Trace(data, JOB_NO, TRACE_CIRC_OFFSET, Panel1, Panel1, _
+                           True, baseClass, TRCFMTs, Rs, TD, SPts, _
+                           False, True, dst.Tables("DETPARM1").Rows(0).Item("DE_PARM_ARCHIVE_BMP") & "\", , "D")
+                        Dim STDPATTERN As String = "0000" & JOB_NO
+
+                        rowDETJOBM1.Item("DATABASE_TRACE_EXECUTED") = "1"
+                        rowDETJOBM1.Item("PATTERN_NO") = STDPATTERN
+
+                    End Using
+                End If
+            Catch ex As Exception
+
             End Try
         End Sub
 
@@ -6845,6 +6894,7 @@ Namespace OrdersImport
                 If testMode Then RecordLogEntry("Enter PrepareDatasetEntries.")
 
                 dst = baseClass.clsASCBASE1.dst
+                baseClass.dst = dst
                 dst.Tables.Clear()
 
                 With dst
@@ -6864,6 +6914,9 @@ Namespace OrdersImport
                     baseClass.Create_TDA(.Tables.Add, "DETJOBM3", "*")
                     baseClass.Create_TDA(.Tables.Add, "DETJOBM4", "*")
                     baseClass.Create_TDA(.Tables.Add, "DETJOBIE", "*")
+
+                    baseClass.Create_TDA(.Tables.Add, "DETJOBT1", "*")
+                    baseClass.Create_TDA(.Tables.Add, "DETJOBT2", "*")
 
                     With .Tables("SOTORDR2")
                         .Columns.Add("ORDR_LNO_EXT", GetType(System.Double), "ISNULL(ORDR_QTY, 0) * ISNULL(ORDR_UNIT_PRICE, 0)")
