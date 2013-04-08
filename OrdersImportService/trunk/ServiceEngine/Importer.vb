@@ -2038,8 +2038,10 @@ Namespace OrdersImport
                                     Next
                                 Next
 
-                                ' See if DPD Order
+                                ' See if DPD Order. DPD orders ship complete effective 4/8/2013
                                 rowSOTORDRX.Item("ORDR_DPD") = IIf(tableName = "RX_SOFT_PATIENT", "1", "0")
+                                rowSOTORDRX.Item("ORDR_SHIP_COMPLETE") = rowSOTORDRX.Item("ORDR_DPD")
+
                                 AttentionTo = String.Empty
                                 DELIVERY_Id = String.Empty
                                 If vwXmlDataset.Tables("DELIVERY").Select("HEADER_Id = " & HEADER_Id, "DELIVERY_Id").Length > 0 Then
@@ -2218,7 +2220,7 @@ Namespace OrdersImport
                 Next
 
                 If dst.Tables("SOTORDRX").Rows.Count > 0 Then
-                    ' Commit the data from the Excel file and then archive the file
+                    ' Commit the data from the xml file and then archive the file
                     Dim UpdateInProcess As Boolean = False
                     With baseClass
                         Try
