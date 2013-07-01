@@ -526,8 +526,8 @@ Namespace OrdersImport
                                 ProcessWebServiceSalesOrders(ORDR_SOURCE)
 
                             Case "X" ' AnyLens (A), DBVISION (D), 
-                                '   do not grab Y for eyeconic. There order source is 'Y' it is a differnt import
-                                '   do not grab O for OptiPort. There order source is 'O' it is a differnt import
+                                '   do not grab Y for eyeconic. Thier order source is 'Y' it is a differnt import
+                                '   do not grab O for OptiPort. Thier order source is 'O' it is a differnt import
                                 For Each row As DataRow In ABSolution.ASCDATA1.GetDataTable("SELECT ORDR_LINE_SOURCE FROM XMTXREF1 WHERE ORDR_SOURCE = 'X' AND ORDR_LINE_SOURCE NOT IN ('Y', 'O')").Rows
                                     ProcessWebServiceSalesOrders(row.Item("ORDR_LINE_SOURCE") & String.Empty)
 
@@ -3650,7 +3650,7 @@ Namespace OrdersImport
                                                     rowDETJOBM1.Item("TRC_IND") = "2"
                                                     rowDETJOBM1.Item("TRACE_FROM") = "T"
 
-                                                    ProcessTraceFile(rowDETJOBM1)
+                                                    ProcessTraceFile(rowDETJOBM1, errors)
 
                                                 Catch ex As Exception
                                                     errors.Add(New DelJobService.DelJobValidationError("TraceData", "Error: " & ex.Message))
@@ -3922,7 +3922,7 @@ Namespace OrdersImport
                                 & CStr(Val(dst.Tables("DETPARM1").Rows(0).Item("DE_PARM_MAX_ED") & "")) & ", DBL=" _
                                 & CStr(Val(dst.Tables("DETPARM1").Rows(0).Item("DE_PARM_MAX_DBL") & "")) & ""
 
-                                errors.Add(New DelJobService.DelJobValidationError("Customer", dst.Tables("SOTORDRO").Select("ORDR_REL_HOLD_CODES = '" & code & "'")(0).Item("ORDR_COMMENT")))
+                                errors.Add(New DelJobService.DelJobValidationError("Customer", EMsg))
 
                             End If
 
@@ -4070,7 +4070,7 @@ Namespace OrdersImport
             End Try
         End Sub
 
-        Private Sub ProcessTraceFile(ByRef rowDETJOBM1 As DataRow)
+        Private Sub ProcessTraceFile(ByRef rowDETJOBM1 As DataRow, ByRef errors As List(Of DelJobService.DelJobValidationError))
             Try
                 Dim JOB_NO As String = rowDETJOBM1.Item("JOB_NO") & String.Empty
                 Dim TraceFile As String = traceFileDirectory & JOB_NO & ".trc"
@@ -4102,7 +4102,7 @@ Namespace OrdersImport
                     End Using
                 End If
             Catch ex As Exception
-
+                errors.Add(New DelJobService.DelJobValidationError("ProcessTraceFile", "Error: " & ex.Message))
             End Try
         End Sub
 
@@ -5021,7 +5021,7 @@ Namespace OrdersImport
                 rowSOTORDR2.Item("ORDR_QTY_OPEN") = 1
                 rowSOTORDR2.Item("ORDR_QTY_ORIG") = 1
                 rowSOTORDR2.Item("ORDR_LINE_STATUS") = "O"
-                rowSOTORDR2.Item("CUST_LINE_REF") = rowSOTORDR2X.Item("CUST_LINE_REF") & String.Empty
+                'rowSOTORDR2.Item("CUST_LINE_REF") = rowSOTORDR2X.Item("CUST_LINE_REF") & String.Empty
                 rowSOTORDR2.Item("ORDR_LINE_SOURCE") = rowSOTORDR2X.Item("ORDR_LINE_SOURCE") & String.Empty
                 rowSOTORDR2.Item("ORDR_LR") = rowSOTORDR2X.Item("ORDR_LR") & String.Empty
 
@@ -6442,6 +6442,19 @@ Namespace OrdersImport
                     + Val(rowSOTORDR1.Item("ORDR_STAX") & String.Empty) _
                     + Val(rowSOTORDR1.Item("ORDR_SAMPLE_SURCHARGE") & String.Empty) _
                     + Val(rowSOTORDR1.Item("ORDR_MISC_CHG_AMT") & String.Empty)
+
+                Dim ORDR_BANK_AMT As Decimal = 0
+                For Each rowSOTORDRP As DataRow In dst.Tables("SOTORDRP").Select("ORDR_UNIT_PRICE_SOURCE = 'L' and ORDR_NO = '" & ORDR_NO & "'")
+                    Dim LENS_BANK_INV_NO As String = rowSOTORDRP.Item("LENS_BANK_INV_NO") & String.Empty
+                    Dim rowPPTLBKP1 As DataRow = baseClass.LookUp("PPTLBKP1", LENS_BANK_INV_NO)
+
+                    If rowPPTLBKP1 IsNot Nothing AndAlso rowPPTLBKP1.Item("LENS_BANK_STYLE") & String.Empty = "A" Then
+                        ORDR_BANK_AMT += Val(rowSOTORDRP.Item("ORDR_QTY") & "") * Val(rowSOTORDRP.Item("ORDR_UNIT_PRICE") & "")
+                    End If
+                Next
+                ORDR_BANK_AMT *= -1
+                rowSOTORDR1.Item("ORDR_BANK_AMT") = ORDR_BANK_AMT
+                rowSOTORDR1.Item("ORDR_TOTAL_AMT") = Val(rowSOTORDR1.Item("ORDR_TOTAL_AMT") & String.Empty) + ORDR_BANK_AMT
 
                 If testMode Then RecordLogEntry("Exit UpdateSalesOrderTotal. " & ORDR_NO)
                 Return True
