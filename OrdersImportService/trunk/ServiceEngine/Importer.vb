@@ -65,6 +65,7 @@ Namespace OrdersImport
         Private Const InvalidShipVia = "V"
         Private Const InvalidTaxCode = "X"
         Private Const DPDNoAnnualSupply = "9"
+        Private Const InvalidCustomerStatus = "Z"
 
         'Detail Errors
         Private Const FrozenInactiveItem = "F"
@@ -2982,7 +2983,6 @@ Namespace OrdersImport
 
         End Sub
 
-
         Private Function Track_Shipment(ByVal SHIP_VIA_CODE As String, ByVal SHIP_REF As String) As String
 
             Try
@@ -3548,6 +3548,10 @@ Namespace OrdersImport
                                                 rowDETJOBM1.Item("RX_PRISM") = "1"
                                                 rowDETJOBM1.Item("USE_THINNING_PRISM") = "0"
                                             Next
+
+                                            If vwXmlDataset.Tables("PRISM").Select("PRESCRIPTION_id = " & PRESCRIPTION_ID).Length > 0 Then
+                                                errors.Add(New DelJobService.DelJobValidationError("Prism", "Prism Hold"))
+                                            End If
 
                                             If vwXmlDataset.Tables("CALCULATIONS").Select("POSITION_ID = " & POSITION_ID).Length > 0 Then
                                                 rowData = vwXmlDataset.Tables("CALCULATIONS").Select("POSITION_ID = " & POSITION_ID)(0)
@@ -5939,6 +5943,10 @@ Namespace OrdersImport
                         AddCharNoDups(InvalidTermsCode, errorCodes)
                     End If
 
+                    If rowARTCUST1.Item("CUST_STATUS") & String.Empty = "C" Then
+                        AddCharNoDups(InvalidCustomerStatus, errorCodes)
+                    End If
+
                     rowSOTORDR1.Item("POST_CODE") = rowARTCUST1.Item("POST_CODE") & String.Empty
                     rowSOTORDR1.Item("SREP_CODE") = rowARTCUST1.Item("SREP_CODE") & String.Empty
                     rowSOTORDR1.Item("ORDR_SHIP_COMPLETE") = rowARTCUST1.Item("CUST_SHIP_COMPLETE") & String.Empty
@@ -7171,6 +7179,11 @@ Namespace OrdersImport
             rowSOTORDRO = dst.Tables("SOTORDRO").NewRow
             rowSOTORDRO.Item("ORDR_REL_HOLD_CODES") = InvalidSalesOrderTotal
             rowSOTORDRO.Item("ORDR_COMMENT") = "Invalid Sales Order Total"
+            dst.Tables("SOTORDRO").Rows.Add(rowSOTORDRO)
+
+            rowSOTORDRO = dst.Tables("SOTORDRO").NewRow
+            rowSOTORDRO.Item("ORDR_REL_HOLD_CODES") = InvalidCustomerStatus
+            rowSOTORDRO.Item("ORDR_COMMENT") = "Invalid Customer Status"
             dst.Tables("SOTORDRO").Rows.Add(rowSOTORDRO)
 
             ' Order Detail Errors
