@@ -3119,6 +3119,10 @@ Namespace OrdersImport
             Dim errorsDirectory As String = String.Empty
             Dim invalidCustomer As Boolean = False
 
+            Dim vwCORRIDOR_LENGTH As String = String.Empty
+            Dim rowDETJOBVW As DataRow = Nothing
+
+
             Dim sqlColorCode As String = String.Empty
             sqlColorCode = " SELECT * FROM DETCOLR1 WHERE COLOR_CODE = "
             sqlColorCode &= " ("
@@ -3219,6 +3223,7 @@ Namespace OrdersImport
                         PRESCRIPTION_ID = String.Empty
                         LENS_ID = String.Empty
                         TREATMENTS_ID = String.Empty
+                        vwCORRIDOR_LENGTH = String.Empty
 
                         For Each rowRX_SPECTACLE As DataRow In vwXmlDataset.Tables("RX_SPECTACLE").Rows
 
@@ -3234,6 +3239,7 @@ Namespace OrdersImport
                             PRESCRIPTION_ID = String.Empty
                             LENS_ID = String.Empty
                             TREATMENTS_ID = String.Empty
+                            vwCORRIDOR_LENGTH = String.Empty
 
                             JOB_NO = ABSolution.ASCMAIN1.Next_Control_No("DETJOBM1.JOB_NO", 1)
                             ORDR_NO = ABSolution.ASCMAIN1.Next_Control_No("SOTORDR1.ORDR_NO", 1)
@@ -3576,7 +3582,19 @@ Namespace OrdersImport
 
                                                 If vwXmlDataset.Tables("DESIGN").Select("LENS_ID = " & LENS_ID).Length > 0 Then
                                                     rowData = vwXmlDataset.Tables("DESIGN").Select("LENS_ID = " & LENS_ID)(0)
-                                                    rowDETJOBM1.Item("LENS_DESIGN_CODE") = (rowData.Item("CONVERT") & String.Empty).ToString.Trim
+                                                    Dim convertLENS_DESIGN_CODE As String = (rowData.Item("CONVERT") & String.Empty).ToString.Trim
+
+                                                    ' see if we need to convert the LENS_DESIGN_CODE to another code
+                                                    rowDETJOBVW = ABSolution.ASCDATA1.GetDataRow("SELECT * FROM DETJOBVW WHERE ACTION_CODE = :PARM1 AND ACTION_TYPE = :PARM2", _
+                                                            "VV", New Object() {"LENSDESIGN", convertLENS_DESIGN_CODE})
+
+                                                    If rowDETJOBVW IsNot Nothing AndAlso rowDETJOBVW.Item("LENS_DESIGN_CODE") & String.Empty <> String.Empty Then
+                                                        rowDETJOBM1.Item("LENS_DESIGN_CODE") = (rowDETJOBVW.Item("LENS_DESIGN_CODE") & String.Empty).ToString.Trim
+                                                        ' as per scott pearl on 9/25/2013 - this vakue overrides a caclulated Corrider length
+                                                        vwCORRIDOR_LENGTH = (rowDETJOBVW.Item("CORRIDOR_LENGTH") & String.Empty).ToString.Trim
+                                                    Else
+                                                        rowDETJOBM1.Item("LENS_DESIGN_CODE") = convertLENS_DESIGN_CODE
+                                                    End If
                                                 End If
 
                                                 If vwXmlDataset.Tables("THICKNESS").Select("LENS_ID = " & LENS_ID).Length > 0 Then
@@ -3604,7 +3622,7 @@ Namespace OrdersImport
                                                     For Each rowTREATMENT As DataRow In vwXmlDataset.Tables("TREATMENT").Select("TREATMENTS_ID = " & TREATMENTS_ID)
                                                         tempString = rowTREATMENT.Item("CONVERT") & String.Empty
 
-                                                        Dim rowDETJOBVW As DataRow = ABSolution.ASCDATA1.GetDataRow("SELECT * FROM DETJOBVW WHERE ACTION_CODE = :PARM1 AND ACTION_TYPE = :PARM2", _
+                                                        rowDETJOBVW = ABSolution.ASCDATA1.GetDataRow("SELECT * FROM DETJOBVW WHERE ACTION_CODE = :PARM1 AND ACTION_TYPE = :PARM2", _
                                                                                                                     "VV", New Object() {tempString, "TREATMENT"})
                                                         If rowDETJOBVW IsNot Nothing Then
                                                             If (rowData.Item("COMMENT") & String.Empty).ToString.Trim.Length > 0 Then
@@ -3685,16 +3703,21 @@ Namespace OrdersImport
                             Dim FITTING_HEIGHT As Double
                             FITTING_HEIGHT = Val(dst.Tables("DETJOBM3").Compute("MAX(FITTING_HEIGHT)", String.Empty) & String.Empty)
 
-                            Dim SQL = "Select CORRIDOR_LENGTH from DETDSGN2 " _
-                                & " where LENS_DESIGN_CODE = :PARM1" _
-                                & " and MIN_FITTING_HEIGHT = " _
-                                & " (Select Max (MIN_FITTING_HEIGHT) from DETDSGN2 " _
-                                & " where LENS_DESIGN_CODE = :PARM2" _
-                                & " and MIN_FITTING_HEIGHT <= :PARM3)"
+                            ' As per Scott Pearl if Corridor sent in by customer use it.
+                            If vwCORRIDOR_LENGTH.Length = 0 Then
+                                Dim SQL = "Select CORRIDOR_LENGTH from DETDSGN2 " _
+                                    & " where LENS_DESIGN_CODE = :PARM1" _
+                                    & " and MIN_FITTING_HEIGHT = " _
+                                    & " (Select Max (MIN_FITTING_HEIGHT) from DETDSGN2 " _
+                                    & " where LENS_DESIGN_CODE = :PARM2" _
+                                    & " and MIN_FITTING_HEIGHT <= :PARM3)"
 
-                            Dim CORRIDOR_LENGTH As String = ABSolution.ASCDATA1.GetDataValue(SQL, "VVN", New Object() {LENS_DESIGN_CODE, LENS_DESIGN_CODE, FITTING_HEIGHT})
-                            If CORRIDOR_LENGTH <> String.Empty Then
-                                rowDETJOBM1.Item("CORRIDOR_LENGTH") = CORRIDOR_LENGTH
+                                Dim CORRIDOR_LENGTH As String = ABSolution.ASCDATA1.GetDataValue(SQL, "VVN", New Object() {LENS_DESIGN_CODE, LENS_DESIGN_CODE, FITTING_HEIGHT})
+                                If CORRIDOR_LENGTH <> String.Empty Then
+                                    rowDETJOBM1.Item("CORRIDOR_LENGTH") = CORRIDOR_LENGTH
+                                End If
+                            Else
+                                rowDETJOBM1.Item("CORRIDOR_LENGTH") = vwCORRIDOR_LENGTH
                             End If
 
                             rowDETJOBM1.Item("COMMENT_LAB") = TruncateField(specialInstructions, "DETJOBM1", "COMMENT_LAB")
