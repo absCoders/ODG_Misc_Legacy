@@ -19,7 +19,7 @@ Public NotInheritable Class ASFSPLA1
             End
         End Try
 
-
+        PictureBox2.ImageLocation = Configuration.ConfigurationManager.AppSettings("logoFilePath")
         Timer1.Interval = 3000
         Timer1.Enabled = True
         Timer2.Interval = 300
