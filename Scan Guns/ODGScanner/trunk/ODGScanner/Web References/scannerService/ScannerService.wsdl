@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<wsdl:definitions xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd" xmlns:wsa="http://schemas.xmlsoap.org/ws/2004/08/addressing" xmlns:wsap="http://schemas.xmlsoap.org/ws/2004/08/addressing/policy" xmlns:wsp="http://schemas.xmlsoap.org/ws/2004/09/policy" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msc="http://schemas.microsoft.com/ws/2005/12/wsdl/contract" xmlns:tns="http://tempuri.org/" xmlns:wsaw="http://www.w3.org/2006/05/addressing/wsdl" xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/" xmlns:wsa10="http://www.w3.org/2005/08/addressing" xmlns:wsx="http://schemas.xmlsoap.org/ws/2004/09/mex" xmlns:wsam="http://www.w3.org/2007/05/addressing/metadata" name="ScannerService" targetNamespace="http://tempuri.org/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">
+<wsdl:definitions xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:wsa="http://schemas.xmlsoap.org/ws/2004/08/addressing" xmlns:wsp="http://schemas.xmlsoap.org/ws/2004/09/policy" xmlns:wsap="http://schemas.xmlsoap.org/ws/2004/08/addressing/policy" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msc="http://schemas.microsoft.com/ws/2005/12/wsdl/contract" xmlns:tns="http://tempuri.org/" xmlns:wsaw="http://www.w3.org/2006/05/addressing/wsdl" xmlns:wsx="http://schemas.xmlsoap.org/ws/2004/09/mex" xmlns:wsa10="http://www.w3.org/2005/08/addressing" xmlns:wsam="http://www.w3.org/2007/05/addressing/metadata" name="ScannerService" targetNamespace="http://tempuri.org/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">
   <wsdl:types>
     <xsd:schema targetNamespace="http://tempuri.org/Imports">
-      <xsd:import schemaLocation="http://odgiisvm.opticaldg.com:8080/ScannerService/ScannerService.svc?xsd=xsd0" namespace="http://tempuri.org/" />
-      <xsd:import schemaLocation="http://odgiisvm.opticaldg.com:8080/ScannerService/ScannerService.svc?xsd=xsd1" namespace="http://schemas.microsoft.com/2003/10/Serialization/" />
-      <xsd:import schemaLocation="http://odgiisvm.opticaldg.com:8080/ScannerService/ScannerService.svc?xsd=xsd2" />
+      <xsd:import schemaLocation="http://orders1.opticaldg.com:8080/ScannerService/ScannerService.svc?xsd=xsd0" namespace="http://tempuri.org/" />
+      <xsd:import schemaLocation="http://orders1.opticaldg.com:8080/ScannerService/ScannerService.svc?xsd=xsd1" namespace="http://schemas.microsoft.com/2003/10/Serialization/" />
+      <xsd:import schemaLocation="http://orders1.opticaldg.com:8080/ScannerService/ScannerService.svc?xsd=xsd2" />
     </xsd:schema>
   </wsdl:types>
   <wsdl:message name="IScannerService_GetItemInfo_InputMessage">
@@ -18,6 +18,18 @@
   </wsdl:message>
   <wsdl:message name="IScannerService_CheckBin_OutputMessage">
     <wsdl:part name="parameters" element="tns:CheckBinResponse" />
+  </wsdl:message>
+  <wsdl:message name="IScannerService_GetJobBin_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetJobBin" />
+  </wsdl:message>
+  <wsdl:message name="IScannerService_GetJobBin_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetJobBinResponse" />
+  </wsdl:message>
+  <wsdl:message name="IScannerService_PutJobInBin_InputMessage">
+    <wsdl:part name="parameters" element="tns:PutJobInBin" />
+  </wsdl:message>
+  <wsdl:message name="IScannerService_PutJobInBin_OutputMessage">
+    <wsdl:part name="parameters" element="tns:PutJobInBinResponse" />
   </wsdl:message>
   <wsdl:message name="IScannerService_GetBin_InputMessage">
     <wsdl:part name="parameters" element="tns:GetBin" />
@@ -55,6 +67,12 @@
   <wsdl:message name="IScannerService_UpdatePO_OutputMessage">
     <wsdl:part name="parameters" element="tns:UpdatePOResponse" />
   </wsdl:message>
+  <wsdl:message name="IScannerService_UpdatePO2_InputMessage">
+    <wsdl:part name="parameters" element="tns:UpdatePO2" />
+  </wsdl:message>
+  <wsdl:message name="IScannerService_UpdatePO2_OutputMessage">
+    <wsdl:part name="parameters" element="tns:UpdatePO2Response" />
+  </wsdl:message>
   <wsdl:portType name="IScannerService">
     <wsdl:operation name="GetItemInfo">
       <wsdl:input wsaw:Action="http://tempuri.org/IScannerService/GetItemInfo" message="tns:IScannerService_GetItemInfo_InputMessage" />
@@ -63,6 +81,14 @@
     <wsdl:operation name="CheckBin">
       <wsdl:input wsaw:Action="http://tempuri.org/IScannerService/CheckBin" message="tns:IScannerService_CheckBin_InputMessage" />
       <wsdl:output wsaw:Action="http://tempuri.org/IScannerService/CheckBinResponse" message="tns:IScannerService_CheckBin_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="GetJobBin">
+      <wsdl:input wsaw:Action="http://tempuri.org/IScannerService/GetJobBin" message="tns:IScannerService_GetJobBin_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IScannerService/GetJobBinResponse" message="tns:IScannerService_GetJobBin_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="PutJobInBin">
+      <wsdl:input wsaw:Action="http://tempuri.org/IScannerService/PutJobInBin" message="tns:IScannerService_PutJobInBin_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IScannerService/PutJobInBinResponse" message="tns:IScannerService_PutJobInBin_OutputMessage" />
     </wsdl:operation>
     <wsdl:operation name="GetBin">
       <wsdl:input wsaw:Action="http://tempuri.org/IScannerService/GetBin" message="tns:IScannerService_GetBin_InputMessage" />
@@ -88,6 +114,10 @@
       <wsdl:input wsaw:Action="http://tempuri.org/IScannerService/UpdatePO" message="tns:IScannerService_UpdatePO_InputMessage" />
       <wsdl:output wsaw:Action="http://tempuri.org/IScannerService/UpdatePOResponse" message="tns:IScannerService_UpdatePO_OutputMessage" />
     </wsdl:operation>
+    <wsdl:operation name="UpdatePO2">
+      <wsdl:input wsaw:Action="http://tempuri.org/IScannerService/UpdatePO2" message="tns:IScannerService_UpdatePO2_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IScannerService/UpdatePO2Response" message="tns:IScannerService_UpdatePO2_OutputMessage" />
+    </wsdl:operation>
   </wsdl:portType>
   <wsdl:binding name="BasicHttpBinding_IScannerService" type="tns:IScannerService">
     <soap:binding transport="http://schemas.xmlsoap.org/soap/http" />
@@ -102,6 +132,24 @@
     </wsdl:operation>
     <wsdl:operation name="CheckBin">
       <soap:operation soapAction="http://tempuri.org/IScannerService/CheckBin" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetJobBin">
+      <soap:operation soapAction="http://tempuri.org/IScannerService/GetJobBin" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="PutJobInBin">
+      <soap:operation soapAction="http://tempuri.org/IScannerService/PutJobInBin" style="document" />
       <wsdl:input>
         <soap:body use="literal" />
       </wsdl:input>
@@ -163,10 +211,19 @@
         <soap:body use="literal" />
       </wsdl:output>
     </wsdl:operation>
+    <wsdl:operation name="UpdatePO2">
+      <soap:operation soapAction="http://tempuri.org/IScannerService/UpdatePO2" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
   </wsdl:binding>
   <wsdl:service name="ScannerService">
     <wsdl:port name="BasicHttpBinding_IScannerService" binding="tns:BasicHttpBinding_IScannerService">
-      <soap:address location="http://odgiisvm.opticaldg.com:8080/ScannerService/ScannerService.svc" />
+      <soap:address location="http://orders1.opticaldg.com:8080/ScannerService/ScannerService.svc" />
     </wsdl:port>
   </wsdl:service>
 </wsdl:definitions>

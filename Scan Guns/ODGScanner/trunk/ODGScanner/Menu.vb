@@ -14,6 +14,11 @@
         f.ShowDialog()
     End Sub
 
+    Private Sub LinkLabel3_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles LinkLabel3.Click
+        Dim f As New DELConsolidation()
+        f.ShowDialog()
+    End Sub
+
     Private Sub Menu_Load(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles MyBase.Load
         SingleInstance.HideTaskBar(Me.Handle)
     End Sub
@@ -37,6 +42,9 @@
                 LinkLabel1_Click(Me, Nothing)
             Case "2"
                 LinkLabel2_Click(Me, Nothing)
+            Case "3"
+                LinkLabel3_Click(Me, Nothing)
         End Select
     End Sub
+
 End Class

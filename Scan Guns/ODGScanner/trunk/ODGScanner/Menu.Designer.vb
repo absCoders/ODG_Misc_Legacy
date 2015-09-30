@@ -22,6 +22,7 @@ Partial Public Class Menu
         Me.LinkLabel1 = New System.Windows.Forms.LinkLabel
         Me.LinkLabel2 = New System.Windows.Forms.LinkLabel
         Me.Label1 = New System.Windows.Forms.Label
+        Me.LinkLabel3 = New System.Windows.Forms.LinkLabel
         Me.SuspendLayout()
         '
         'LinkLabel1
@@ -49,12 +50,22 @@ Partial Public Class Menu
         Me.Label1.Size = New System.Drawing.Size(156, 20)
         Me.Label1.Text = "Select an application:"
         '
+        'LinkLabel3
+        '
+        Me.LinkLabel3.ForeColor = System.Drawing.Color.Black
+        Me.LinkLabel3.Location = New System.Drawing.Point(39, 172)
+        Me.LinkLabel3.Name = "LinkLabel3"
+        Me.LinkLabel3.Size = New System.Drawing.Size(138, 20)
+        Me.LinkLabel3.TabIndex = 2
+        Me.LinkLabel3.Text = "3. DEL Consolidation"
+        '
         'Menu
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(96.0!, 96.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi
         Me.AutoScroll = True
         Me.ClientSize = New System.Drawing.Size(638, 455)
+        Me.Controls.Add(Me.LinkLabel3)
         Me.Controls.Add(Me.Label1)
         Me.Controls.Add(Me.LinkLabel2)
         Me.Controls.Add(Me.LinkLabel1)
@@ -70,5 +81,6 @@ Partial Public Class Menu
     Friend WithEvents LinkLabel1 As System.Windows.Forms.LinkLabel
     Friend WithEvents LinkLabel2 As System.Windows.Forms.LinkLabel
     Friend WithEvents Label1 As System.Windows.Forms.Label
+    Friend WithEvents LinkLabel3 As System.Windows.Forms.LinkLabel
 
 End Class

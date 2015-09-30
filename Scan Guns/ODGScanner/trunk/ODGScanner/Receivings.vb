@@ -3,6 +3,7 @@
 Public Class Receivings
 
     Dim WH_OPER_ID As String = ""
+    Dim curInvPackUpc As String = ""
 
     Dim scannerService As New scannerService.ScannerService()
     Dim dst As New Data.DataSet
@@ -137,9 +138,10 @@ Public Class Receivings
 
             If dst.Tables("POTORDR2").Rows.Count > 0 Then
                 Try
-                    Dim rtrnMsg As String = scannerService.UpdatePO(WH_OPER_ID, dst)
+                    Dim rtrnMsg As String = scannerService.UpdatePO2(WH_OPER_ID, curInvPackUpc, dst)
                     If rtrnMsg = "1" Then
                         txtStatus.Text = "Scans updated."
+                        curInvPackUpc = ""
                     Else
                         txtStatus.Text = rtrnMsg
                     End If
@@ -188,6 +190,7 @@ Public Class Receivings
         Try
             txtStatus.Text = "Loading data..."
             dst.Merge(scannerService.LoadPO(invPackUPC))
+            curInvPackUpc = invPackUPC
             'txtStatus.Text = "Data loaded."
             'txtStatus.Text = ex.Message
 
